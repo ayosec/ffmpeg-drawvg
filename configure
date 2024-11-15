@@ -200,6 +200,7 @@ External library support:
   --disable-avfoundation   disable Apple AVFoundation framework [autodetect]
   --enable-avisynth        enable reading of AviSynth script files [no]
   --disable-bzlib          disable bzlib [autodetect]
+  --disable-cairo          disable cairo [autodetect]
   --disable-coreimage      disable Apple CoreImage framework [autodetect]
   --enable-chromaprint     enable audio fingerprinting with chromaprint [no]
   --enable-frei0r          enable frei0r video filtering [no]
@@ -1843,6 +1844,7 @@ EXTERNAL_AUTODETECT_LIBRARY_LIST="
     appkit
     avfoundation
     bzlib
+    cairo
     coreimage
     iconv
     libxcb
@@ -3880,6 +3882,7 @@ dnn_detect_filter_select="dnn"
 dnn_processing_filter_select="dnn"
 drawtext_filter_deps="libfreetype libharfbuzz"
 drawtext_filter_suggest="libfontconfig libfribidi"
+drawvg_filter_deps="cairo"
 elbg_filter_deps="avcodec"
 eq_filter_deps="gpl"
 erosion_opencl_filter_deps="opencl"
