@@ -18,17 +18,76 @@
 
 /**
  * @file
- * drawvg filter, draw vector graphics with libcairo.
+ * drawvg filter, draw vector graphics with cairo.
  */
 
 #include <cairo.h>
 
 #include "libavutil/avassert.h"
 #include "libavutil/internal.h"
+#include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
+
 #include "avfilter.h"
 #include "filters.h"
 #include "video.h"
+
+#define MAX_ARGS 4
+
+typedef struct DrawVGContext {
+    const AVClass *class;
+
+    cairo_format_t cairo_format;  ///< equivalent to AVPixelFormat
+
+    uint8_t *script;              ///< render script.
+    double args[MAX_ARGS];        ///< values for argN variables.
+} DrawVGContext;
+
+#define OFFSET(x) offsetof(DrawVGContext, x)
+
+#define FLAGS AV_OPT_FLAG_FILTERING_PARAM | AV_OPT_FLAG_VIDEO_PARAM
+
+#define OPT_SCRIPT(name) \
+    {                                            \
+        name,                                    \
+        "script source to render the graphics.", \
+        OFFSET(script),                          \
+        AV_OPT_TYPE_STRING,                      \
+        { .str = NULL },                         \
+        0, 0,                                    \
+        FLAGS                                    \
+    }
+
+// The min/max for the argN options are restricted to the int range,
+// in case we want to convert the variable to int.
+#define OPT_ARGN(n) \
+    {                                        \
+        "arg" #n,                            \
+        "value for the arg" #n " variable.", \
+        OFFSET(args[n]),                     \
+        AV_OPT_TYPE_DOUBLE,                  \
+        { .dbl = 0 },                        \
+        INT_MIN, INT_MAX,                    \
+        FLAGS | AV_OPT_FLAG_RUNTIME_PARAM    \
+    }
+
+static const AVOption drawvg_options[]= {
+    OPT_SCRIPT("script"),
+    OPT_SCRIPT("s"),
+    OPT_ARGN(0),
+    OPT_ARGN(1),
+    OPT_ARGN(2),
+    OPT_ARGN(3),
+    { NULL }
+};
+
+#undef OFFSET
+#undef FLAGS
+#undef OPT_SCRIPT
+#undef OPT_ARGN
+
+
+AVFILTER_DEFINE_CLASS(drawvg);
 
 static const enum AVPixelFormat pixel_fmts_drawvg[] = {
     AV_PIX_FMT_BGRA,
@@ -39,9 +98,9 @@ static const enum AVPixelFormat pixel_fmts_drawvg[] = {
 };
 
 // Return the cairo equivalent to AVPixelFormat.
-static cairo_format_t cairo_format_from_pix_fmt(AVFrame *frame) {
+static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixelFormat format) {
     // This array must have the same order of `pixel_fmts_drawvg`.
-    static const cairo_format_t pixel_fmt_map[] = {
+    const cairo_format_t pixel_fmt_map[] = {
         CAIRO_FORMAT_ARGB32, // cairo expects pre-multiplied alpha.
         CAIRO_FORMAT_RGB24,
         CAIRO_FORMAT_RGB16_565,
@@ -49,61 +108,45 @@ static cairo_format_t cairo_format_from_pix_fmt(AVFrame *frame) {
         CAIRO_FORMAT_INVALID,
     };
 
-    const int format = frame->format;
+    const char* pix_fmt_name = av_get_pix_fmt_name(format);
 
     for (int i = 0; pixel_fmts_drawvg[i] != AV_PIX_FMT_NONE; i++) {
         if (pixel_fmts_drawvg[i] == format) {
             cairo_format_t fmt = pixel_fmt_map[i];
 
-            av_log(
-                NULL,
-                AV_LOG_VERBOSE,
-                "Use cairo_format_t#%d for %s\n",
-                fmt,
-                av_get_pix_fmt_name(format)
-            );
+            av_log(ctx, AV_LOG_TRACE, "Use cairo_format_t#%d for %s\n",
+                fmt, pix_fmt_name);
 
             return fmt;
         }
     }
 
-    av_log(NULL, AV_LOG_ERROR, "Invalid pix_fmt: %s\n", av_get_pix_fmt_name(format));
+    av_log(ctx, AV_LOG_ERROR, "Invalid pix_fmt: %s\n", pix_fmt_name);
     return CAIRO_FORMAT_INVALID;
 }
 
-static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
-{
+static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     cairo_surface_t* surface;
     cairo_t *cr;
 
     /*FilterLink *inl = ff_filter_link(inlink);*/
-    /*AVFilterContext *ctx = inlink->dst;*/
     AVFilterLink *outlink = inlink->dst->outputs[0];
-    /*EQContext *eq = ctx->priv;*/
-    AVFrame *out;
-    const AVPixFmtDescriptor *desc;
+    AVFilterContext *filter_ctx = inlink->dst;
+    DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
-    desc = av_pix_fmt_desc_get(inlink->format);
-
-    if (desc->flags & AV_PIX_FMT_FLAG_BITSTREAM == 0) {
-        av_log(NULL, AV_LOG_ERROR, "Expected packed pixel format, received: %s\n", desc->name);
-        return AVERROR(EINVAL);
-    }
-
-    out = ff_get_video_buffer(outlink, inlink->w, inlink->h);
-    if (!out) {
-        av_frame_free(&frame);
-        return AVERROR(ENOMEM);
-    }
-
-    // Draw something with libcairo // TODO: send context for av_log; handle errors
+    // Draw directly on the frame data.
     surface = cairo_image_surface_create_for_data(
-        frame->data[0], // Cairo is compatible only with packed formats.
-        cairo_format_from_pix_fmt(frame),
+        frame->data[0],
+        drawvg_ctx->cairo_format,
         frame->width,
         frame->height,
         frame->linesize[0]
     );
+
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
+        av_log(drawvg_ctx, AV_LOG_ERROR, "Failed to create cairo surface.\n");
+        return AVERROR_EXTERNAL;
+    }
 
     cr = cairo_create(surface);
 
@@ -130,12 +173,46 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *frame)
     return ff_filter_frame(outlink, frame);
 }
 
+static int drawvg_config_props(AVFilterLink *inlink) {
+    const AVPixFmtDescriptor *desc;
+    AVFilterContext *filter_ctx = inlink->dst;
+    DrawVGContext *drawvg_ctx = filter_ctx->priv;
+
+    // Find the cairo format equivalent to the format of the frame,
+    // so cairo can draw directly on the frame data.
+    //
+    // Cairo is compatible only with packed pixel formats.
+
+    desc = av_pix_fmt_desc_get(inlink->format);
+    if (desc->flags & AV_PIX_FMT_FLAG_BITSTREAM == 0) {
+        av_log(drawvg_ctx, AV_LOG_ERROR, "Expected packed pixel format, received: %s\n",
+            desc->name);
+        return AVERROR(EINVAL);
+    }
+
+    drawvg_ctx->cairo_format = cairo_format_from_pix_fmt(drawvg_ctx, inlink->format);
+    if (drawvg_ctx->cairo_format == CAIRO_FORMAT_INVALID) {
+        return AVERROR(EINVAL);
+    }
+
+    return 0;
+}
+
+static av_cold int drawvg_init(AVFilterContext *ctx) {
+    // TODO parse script
+    return 0;
+}
+
+static av_cold void drawvg_uninit(AVFilterContext *ctx) {
+    // TODO release memory from parsed script
+}
+
 static const AVFilterPad drawvg_inputs[] = {
     {
         .name = "default",
         .type = AVMEDIA_TYPE_VIDEO,
-        .filter_frame = filter_frame,
-        /*.config_props = config_props,*/
+        .filter_frame = drawvg_filter_frame,
+        .config_props = drawvg_config_props,
     },
 };
 
@@ -143,6 +220,10 @@ const AVFilter ff_vf_drawvg = {
     .name        = "drawvg",
     .description = NULL_IF_CONFIG_SMALL("Draw vector graphics on top of video frames."),
     .flags       = AVFILTER_FLAG_METADATA_ONLY,
+    .priv_size   = sizeof(DrawVGContext),
+    .priv_class  = &drawvg_class,
+    .init        = drawvg_init,
+    .uninit      = drawvg_uninit,
     FILTER_INPUTS(drawvg_inputs),
     FILTER_OUTPUTS(ff_video_default_filterpad),
     FILTER_PIXFMTS_ARRAY(pixel_fmts_drawvg),
