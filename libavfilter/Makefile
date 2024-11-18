@@ -670,6 +670,10 @@ SKIPHEADERS-$(CONFIG_VULKAN)                 += vulkan_filter.h
 TOOLS     = graph2dot
 TESTPROGS = drawutils filtfmts formats integral
 
+ifdef CONFIG_DRAWVG_FILTER
+TESTPROGS += drawvg
+endif
+
 TOOLS-$(CONFIG_LIBZMQ) += zmqsend
 
 clean::
