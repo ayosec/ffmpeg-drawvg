@@ -17,47 +17,90 @@
  */
 
 #include <stdio.h>
-
 #include <cairo.h>
-#include <cairo-script.h>
 
 #include "libavutil/pixdesc.h"
 #include "libavfilter/vf_drawvg.c"
 
-static cairo_status_t write_stdout (
-    void *closure,
-    const unsigned char *data,
-    unsigned int length
-) {
-    av_assert0(fwrite(data, length, 1, stdout) == 1);
-    return CAIRO_STATUS_SUCCESS;
+// Mock for cairo functions. They just print their arguments.
+//
+// `MOCK_FNx` macros define wrappers for functions that only
+// receive arguments of type `double`.
+
+#define MOCK_FN0(func) \
+    void func(cairo_t* cr) { \
+        puts(#func); \
+    }
+
+#define MOCK_FN1(func) \
+    void func(cairo_t* cr, double a0) { \
+        printf(#func " %g\n", a0); \
+    }
+
+#define MOCK_FN2(func) \
+    void func(cairo_t* cr, double a0, double a1) { \
+        printf(#func " %g %g\n", a0, a1); \
+    }
+
+#define MOCK_FN4(func) \
+    void func(cairo_t* cr, double a0, double a1, double a2, double a3) { \
+        printf(#func " %g %g %g %g\n", a0, a1, a2, a3); \
+    }
+
+#define MOCK_FN5(func) \
+    void func(cairo_t* cr, double a0, double a1, double a2, double a3, double a4) { \
+        printf(#func " %g %g %g %g %g\n", a0, a1, a2, a3, a4); \
+    }
+
+#define MOCK_FN6(func) \
+    void func(cairo_t* cr, double a0, double a1, double a2, double a3, double a4, double a5) { \
+        printf(#func " %g %g %g %g %g %g\n", a0, a1, a2, a3, a4, a5); \
+    }
+
+MOCK_FN5(cairo_arc);
+MOCK_FN0(cairo_clip_preserve);
+MOCK_FN0(cairo_close_path);
+MOCK_FN6(cairo_curve_to);
+MOCK_FN0(cairo_fill_preserve);
+MOCK_FN2(cairo_line_to);
+MOCK_FN2(cairo_move_to);
+MOCK_FN0(cairo_new_path);
+MOCK_FN6(cairo_rel_curve_to);
+MOCK_FN2(cairo_rel_line_to);
+MOCK_FN2(cairo_rel_move_to);
+MOCK_FN0(cairo_reset_clip);
+MOCK_FN0(cairo_restore);
+MOCK_FN1(cairo_rotate);
+MOCK_FN0(cairo_save);
+MOCK_FN2(cairo_scale);
+MOCK_FN1(cairo_set_font_size);
+MOCK_FN1(cairo_set_line_width);
+MOCK_FN1(cairo_set_miter_limit);
+MOCK_FN4(cairo_set_source_rgba);
+MOCK_FN0(cairo_stroke_preserve);
+MOCK_FN2(cairo_translate);
+
+void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
+    *x = 100;
+    *y = 200;
 }
 
 int main(void)
 {
-    cairo_device_t* device;
-    cairo_surface_t* surface;
-    cairo_t *cr;
-
-    puts("-- running drawvg test: script:\n");
-
-    device = cairo_script_create_for_stream(write_stdout, NULL);
-    surface = cairo_script_surface_create(device, CAIRO_CONTENT_COLOR_ALPHA, 320, 240);
-
-    cr = cairo_create(surface);
+    cairo_t *cr = NULL;
 
     // Simple example.
     cairo_save(cr);
     cairo_set_source_rgba(cr, 1, 0, 0, 0.9);
     cairo_set_line_width(cr, 30);
     cairo_translate(cr, 320/2, 240/2);
-    /*cairo_arc(cr, 0, 0, 320/3, 0, 2 * M_PI);*/
+    cairo_arc(cr, 0, 0, 1, 0, 1);
     cairo_move_to(cr, 10, 20);
-    cairo_stroke(cr);
+    cairo_stroke_preserve(cr);
     cairo_save(cr);
     cairo_set_source_rgba(cr, 1, 1, 0, 1);
     cairo_move_to(cr, 1, 2);
-    cairo_stroke(cr);
+    cairo_stroke_preserve(cr);
     cairo_restore(cr);
     cairo_move_to(cr, 1, 2);
     cairo_restore(cr);
@@ -68,36 +111,6 @@ int main(void)
     cairo_scale(cr, 1, 100 / 40.0 + 0.5);
     cairo_set_font_size(cr, 320/3);
     cairo_move_to(cr, 0, -320/3);
-    cairo_stroke(cr);
+    cairo_stroke_preserve(cr);
 
-    /*enum AVPixelFormat f;*/
-    /*const AVPixFmtDescriptor *desc;*/
-    /*FFDrawContext draw;*/
-    /*FFDrawColor color;*/
-    /*int r, i;*/
-    /**/
-    /*for (f = 0; av_pix_fmt_desc_get(f); f++) {*/
-    /*    desc = av_pix_fmt_desc_get(f);*/
-    /*    if (!desc->name)*/
-    /*        continue;*/
-    /*    printf("Testing %s...%*s", desc->name,*/
-    /*           (int)(16 - strlen(desc->name)), "");*/
-    /*    r = ff_draw_init(&draw, f, 0);*/
-    /*    if (r < 0) {*/
-    /*        char buf[128];*/
-    /*        av_strerror(r, buf, sizeof(buf));*/
-    /*        printf("no: %s\n", buf);*/
-    /*        continue;*/
-    /*    }*/
-    /*    ff_draw_color(&draw, &color, (uint8_t[]) { 1, 0, 0, 1 });*/
-    /*    for (i = 0; i < sizeof(color); i++)*/
-    /*        if (((uint8_t *)&color)[i] != 128)*/
-    /*            break;*/
-    /*    if (i == sizeof(color)) {*/
-    /*        printf("fallback color\n");*/
-    /*        continue;*/
-    /*    }*/
-    /*    printf("ok\n");*/
-    /*}*/
-    /*return 0;*/
 }

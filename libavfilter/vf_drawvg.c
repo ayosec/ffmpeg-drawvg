@@ -24,7 +24,9 @@
 #include <cairo.h>
 
 #include "libavutil/avassert.h"
+#include "libavutil/eval.h"
 #include "libavutil/internal.h"
+#include "libavutil/mem.h"
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
 
@@ -34,12 +36,109 @@
 
 #define MAX_ARGS 4
 
+struct DrawVGContext;
+
+// Script Interpreter
+
+struct Tokenizer {
+    const char* source;
+    size_t cursor;
+};
+
+typedef int (*command_eval)(int);
+
+#define MAX_COMMAND_ARGUMENTS 8
+
+struct ScriptCommandArgument {
+    enum {
+        SCA_CONST = 1,
+        SCA_LITERAL,
+        SCA_AV_EXPR,
+    } tag;
+
+    union {
+        int constant;
+        double literal;
+        AVExpr *expr;
+    };
+};
+
+struct ScriptCommand {
+    struct ScriptCommand *next;
+    struct ScriptCommandArgument *arguments;
+};
+
+struct Script {
+    struct ScriptCommand *command_head;
+};
+
+// Constants used in some draw commands, like `setlinejoin`.
+struct ConstantName {
+    const char* name;
+    int value;
+};
+
+static struct ConstantName consts_line_cap[] = {
+    { "butt", CAIRO_LINE_CAP_BUTT },
+    { "round", CAIRO_LINE_CAP_ROUND },
+    { "square", CAIRO_LINE_CAP_SQUARE },
+    { 0, 0 },
+};
+
+static struct ConstantName consts_line_join[] = {
+    { "bevel", CAIRO_LINE_JOIN_BEVEL },
+    { "miter", CAIRO_LINE_JOIN_MITER },
+    { "round", CAIRO_LINE_JOIN_ROUND },
+    { 0, 0 },
+};
+
+struct ArgumentsParserOptions {
+    union {
+        struct {
+            int size; ///< Size of each set.
+        } sets;
+
+        struct {
+            const struct ConstantName *names; ///< Array where contants are defined.
+        } constants;
+    };
+};
+
+// Parse sequences of argument sets.
+//
+// Some commands, like `lineto` or `moveto`, expects a fixed set of
+// arguments. This parser emits a command for each set.
+//
+// For example, the script "L 10 10 20 20" will emit two `lineto`
+// commands, equivalent to `L 10 20 L 20 20`.
+static int arguments_parser_sets(
+    struct DrawVGContext *ctx,
+    struct Tokenizer *tokenizer,
+    const struct ArgumentsParserOptions *options
+) {
+    //options->sets.size;
+    return 0;
+}
+
+// Parse one argument, which must be a constant name.
+static int arguments_parser_constant(
+    struct DrawVGContext *ctx,
+    struct Tokenizer *tokenizer,
+    const struct ArgumentsParserOptions *options
+) {
+    return 0;
+}
+
+// drawvg filter.
+
 typedef struct DrawVGContext {
     const AVClass *class;
 
     cairo_format_t cairo_format;  ///< equivalent to AVPixelFormat
 
-    uint8_t *script;              ///< render script.
+    struct Script script;         ///< script to render on each frame.
+
+    uint8_t *script_source;       ///< render script.
     double args[MAX_ARGS];        ///< values for argN variables.
 } DrawVGContext;
 
@@ -51,7 +150,7 @@ typedef struct DrawVGContext {
     {                                            \
         name,                                    \
         "script source to render the graphics.", \
-        OFFSET(script),                          \
+        OFFSET(script_source),                   \
         AV_OPT_TYPE_STRING,                      \
         { .str = NULL },                         \
         0, 0,                                    \
@@ -204,7 +303,18 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {
-    // TODO release memory from parsed script
+    DrawVGContext *drawvg_ctx = ctx->priv;
+
+    // Release memory of the script.
+    struct ScriptCommand *node = drawvg_ctx->script.command_head;
+    while (node != NULL) {
+        struct ScriptCommand *next = node->next;
+
+        av_free(node->arguments);
+        av_free(node);
+
+        node = next;
+    }
 }
 
 static const AVFilterPad drawvg_inputs[] = {
