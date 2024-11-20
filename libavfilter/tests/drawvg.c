@@ -85,9 +85,52 @@ void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
     *y = 200;
 }
 
+// Veify that the `command_specs` is sorted. This is required because
+// the search is done with `bsearch(3)`.
+static void check_sort_cmd_specs(void) {
+    int failures = 0;
+
+    for (int i = 0;; i++) {
+        if (instruction_specs[i + 1].name == NULL) {
+            break;
+        }
+
+        if (comparator_instruction_spec(&instruction_specs[i], &instruction_specs[i]) != 0) {
+            printf("%s: comparator must return 0 for item %d\n", __func__, i);
+            failures++;
+        }
+
+        if (comparator_instruction_spec(&instruction_specs[i], &instruction_specs[i + 1]) >= 0) {
+            printf("%s: entry for '%s' must appear after '%s', at index %d\n",
+                __func__, instruction_specs[i].name, instruction_specs[i + 1].name, i);
+            failures++;
+        }
+    }
+
+    printf("%s: %d failures\n\n", __func__, failures);
+}
+
+// Compile and run a script.
+static void check_script(const char* source) {
+    int ret;
+    struct Script script;
+
+    ret = script_parse(source, &script);
+    if (ret != 0) {
+        printf("%s: script_parse: %d\n", __func__, ret);
+        return;
+    }
+
+    script_free(&script);
+}
+
 int main(void)
 {
     cairo_t *cr = NULL;
+
+    check_sort_cmd_specs();
+
+    check_script("M 0 0 1 1 lineto 10 20 stroke");
 
     // Simple example.
     cairo_save(cr);
@@ -113,4 +156,5 @@ int main(void)
     cairo_move_to(cr, 0, -320/3);
     cairo_stroke_preserve(cr);
 
+    return 0;
 }

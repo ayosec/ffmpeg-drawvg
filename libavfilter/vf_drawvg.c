@@ -24,6 +24,7 @@
 #include <cairo.h>
 
 #include "libavutil/avassert.h"
+#include "libavutil/avstring.h"
 #include "libavutil/eval.h"
 #include "libavutil/internal.h"
 #include "libavutil/mem.h"
@@ -34,22 +35,27 @@
 #include "filters.h"
 #include "video.h"
 
-#define MAX_ARGS 4
-
 struct DrawVGContext;
 
-// Script Interpreter
-
-struct Tokenizer {
+// Parser to convert the source of a script to a list of instructions.
+struct ScriptParser {
     const char* source;
     size_t cursor;
 };
 
-typedef int (*command_eval)(int);
+enum ScriptInstruction {
+    CMD_LINETO = 1,
+    CMD_MOVETO,
+    CMD_REL_LINETO,
+    CMD_REL_MOVETO,
+    CMD_SAVE,
+    CMD_SETLINECAP,
+    CMD_SETLINEJOIN,
+    CMD_STROKE,
+};
 
-#define MAX_COMMAND_ARGUMENTS 8
-
-struct ScriptCommandArgument {
+// Instruction arguments.
+struct ScriptArgument {
     enum {
         SCA_CONST = 1,
         SCA_LITERAL,
@@ -63,83 +69,139 @@ struct ScriptCommandArgument {
     };
 };
 
-struct ScriptCommand {
-    struct ScriptCommand *next;
-    struct ScriptCommandArgument *arguments;
+// Script statements.
+struct ScriptStatement {
+    enum ScriptInstruction inst;
+    struct ScriptArgument *args;
+    int args_count;
 };
 
 struct Script {
-    struct ScriptCommand *command_head;
+    struct ScriptStatement *statements;
+    int statements_count;
 };
 
-// Constants used in some draw commands, like `setlinejoin`.
-struct ConstantName {
+// Constants used in some draw instructions, like `setlinejoin`.
+struct ScriptConstantName {
     const char* name;
     int value;
 };
 
-static struct ConstantName consts_line_cap[] = {
+static struct ScriptConstantName consts_line_cap[] = {
     { "butt", CAIRO_LINE_CAP_BUTT },
     { "round", CAIRO_LINE_CAP_ROUND },
     { "square", CAIRO_LINE_CAP_SQUARE },
     { 0, 0 },
 };
 
-static struct ConstantName consts_line_join[] = {
+static struct ScriptConstantName consts_line_join[] = {
     { "bevel", CAIRO_LINE_JOIN_BEVEL },
     { "miter", CAIRO_LINE_JOIN_MITER },
     { "round", CAIRO_LINE_JOIN_ROUND },
     { 0, 0 },
 };
 
-struct ArgumentsParserOptions {
-    union {
-        struct {
-            int size; ///< Size of each set.
-        } sets;
+// Syntax of the instruction arguments.
+struct ScriptArgumentSyntax {
+    enum {
+        // The instruction does not expect any argument.
+        ARG_SYNTAX_NONE = 1,
 
-        struct {
-            const struct ConstantName *names; ///< Array where contants are defined.
-        } constants;
+        // The instruction expects a sequence of sets. The parser parser
+        // emits an instruction for each complete set.
+        //
+        // For example, the instruction `L` expects 2 arguments in each set,
+        // so the script `L 10 10 20 20` emit two `lineto` instructions:
+        // `L 10 20` and `L 20 20`.
+        //
+        // The field `num` must indicate the size of the set.
+        ARG_SYNTAX_SETS,
+
+        // The instruction expects a single argument, which is a keyword
+        // from the array in the field `const_names`.
+        ARG_SYNTAX_CONST,
+    } kind;
+
+    union {
+        int num;
+        const struct ScriptConstantName *consts;
     };
 };
 
-// Parse sequences of argument sets.
+struct ScriptInstructionSpec {
+    enum ScriptInstruction inst;
+    const char* name;
+    struct ScriptArgumentSyntax syntax;
+};
+
+// Instructions available to the scripts.
 //
-// Some commands, like `lineto` or `moveto`, expects a fixed set of
-// arguments. This parser emits a command for each set.
+// The array must be sorted in ascending order by `name`.
 //
-// For example, the script "L 10 10 20 20" will emit two `lineto`
-// commands, equivalent to `L 10 20 L 20 20`.
-static int arguments_parser_sets(
-    struct DrawVGContext *ctx,
-    struct Tokenizer *tokenizer,
-    const struct ArgumentsParserOptions *options
-) {
-    //options->sets.size;
+// `name` in last item must be `NULL`.
+struct ScriptInstructionSpec instruction_specs[] = {
+    { CMD_LINETO,      "L",           { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_MOVETO,      "M",           { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_LINETO,  "l",           { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_LINETO,      "lineto",      { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_MOVETO,  "m",           { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_MOVETO,      "moveto",      { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_LINETO,  "rlineto",     { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_MOVETO,  "rmoveto",     { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_SAVE,        "save",        { ARG_SYNTAX_NONE } },
+    { CMD_SETLINECAP,  "setlinecap",  { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
+    { CMD_SETLINEJOIN, "setlinejoin", { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
+    { CMD_STROKE,      "stroke",      { ARG_SYNTAX_NONE } },
+    { 0, NULL, {} }
+};
+
+// Comparator for `ScriptInstructionSpec`, to be used with `bsearch(3)`.
+static int comparator_instruction_spec(const void *cs1, const void *cs2) {
+    return strcmp(
+        ((struct ScriptInstructionSpec*)cs1)->name,
+        ((struct ScriptInstructionSpec*)cs2)->name
+    );
+}
+
+// Parse a script and write the instructions to the `script` argument.
+//
+// @param[in]  source   Script source.
+// @param[out] script   Parsed script.
+//
+// @return `0` on success, a negative `AVERROR` code on failure.
+static int script_parse(const char *source, struct Script *script) {
+    script->statements = NULL;
     return 0;
 }
 
-// Parse one argument, which must be a constant name.
-static int arguments_parser_constant(
-    struct DrawVGContext *ctx,
-    struct Tokenizer *tokenizer,
-    const struct ArgumentsParserOptions *options
-) {
-    return 0;
+// Release the memory allocated by the script.
+static void script_free(struct Script *script) {
+    if (script->statements == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < script->statements_count; i++) {
+        if (script->statements[i].args_count > 0) {
+            av_freep(&script->statements[i].args);
+        }
+    }
+
+    av_freep(&script->statements);
 }
 
-// drawvg filter.
+
+// Number of `argN` options available to users.
+#define MAX_FILTER_ARGS 4
 
 typedef struct DrawVGContext {
     const AVClass *class;
 
-    cairo_format_t cairo_format;  ///< equivalent to AVPixelFormat
+    cairo_format_t cairo_format;     ///< equivalent to AVPixelFormat
 
-    struct Script script;         ///< script to render on each frame.
+    struct Script script;            ///< script to render on each frame.
 
-    uint8_t *script_source;       ///< render script.
-    double args[MAX_ARGS];        ///< values for argN variables.
+    uint8_t *script_source;          ///< render script.
+    double args[MAX_FILTER_ARGS];    ///< values for argN variables.
 } DrawVGContext;
 
 #define OFFSET(x) offsetof(DrawVGContext, x)
@@ -176,7 +238,7 @@ static const AVOption drawvg_options[]= {
     OPT_ARGN(0),
     OPT_ARGN(1),
     OPT_ARGN(2),
-    OPT_ARGN(3),
+    OPT_ARGN(3), // This must be `MAX_FILTER_ARGS - 1`.
     { NULL }
 };
 
@@ -303,18 +365,8 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {
-    DrawVGContext *drawvg_ctx = ctx->priv;
-
-    // Release memory of the script.
-    struct ScriptCommand *node = drawvg_ctx->script.command_head;
-    while (node != NULL) {
-        struct ScriptCommand *next = node->next;
-
-        av_free(node->arguments);
-        av_free(node);
-
-        node = next;
-    }
+    DrawVGContext *drawvg = ctx->priv;
+    script_free(&drawvg->script);
 }
 
 static const AVFilterPad drawvg_inputs[] = {
