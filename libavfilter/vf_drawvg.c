@@ -37,12 +37,6 @@
 
 struct DrawVGContext;
 
-// Parser to convert the source of a script to a list of instructions.
-struct ScriptParser {
-    const char* source;
-    size_t cursor;
-};
-
 enum ScriptInstruction {
     CMD_LINETO = 1,
     CMD_MOVETO,
@@ -163,14 +157,127 @@ static int comparator_instruction_spec(const void *cs1, const void *cs2) {
     );
 }
 
+struct ScriptParser {
+    const char* source;
+    size_t cursor;
+};
+
+struct ScriptParserToken {
+    enum {
+        TOKEN_EOF,
+        TOKEN_WORD,
+        TOKEN_EXPR,
+    } type;
+
+    const char *lexeme;
+    size_t length;
+};
+
+// Return the next token in the source.
+//
+// @param[out]  token     Next token.
+// @param[in]   advance   If true, the parser cursor is updated after
+//                        the returned token.
+//
+// @return `0` on success, a negative `AVERROR` code on failure.
+static int script_parser_scan(
+    struct DrawVGContext *ctx,
+    struct ScriptParser *parser,
+    struct ScriptParserToken *token,
+    int advance
+) {
+
+#define WORD_SEPARATOR " \n\t\r,"
+
+    int level;
+    size_t cursor, length;
+    const char *source = &parser->source[parser->cursor];
+
+    cursor = strspn(source, WORD_SEPARATOR);
+    switch (source[cursor]) {
+    case '\0':
+        token->type = TOKEN_EOF;
+        token->lexeme = "";
+        token->length = 0;
+        break;
+
+    case '(':
+        // Find matching parenthesis.
+        level = 1;
+        length = 1;
+
+        while (level > 0) {
+            switch (source[cursor + length]) {
+            case '\0':
+                av_log(ctx, AV_LOG_ERROR, "unclosed '(' at position %zu\n", parser->cursor + cursor);
+                return -1;
+
+            case '(':
+                level++;
+                break;
+
+            case ')':
+                level--;
+                break;
+            }
+
+            length++;
+        }
+
+        token->type = TOKEN_EXPR;
+        token->lexeme = &source[cursor];
+        token->length = length;
+        break;
+
+    default:
+        token->type = TOKEN_WORD;
+        token->lexeme = &source[cursor];
+        token->length = strcspn(token->lexeme, WORD_SEPARATOR);
+        break;
+    }
+
+    if (advance) {
+        parser->cursor += cursor + token->length;
+    }
+
+    return 0;
+}
+
 // Parse a script and write the instructions to the `script` argument.
 //
 // @param[in]  source   Script source.
 // @param[out] script   Parsed script.
 //
 // @return `0` on success, a negative `AVERROR` code on failure.
-static int script_parse(const char *source, struct Script *script) {
+static int script_parse(
+    struct DrawVGContext *ctx,
+    const char *source,
+    struct Script *script
+) {
+    struct ScriptParser parser = {
+        .source = source,
+        .cursor = 0,
+    };
+
     script->statements = NULL;
+    script->statements_count = 0;
+
+    for(;;) {
+        int ret;
+        struct ScriptParserToken token;
+
+        ret = script_parser_scan(ctx, &parser, &token, 1);
+        if (ret != 0) {
+            return ret;
+        }
+
+        printf("token: %d -> |%.*s|\n", token.type, (int)token.length, token.lexeme);
+
+        if (token.type == TOKEN_EOF) {
+            break;
+        }
+    }
+
     return 0;
 }
 
@@ -190,18 +297,13 @@ static void script_free(struct Script *script) {
 }
 
 
-// Number of `argN` options available to users.
-#define MAX_FILTER_ARGS 4
-
 typedef struct DrawVGContext {
     const AVClass *class;
 
     cairo_format_t cairo_format;     ///< equivalent to AVPixelFormat
 
-    struct Script script;            ///< script to render on each frame.
-
-    uint8_t *script_source;          ///< render script.
-    double args[MAX_FILTER_ARGS];    ///< values for argN variables.
+    uint8_t *script_source;
+    struct Script script;
 } DrawVGContext;
 
 #define OFFSET(x) offsetof(DrawVGContext, x)
@@ -219,26 +321,9 @@ typedef struct DrawVGContext {
         FLAGS                                    \
     }
 
-// The min/max for the argN options are restricted to the int range,
-// in case we want to convert the variable to int.
-#define OPT_ARGN(n) \
-    {                                        \
-        "arg" #n,                            \
-        "value for the arg" #n " variable.", \
-        OFFSET(args[n]),                     \
-        AV_OPT_TYPE_DOUBLE,                  \
-        { .dbl = 0 },                        \
-        INT_MIN, INT_MAX,                    \
-        FLAGS | AV_OPT_FLAG_RUNTIME_PARAM    \
-    }
-
 static const AVOption drawvg_options[]= {
     OPT_SCRIPT("script"),
     OPT_SCRIPT("s"),
-    OPT_ARGN(0),
-    OPT_ARGN(1),
-    OPT_ARGN(2),
-    OPT_ARGN(3), // This must be `MAX_FILTER_ARGS - 1`.
     { NULL }
 };
 

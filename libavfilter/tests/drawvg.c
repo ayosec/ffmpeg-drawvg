@@ -22,63 +22,63 @@
 #include "libavutil/pixdesc.h"
 #include "libavfilter/vf_drawvg.c"
 
-// Mock for cairo functions. They just print their arguments.
+// Mock for cairo functions.
 //
-// `MOCK_FNx` macros define wrappers for functions that only
-// receive arguments of type `double`.
+// `MOCK_FN_n` macros define wrappers for functions that only
+// receive `n` arguments of type `double`.
 
-#define MOCK_FN0(func) \
+#define MOCK_FN_0(func) \
     void func(cairo_t* cr) { \
-        puts(#func); \
+        puts(#func);         \
     }
 
-#define MOCK_FN1(func) \
+#define MOCK_FN_1(func) \
     void func(cairo_t* cr, double a0) { \
-        printf(#func " %g\n", a0); \
+        printf(#func " %g\n", a0);      \
     }
 
-#define MOCK_FN2(func) \
+#define MOCK_FN_2(func) \
     void func(cairo_t* cr, double a0, double a1) { \
-        printf(#func " %g %g\n", a0, a1); \
+        printf(#func " %g %g\n", a0, a1);          \
     }
 
-#define MOCK_FN4(func) \
+#define MOCK_FN_4(func) \
     void func(cairo_t* cr, double a0, double a1, double a2, double a3) { \
-        printf(#func " %g %g %g %g\n", a0, a1, a2, a3); \
+        printf(#func " %g %g %g %g\n", a0, a1, a2, a3);                  \
     }
 
-#define MOCK_FN5(func) \
+#define MOCK_FN_5(func) \
     void func(cairo_t* cr, double a0, double a1, double a2, double a3, double a4) { \
-        printf(#func " %g %g %g %g %g\n", a0, a1, a2, a3, a4); \
+        printf(#func " %g %g %g %g %g\n", a0, a1, a2, a3, a4);                      \
     }
 
-#define MOCK_FN6(func) \
+#define MOCK_FN_6(func) \
     void func(cairo_t* cr, double a0, double a1, double a2, double a3, double a4, double a5) { \
-        printf(#func " %g %g %g %g %g %g\n", a0, a1, a2, a3, a4, a5); \
+        printf(#func " %g %g %g %g %g %g\n", a0, a1, a2, a3, a4, a5);                          \
     }
 
-MOCK_FN5(cairo_arc);
-MOCK_FN0(cairo_clip_preserve);
-MOCK_FN0(cairo_close_path);
-MOCK_FN6(cairo_curve_to);
-MOCK_FN0(cairo_fill_preserve);
-MOCK_FN2(cairo_line_to);
-MOCK_FN2(cairo_move_to);
-MOCK_FN0(cairo_new_path);
-MOCK_FN6(cairo_rel_curve_to);
-MOCK_FN2(cairo_rel_line_to);
-MOCK_FN2(cairo_rel_move_to);
-MOCK_FN0(cairo_reset_clip);
-MOCK_FN0(cairo_restore);
-MOCK_FN1(cairo_rotate);
-MOCK_FN0(cairo_save);
-MOCK_FN2(cairo_scale);
-MOCK_FN1(cairo_set_font_size);
-MOCK_FN1(cairo_set_line_width);
-MOCK_FN1(cairo_set_miter_limit);
-MOCK_FN4(cairo_set_source_rgba);
-MOCK_FN0(cairo_stroke_preserve);
-MOCK_FN2(cairo_translate);
+MOCK_FN_5(cairo_arc);
+MOCK_FN_0(cairo_clip_preserve);
+MOCK_FN_0(cairo_close_path);
+MOCK_FN_6(cairo_curve_to);
+MOCK_FN_0(cairo_fill_preserve);
+MOCK_FN_2(cairo_line_to);
+MOCK_FN_2(cairo_move_to);
+MOCK_FN_0(cairo_new_path);
+MOCK_FN_6(cairo_rel_curve_to);
+MOCK_FN_2(cairo_rel_line_to);
+MOCK_FN_2(cairo_rel_move_to);
+MOCK_FN_0(cairo_reset_clip);
+MOCK_FN_0(cairo_restore);
+MOCK_FN_1(cairo_rotate);
+MOCK_FN_0(cairo_save);
+MOCK_FN_2(cairo_scale);
+MOCK_FN_1(cairo_set_font_size);
+MOCK_FN_1(cairo_set_line_width);
+MOCK_FN_1(cairo_set_miter_limit);
+MOCK_FN_4(cairo_set_source_rgba);
+MOCK_FN_0(cairo_stroke_preserve);
+MOCK_FN_2(cairo_translate);
 
 void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
     *x = 100;
@@ -115,9 +115,11 @@ static void check_script(const char* source) {
     int ret;
     struct Script script;
 
-    ret = script_parse(source, &script);
+    printf("%s: %s\n", __func__, source);
+
+    ret = script_parse(NULL, source, &script);
     if (ret != 0) {
-        printf("%s: script_parse: %d\n", __func__, ret);
+        printf("%s: script_parse = %d\n", __func__, ret);
         return;
     }
 
@@ -130,7 +132,7 @@ int main(void)
 
     check_sort_cmd_specs();
 
-    check_script("M 0 0 1 1 lineto 10 20 stroke");
+    check_script("M 0 0 1 (t * (1 + 0.5)) lineto 10 20 stroke");
 
     // Simple example.
     cairo_save(cr);
