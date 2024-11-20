@@ -412,14 +412,14 @@ static int concat_read_close(AVFormatContext *avf)
     return 0;
 }
 
-#define MAX_FILTER_ARGS 3
+#define MAX_ARGS 3
 #define NEEDS_UNSAFE   (1 << 0)
 #define NEEDS_FILE     (1 << 1)
 #define NEEDS_STREAM   (1 << 2)
 
 typedef struct ParseSyntax {
     const char *keyword;
-    char args[MAX_FILTER_ARGS];
+    char args[MAX_ARGS];
     uint8_t flags;
 } ParseSyntax;
 
@@ -468,9 +468,9 @@ static int concat_parse_script(AVFormatContext *avf)
     AVChapter *chapter = NULL;
     unsigned line = 0, arg;
     const ParseSyntax *dir;
-    char *arg_kw[MAX_FILTER_ARGS];
-    char *arg_str[MAX_FILTER_ARGS] = { 0 };
-    int64_t arg_int[MAX_FILTER_ARGS];
+    char *arg_kw[MAX_ARGS];
+    char *arg_str[MAX_ARGS] = { 0 };
+    int64_t arg_int[MAX_ARGS];
     int ret;
 
     av_bprint_init(&bp, 0, AV_BPRINT_SIZE_UNLIMITED);
@@ -651,7 +651,7 @@ static int concat_parse_script(AVFormatContext *avf)
     }
 
 fail:
-    for (arg = 0; arg < MAX_FILTER_ARGS; arg++)
+    for (arg = 0; arg < MAX_ARGS; arg++)
         av_freep(&arg_str[arg]);
     av_bprint_finalize(&bp, NULL);
     return ret == AVERROR_EOF ? 0 : ret;
