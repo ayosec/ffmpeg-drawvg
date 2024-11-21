@@ -90,11 +90,7 @@ void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
 static void check_sort_cmd_specs(void) {
     int failures = 0;
 
-    for (int i = 0;; i++) {
-        if (instruction_specs[i + 1].name == NULL) {
-            break;
-        }
-
+    for (int i = 0; i < INSTRUCTION_SPECS_COUNT  - 1; i++) {
         if (comparator_instruction_spec(&instruction_specs[i], &instruction_specs[i]) != 0) {
             printf("%s: comparator must return 0 for item %d\n", __func__, i);
             failures++;
@@ -128,35 +124,9 @@ static void check_script(const char* source) {
 
 int main(void)
 {
-    cairo_t *cr = NULL;
-
     check_sort_cmd_specs();
 
-    check_script("M 0 0 1 (t * (1 + 0.5)) lineto 10 20 stroke");
-
-    // Simple example.
-    cairo_save(cr);
-    cairo_set_source_rgba(cr, 1, 0, 0, 0.9);
-    cairo_set_line_width(cr, 30);
-    cairo_translate(cr, 320/2, 240/2);
-    cairo_arc(cr, 0, 0, 1, 0, 1);
-    cairo_move_to(cr, 10, 20);
-    cairo_stroke_preserve(cr);
-    cairo_save(cr);
-    cairo_set_source_rgba(cr, 1, 1, 0, 1);
-    cairo_move_to(cr, 1, 2);
-    cairo_stroke_preserve(cr);
-    cairo_restore(cr);
-    cairo_move_to(cr, 1, 2);
-    cairo_restore(cr);
-
-    cairo_set_line_width(cr, 5);
-    cairo_set_source_rgba(cr, 0, 1, 0, 1);
-    cairo_translate(cr, 0, 240/2);
-    cairo_scale(cr, 1, 100 / 40.0 + 0.5);
-    cairo_set_font_size(cr, 320/3);
-    cairo_move_to(cr, 0, -320/3);
-    cairo_stroke_preserve(cr);
+    check_script("save setlinecap round M 0 (4 * (1 + 0.5)) lineto 10 20 stroke");
 
     return 0;
 }

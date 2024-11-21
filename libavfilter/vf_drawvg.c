@@ -51,10 +51,10 @@ enum ScriptInstruction {
 // Instruction arguments.
 struct ScriptArgument {
     enum {
-        SCA_CONST = 1,
-        SCA_LITERAL,
-        SCA_AV_EXPR,
-    } tag;
+        SA_CONST = 1,
+        SA_LITERAL,
+        SA_AV_EXPR,
+    } type;
 
     union {
         int constant;
@@ -76,19 +76,19 @@ struct Script {
 };
 
 // Constants used in some draw instructions, like `setlinejoin`.
-struct ScriptConstantName {
+struct ScriptConstant {
     const char* name;
     int value;
 };
 
-static struct ScriptConstantName consts_line_cap[] = {
+static struct ScriptConstant consts_line_cap[] = {
     { "butt", CAIRO_LINE_CAP_BUTT },
     { "round", CAIRO_LINE_CAP_ROUND },
     { "square", CAIRO_LINE_CAP_SQUARE },
     { 0, 0 },
 };
 
-static struct ScriptConstantName consts_line_join[] = {
+static struct ScriptConstant consts_line_join[] = {
     { "bevel", CAIRO_LINE_JOIN_BEVEL },
     { "miter", CAIRO_LINE_JOIN_MITER },
     { "round", CAIRO_LINE_JOIN_ROUND },
@@ -101,24 +101,24 @@ struct ScriptArgumentSyntax {
         // The instruction does not expect any argument.
         ARG_SYNTAX_NONE = 1,
 
-        // The instruction expects a sequence of sets. The parser parser
-        // emits an instruction for each complete set.
+        // The instruction expects a sequence of sets. The parser emits an
+        // instruction for each complete set.
+        //
+        // The field `num` must indicate the size of the set.
         //
         // For example, the instruction `L` expects 2 arguments in each set,
         // so the script `L 10 10 20 20` emit two `lineto` instructions:
         // `L 10 20` and `L 20 20`.
-        //
-        // The field `num` must indicate the size of the set.
         ARG_SYNTAX_SETS,
 
         // The instruction expects a single argument, which is a keyword
         // from the array in the field `const_names`.
         ARG_SYNTAX_CONST,
-    } kind;
+    } type;
 
     union {
         int num;
-        const struct ScriptConstantName *consts;
+        const struct ScriptConstant *consts;
     };
 };
 
@@ -131,8 +131,6 @@ struct ScriptInstructionSpec {
 // Instructions available to the scripts.
 //
 // The array must be sorted in ascending order by `name`.
-//
-// `name` in last item must be `NULL`.
 struct ScriptInstructionSpec instruction_specs[] = {
     { CMD_LINETO,      "L",           { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_MOVETO,      "M",           { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -146,14 +144,36 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { CMD_SETLINECAP,  "setlinecap",  { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
     { CMD_SETLINEJOIN, "setlinejoin", { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
     { CMD_STROKE,      "stroke",      { ARG_SYNTAX_NONE } },
-    { 0, NULL, {} }
 };
+
+#define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(instruction_specs)
 
 // Comparator for `ScriptInstructionSpec`, to be used with `bsearch(3)`.
 static int comparator_instruction_spec(const void *cs1, const void *cs2) {
     return strcmp(
         ((struct ScriptInstructionSpec*)cs1)->name,
         ((struct ScriptInstructionSpec*)cs2)->name
+    );
+}
+
+// Return the specs for the given instruction, or `NULL` if the name is not valid.
+static struct ScriptInstructionSpec* script_get_instruction(const char *name, size_t length) {
+    char bufname[64];
+    struct ScriptInstructionSpec key = { .name = bufname };
+
+    if (length >= sizeof(bufname)) {
+        return NULL;
+    }
+
+    memcpy(bufname, name, length);
+    bufname[length] = '\0';
+
+    return bsearch(
+        &key,
+        instruction_specs,
+        INSTRUCTION_SPECS_COUNT,
+        sizeof(instruction_specs[0]),
+        comparator_instruction_spec
     );
 }
 
@@ -165,11 +185,13 @@ struct ScriptParser {
 struct ScriptParserToken {
     enum {
         TOKEN_EOF,
-        TOKEN_WORD,
         TOKEN_EXPR,
+        TOKEN_LITERAL,
+        TOKEN_WORD,
     } type;
 
     const char *lexeme;
+    size_t position;
     size_t length;
 };
 
@@ -194,10 +216,12 @@ static int script_parser_scan(
     const char *source = &parser->source[parser->cursor];
 
     cursor = strspn(source, WORD_SEPARATOR);
+    token->position = parser->cursor + cursor;
+    token->lexeme = &source[cursor];
+
     switch (source[cursor]) {
     case '\0':
         token->type = TOKEN_EOF;
-        token->lexeme = "";
         token->length = 0;
         break;
 
@@ -209,7 +233,7 @@ static int script_parser_scan(
         while (level > 0) {
             switch (source[cursor + length]) {
             case '\0':
-                av_log(ctx, AV_LOG_ERROR, "unclosed '(' at position %zu\n", parser->cursor + cursor);
+                av_log(ctx, AV_LOG_ERROR, "unclosed '(' at position %zu\n", token->position);
                 return -1;
 
             case '(':
@@ -225,13 +249,27 @@ static int script_parser_scan(
         }
 
         token->type = TOKEN_EXPR;
-        token->lexeme = &source[cursor];
         token->length = length;
+        break;
+
+    case '-':
+    case '+':
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+        token->type = TOKEN_LITERAL;
+        token->length = strcspn(token->lexeme, WORD_SEPARATOR);
         break;
 
     default:
         token->type = TOKEN_WORD;
-        token->lexeme = &source[cursor];
         token->length = strcspn(token->lexeme, WORD_SEPARATOR);
         break;
     }
@@ -241,6 +279,201 @@ static int script_parser_scan(
     }
 
     return 0;
+}
+
+// Release the memory allocated by the script.
+static void script_free(struct Script *script) {
+    if (script->statements == NULL) {
+        return;
+    }
+
+    for (int i = 0; i < script->statements_count; i++) {
+        struct ScriptStatement *s = &script->statements[i];
+        if (s->args_count > 0) {
+            for (int j = 0; j < s->args_count; j++) {
+                if (s->args[j].type == SA_AV_EXPR) {
+                    av_expr_free(s->args[j].expr);
+                }
+            }
+
+            av_freep(&s->args);
+        }
+    }
+
+    av_freep(&script->statements);
+}
+
+static int parse_literal(struct ScriptParserToken *token, double *out) {
+    char buf[128];
+    char *endptr;
+
+    *out = FP_NAN;
+
+    if (token->length >= sizeof(buf)) {
+        return -1;
+    }
+
+    memcpy(buf, token->lexeme, token->length);
+    buf[token->length] = '\0';
+
+    *out = strtod(buf, &endptr);
+    return *endptr == '\0' ? 0 : - 1;
+}
+
+// Extract the arguments for an instruction, and add a new statement
+// to the script.
+static int script_parse_statement(
+    struct DrawVGContext *ctx,
+    struct ScriptParser *parser,
+    struct Script *script,
+    struct ScriptInstructionSpec *spec
+) {
+    int ret;
+    char *slice;
+    struct ScriptParserToken token;
+
+    struct ScriptStatement statement = {
+        .inst = spec->inst,
+        .args = NULL,
+        .args_count = 0,
+    };
+
+#define ADD_ARG(arg) \
+    do {                            \
+        void *r = av_dynarray2_add( \
+            (void*)&statement.args, \
+            &statement.args_count,  \
+            sizeof(arg),            \
+            (void*)&arg             \
+        );                          \
+                                    \
+        if (r == NULL) {            \
+            goto fail;              \
+        }                           \
+    } while(0)
+
+#define ADD_STATEMENT() \
+    do {                                \
+        void *r = av_dynarray2_add(     \
+            (void*)&script->statements, \
+            &script->statements_count,  \
+            sizeof(statement),          \
+            (void*)&statement           \
+        );                              \
+                                        \
+        if (r == NULL) {                \
+            goto fail;                  \
+        }                               \
+    } while(0)
+
+    switch (spec->syntax.type) {
+        case ARG_SYNTAX_NONE:
+            ADD_STATEMENT();
+            return 0;
+
+        case ARG_SYNTAX_SETS:
+add_set:
+            while (statement.args_count < spec->syntax.num) {
+                struct ScriptArgument arg;
+
+                ret = script_parser_scan(ctx, parser, &token, 1);
+                if (ret != 0) {
+                    goto fail;
+                }
+
+                switch (token.type) {
+                    case TOKEN_LITERAL:
+                        ret = parse_literal(&token, &arg.literal);
+                        if (ret != 0) {
+                            goto fail;
+                        }
+
+                        arg.type = SA_LITERAL;
+                        ADD_ARG(arg);
+                        break;
+
+                    case TOKEN_EXPR:
+                        slice = av_memdup(token.lexeme, token.length + 1);
+                        slice[token.length] = '\0';
+
+                        ret = av_expr_parse(
+                            &arg.expr,
+                            slice,
+                            NULL, // TODO
+                            NULL,
+                            NULL,
+                            NULL,
+                            NULL,
+                            0, // ??
+                            ctx
+                        );
+
+                        av_freep(&slice);
+
+                        if (ret != 0) {
+                            goto fail;
+                        }
+
+                        arg.type = SA_AV_EXPR;
+                        ADD_ARG(arg);
+
+                        break;
+
+                    default:
+                        av_log(ctx, AV_LOG_ERROR, "expected numeric argument at position %zu\n",
+                            token.position);
+                        goto fail;
+                }
+            }
+
+            ADD_STATEMENT();
+
+            // Add a new set if the next token is numeric.
+            if (
+                script_parser_scan(ctx, parser, &token, 0) == 0
+                && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
+            ) {
+                statement.args = NULL;
+                statement.args_count = 0;
+                goto add_set;
+            }
+
+            return 0;
+
+        case ARG_SYNTAX_CONST:
+            ret = script_parser_scan(ctx, parser, &token, 1);
+            if (ret != 0) {
+                goto fail;
+            }
+
+            for (const struct ScriptConstant *c = spec->syntax.consts; c->name != NULL; c++) {
+                if (
+                    strncmp(token.lexeme, c->name, token.length) == 0
+                    && token.length == strlen(c->name)
+                ) {
+                    struct ScriptArgument arg = {
+                        .type = SA_CONST,
+                        .constant = c->value,
+                    };
+
+                    ADD_ARG(arg);
+                    ADD_STATEMENT();
+                    return 0;
+                }
+            }
+
+            goto fail;
+    }
+
+#undef ADD_ARG
+#undef ADD_STATEMENT
+
+fail:
+    if (statement.args != NULL) {
+        av_freep(&statement.args);
+    }
+
+    return AVERROR(EINVAL);
 }
 
 // Parse a script and write the instructions to the `script` argument.
@@ -268,33 +501,39 @@ static int script_parse(
 
         ret = script_parser_scan(ctx, &parser, &token, 1);
         if (ret != 0) {
-            return ret;
+            goto fail;
         }
-
-        printf("token: %d -> |%.*s|\n", token.type, (int)token.length, token.lexeme);
 
         if (token.type == TOKEN_EOF) {
             break;
         }
+
+        if (token.type == TOKEN_WORD) {
+            // Expect a valid instruction.
+            struct ScriptInstructionSpec *inst = script_get_instruction(token.lexeme, token.length);
+            if (inst != NULL) {
+                ret = script_parse_statement(ctx, &parser, script, inst);
+                if (ret != 0) {
+                    goto fail;
+                }
+
+                continue;
+            }
+        }
+
+        av_log(ctx, AV_LOG_ERROR, "Invalid token at position %zu: %.*s\n",
+            token.position, (int)token.length, token.lexeme);
+
+        goto fail;
     }
 
     return 0;
+
+fail:
+    script_free(script);
+    return AVERROR(EINVAL);
 }
 
-// Release the memory allocated by the script.
-static void script_free(struct Script *script) {
-    if (script->statements == NULL) {
-        return;
-    }
-
-    for (int i = 0; i < script->statements_count; i++) {
-        if (script->statements[i].args_count > 0) {
-            av_freep(&script->statements[i].args);
-        }
-    }
-
-    av_freep(&script->statements);
-}
 
 
 typedef struct DrawVGContext {
