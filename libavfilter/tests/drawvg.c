@@ -139,8 +139,10 @@ static void check_sort_cmd_specs(void) {
 static void check_script(const char* source) {
     int ret;
     struct Script script;
-    double vars[VAR_COUNT] = { 1, 2, 4, 8 };
-    struct ReflectedControlPoints rcp = { .valid = 0 };
+    struct ScriptEvalContext ctx = {
+        .rcp = { .valid = 0 },
+        .vars = { 1, 2, 4, 8 },
+    };
 
     printf("\n---\n%s: {%s}\n", __func__, source);
 
@@ -153,7 +155,7 @@ static void check_script(const char* source) {
         return;
     }
 
-    ret = script_eval(NULL, &script, NULL, &rcp, vars);
+    ret = script_eval(&ctx, &script);
     if (ret != 0) {
         printf("%s: script_eval = %d\n", __func__, ret);
         return;
@@ -175,6 +177,19 @@ int main(void)
         "lineto 10 20\n"
         "setcolor red\n"
         "restore\n"
+        "stroke"
+    );
+
+    // Patterns
+    check_script(
+        "lineargrad 0 1 2 3\n"
+        "colorstop 0 red\n"
+        "colorstop 0.5 green\n"
+        "colorstop 1 blue\n"
+        "fill\n"
+        "radialgrad 1 2 3 4 5 6\n"
+        "colorstop 0 white\n"
+        "colorstop 1 black\n"
         "stroke"
     );
 

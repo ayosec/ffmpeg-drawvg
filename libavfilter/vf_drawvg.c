@@ -57,9 +57,12 @@ static const char *const var_names[] = {
 
 enum ScriptInstruction {
     CMD_CLOSE_PATH = 1,
+    CMD_COLOR_STOP,
+    CMD_LINEAR_GRAD,
     CMD_LINETO,
     CMD_MOVETO,
     CMD_Q_CURVE_TO,
+    CMD_RADIAL_GRAD,
     CMD_REL_LINETO,
     CMD_REL_MOVETO,
     CMD_REL_Q_CURVE_TO,
@@ -150,6 +153,9 @@ struct ScriptArgumentSyntax {
         // `num` indicates the maximum number of arguments, or `0` if
         // it accepts any number of colors.
         ARG_SYNTAX_COLORS,
+
+        // The instruction expects a number and a color.
+        ARG_SYNTAX_NUM_COLOR,
     } type;
 
     union {
@@ -174,12 +180,15 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { CMD_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
     { CMD_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
+    { CMD_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUM_COLOR } },
     { CMD_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_LINEAR_GRAD,    "lineargrad",         { ARG_SYNTAX_SETS, { .num = 4 } } },
     { CMD_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_REL_MOVETO,     "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_MOVETO,         "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_REL_Q_CURVE_TO, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { CMD_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { CMD_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SETS, { .num = 6 } } },
     { CMD_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
     { CMD_REL_LINETO,     "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_REL_MOVETO,     "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -360,21 +369,64 @@ static void script_free(struct Script *script) {
     av_freep(&script->statements);
 }
 
-static int parse_literal(struct ScriptParserToken *token, double *out) {
+static int parse_numeric_argument(
+    struct DrawVGContext *ctx,
+    struct ScriptParser *parser,
+    struct Script *script,
+    struct ScriptArgument *arg
+) {
+    int ret;
     char buf[128];
-    char *endptr;
+    char *slice;
+    struct ScriptParserToken token;
 
-    *out = NAN;
-
-    if (token->length >= sizeof(buf)) {
-        return -1;
+    ret = script_parser_scan(ctx, parser, &token, 1);
+    if (ret != 0) {
+        return ret;
     }
 
-    memcpy(buf, token->lexeme, token->length);
-    buf[token->length] = '\0';
+    switch (token.type) {
+    case TOKEN_LITERAL:
+        if (token.length >= sizeof(buf)) {
+            return -1;
+        }
 
-    *out = strtod(buf, &endptr);
-    return *endptr == '\0' ? 0 : - 1;
+        memcpy(buf, token.lexeme, token.length);
+        buf[token.length] = '\0';
+
+        arg->type = SA_LITERAL;
+        arg->literal = strtod(buf, &slice);
+
+        if (*slice != '\0') {
+            av_log(ctx, AV_LOG_ERROR, "invalid number '%.*s' at position %zu\n",
+                (int)token.length, token.lexeme, token.position);
+            return AVERROR(EINVAL);
+        }
+
+        return 0;
+
+    case TOKEN_EXPR:
+        slice = av_memdup(token.lexeme, token.length + 1);
+        slice[token.length] = '\0';
+
+        ret = av_expr_parse(&arg->expr, slice, var_names, NULL, NULL, NULL, NULL, 0, ctx);
+
+        av_freep(&slice);
+
+        if (ret != 0) {
+            return ret;
+        }
+
+        arg->type = SA_AV_EXPR;
+        break;
+
+    default:
+        av_log(ctx, AV_LOG_ERROR, "expected numeric argument at position %zu\n",
+            token.position);
+            return AVERROR(EINVAL);
+    }
+
+    return 0;
 }
 
 // Extract the arguments for an instruction, and add a new statement
@@ -386,8 +438,8 @@ static int script_parse_statement(
     struct ScriptInstructionSpec *spec
 ) {
     int ret;
-    char *slice;
 
+    struct ScriptArgument arg;
     struct ScriptParserToken token;
 
     struct ScriptStatement statement = {
@@ -432,48 +484,13 @@ static int script_parse_statement(
     case ARG_SYNTAX_SETS:
 add_set:
         while (statement.args_count < spec->syntax.num) {
-            struct ScriptArgument arg;
+            ret = parse_numeric_argument(ctx, parser, script, &arg);
 
-            ret = script_parser_scan(ctx, parser, &token, 1);
             if (ret != 0) {
                 goto fail;
             }
 
-            switch (token.type) {
-            case TOKEN_LITERAL:
-                ret = parse_literal(&token, &arg.literal);
-                if (ret != 0) {
-                    av_log(ctx, AV_LOG_ERROR, "invalid number '%.*s' at position %zu\n",
-                        (int)token.length, token.lexeme, token.position);
-                    goto fail;
-                }
-
-                arg.type = SA_LITERAL;
-                ADD_ARG(arg);
-                break;
-
-            case TOKEN_EXPR:
-                slice = av_memdup(token.lexeme, token.length + 1);
-                slice[token.length] = '\0';
-
-                ret = av_expr_parse(&arg.expr, slice, var_names, NULL, NULL, NULL, NULL, 0, ctx);
-
-                av_freep(&slice);
-
-                if (ret != 0) {
-                    goto fail;
-                }
-
-                arg.type = SA_AV_EXPR;
-                ADD_ARG(arg);
-
-                break;
-
-            default:
-                av_log(ctx, AV_LOG_ERROR, "expected numeric argument at position %zu\n",
-                    token.position);
-                goto fail;
-            }
+            ADD_ARG(arg);
         }
 
         ADD_STATEMENT();
@@ -556,6 +573,39 @@ add_set:
 
         ADD_STATEMENT();
         return 0;
+
+    case ARG_SYNTAX_NUM_COLOR:
+
+        // Parse offset.
+        ret = parse_numeric_argument(ctx, parser, script, &arg);
+        if (ret != 0)
+            goto fail;
+
+        ADD_ARG(arg);
+
+        // Parse color.
+        ret = script_parser_scan(ctx, parser, &token, 1);
+        if (ret != 0)
+            goto fail;
+
+        arg.type = SA_COLOR,
+        ret = av_parse_color(arg.color, token.lexeme, token.length, ctx);
+        if (ret != 0)
+            break;
+
+        ret = script_parser_scan(ctx, parser, &token, 0);
+        if (ret != 0)
+            goto fail;
+
+        ADD_ARG(arg);
+
+        if (TOKEN_IS_KEYWORD(&token, "end") || token.type == TOKEN_EOF) {
+            script_parser_scan(ctx, parser, &token, 1);
+            break;
+        }
+
+        ADD_STATEMENT();
+        return 0;
     }
 
 #undef ADD_ARG
@@ -627,15 +677,24 @@ fail:
     return AVERROR(EINVAL);
 }
 
-// Track control points from previous curve operation, for T and S instructions.
-//
-// https://www.w3.org/TR/SVG/paths.html#ReflectedControlPoints
-struct ReflectedControlPoints {
-    int valid;
-    double cubic_x;
-    double cubic_y;
-    double quad_x;
-    double quad_y;
+struct ScriptEvalContext {
+    void *log_ctx;
+
+    cairo_t *cairo_ctx;
+
+    double vars[VAR_COUNT];
+
+    // Track reflected control points from previous curve operation,
+    // for T and S instructions.
+    //
+    // https://www.w3.org/TR/SVG/paths.html#ReflectedControlPoints
+    struct {
+        int valid;
+        double cubic_x;
+        double cubic_y;
+        double quad_x;
+        double quad_y;
+    } rcp;
 };
 
 // Render a quadratic bezier from the current point to `x, y`, The control point
@@ -645,8 +704,7 @@ struct ReflectedControlPoints {
 //
 // cairo only supports cubic cuvers, so we have to transform the control points.
 static void quad_curve_to(
-    cairo_t *cairo_ctx,
-    struct ReflectedControlPoints *rcp,
+    struct ScriptEvalContext *ctx,
     int relative,
     double x1,
     double y1,
@@ -658,7 +716,7 @@ static void quad_curve_to(
 
     int use_reflected = isnan(x1);
 
-    cairo_get_current_point(cairo_ctx, &cpx, &cpy);
+    cairo_get_current_point(ctx->cairo_ctx, &cpx, &cpy);
 
     if (relative) {
         if (!use_reflected) {
@@ -671,9 +729,9 @@ static void quad_curve_to(
     }
 
     if (use_reflected) {
-        if (rcp->valid) {
-            x1 = rcp->cubic_x;
-            y1 = rcp->cubic_y;
+        if (ctx->rcp.valid) {
+            x1 = ctx->rcp.cubic_x;
+            y1 = ctx->rcp.cubic_y;
         } else {
             x1 = cpx;
             y1 = cpy;
@@ -684,38 +742,44 @@ static void quad_curve_to(
     ya = (cpy + 2 * y1) / 3;
     xb = (x + 2 * x1) / 3;
     yb = (y + 2 * y1) / 3;
-    cairo_curve_to(cairo_ctx, xa, ya, xb, yb, x, y);
+    cairo_curve_to(ctx->cairo_ctx, xa, ya, xb, yb, x, y);
 
-    rcp->valid = 1;
-    rcp->cubic_x = 2 * x - x1;
-    rcp->cubic_y = 2 * y - y1;
-    rcp->quad_x = x1;
-    rcp->quad_y = y1;
+    ctx->rcp.valid = 1;
+    ctx->rcp.cubic_x = 2 * x - x1;
+    ctx->rcp.cubic_y = 2 * y - y1;
+    ctx->rcp.quad_x = x1;
+    ctx->rcp.quad_y = y1;
 }
 
 // Execute the cairo functions for the given script.
 static int script_eval(
-    struct DrawVGContext *ctx,
-    const struct Script *script,
-    cairo_t *cairo_ctx,
-    struct ReflectedControlPoints *rcp,
-    const double vars[VAR_COUNT]
+    struct ScriptEvalContext *ctx,
+    const struct Script *script
 ) {
 #define ASSERT_ARGS(n) \
     do {                                                  \
         if (statement->args_count != n) {                 \
             /* This is a bug in the parser */             \
-            av_log(ctx, AV_LOG_ERROR,                     \
+            av_log(ctx->log_ctx, AV_LOG_ERROR,            \
                 "Instruction %d expects %d arguments.\n", \
                 statement->inst, n                        \
             );                                            \
         }                                                 \
     } while(0);
 
-    union { double d; int i; const uint8_t *c; } args[8];
+    union {
+        double d;
+        int i;
+        const uint8_t *c;
+    } args[32];
 
     for (int st_number = 0; st_number < script->statements_count; st_number++) {
         struct ScriptStatement *statement = &script->statements[st_number];
+
+        if (statement->args_count >= FF_ARRAY_ELEMS(args)) {
+            av_log(ctx->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
+            return AVERROR(E2BIG);
+        }
 
         for (int arg = 0; arg < statement->args_count; arg++) {
             const struct ScriptArgument *a = &statement->args[arg];
@@ -729,7 +793,7 @@ static int script_eval(
                 break;
 
             case SA_AV_EXPR:
-                args[arg].d = av_expr_eval(a->expr, vars, NULL);
+                args[arg].d = av_expr_eval(a->expr, ctx->vars, NULL);
                 break;
 
             case SA_COLOR:
@@ -741,68 +805,68 @@ static int script_eval(
         switch (statement->inst) {
         case CMD_CLOSE_PATH:
             ASSERT_ARGS(0);
-            cairo_close_path(cairo_ctx);
+            cairo_close_path(ctx->cairo_ctx);
             break;
 
         case CMD_LINETO:
             ASSERT_ARGS(2);
-            cairo_line_to(cairo_ctx, args[0].d, args[1].d);
+            cairo_line_to(ctx->cairo_ctx, args[0].d, args[1].d);
             break;
 
         case CMD_MOVETO:
             ASSERT_ARGS(2);
-            cairo_move_to(cairo_ctx, args[0].d, args[1].d);
+            cairo_move_to(ctx->cairo_ctx, args[0].d, args[1].d);
             break;
 
         case CMD_Q_CURVE_TO:
             ASSERT_ARGS(4);
-            quad_curve_to(cairo_ctx, rcp, 0, args[0].d, args[1].d, args[2].d, args[3].d);
+            quad_curve_to(ctx, 0, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
         case CMD_REL_LINETO:
             ASSERT_ARGS(2);
-            cairo_rel_line_to(cairo_ctx, args[0].d, args[1].d);
+            cairo_rel_line_to(ctx->cairo_ctx, args[0].d, args[1].d);
             break;
 
         case CMD_REL_MOVETO:
             ASSERT_ARGS(2);
-            cairo_rel_move_to(cairo_ctx, args[0].d, args[1].d);
+            cairo_rel_move_to(ctx->cairo_ctx, args[0].d, args[1].d);
             break;
 
         case CMD_REL_Q_CURVE_TO:
             ASSERT_ARGS(4);
-            quad_curve_to(cairo_ctx, rcp, 1, args[0].d, args[1].d, args[2].d, args[3].d);
+            quad_curve_to(ctx, 1, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
         case CMD_REL_T_CURVE_TO:
             ASSERT_ARGS(2);
-            quad_curve_to(cairo_ctx, rcp, 1, NAN, NAN, args[0].d, args[1].d);
+            quad_curve_to(ctx, 1, NAN, NAN, args[0].d, args[1].d);
             break;
 
         case CMD_RESTORE:
             ASSERT_ARGS(0);
-            cairo_restore(cairo_ctx);
+            cairo_restore(ctx->cairo_ctx);
             break;
 
         case CMD_SAVE:
             ASSERT_ARGS(0);
-            cairo_save(cairo_ctx);
+            cairo_save(ctx->cairo_ctx);
             break;
 
         case CMD_SCALE:
             ASSERT_ARGS(1);
-            cairo_scale(cairo_ctx, args[0].d, args[0].d);
+            cairo_scale(ctx->cairo_ctx, args[0].d, args[0].d);
             break;
 
         case CMD_SCALEXY:
             ASSERT_ARGS(2);
-            cairo_scale(cairo_ctx, args[0].d, args[1].d);
+            cairo_scale(ctx->cairo_ctx, args[0].d, args[1].d);
             break;
 
         case CMD_SETCOLOR:
             ASSERT_ARGS(1);
             cairo_set_source_rgba(
-                cairo_ctx,
+                ctx->cairo_ctx,
                 args[0].c[0] / 255.0,
                 args[0].c[1] / 255.0,
                 args[0].c[2] / 255.0,
@@ -812,27 +876,27 @@ static int script_eval(
 
         case CMD_SETLINECAP:
             ASSERT_ARGS(1);
-            cairo_set_line_cap(cairo_ctx, args[0].i);
+            cairo_set_line_cap(ctx->cairo_ctx, args[0].i);
             break;
 
         case CMD_SETLINEJOIN:
             ASSERT_ARGS(1);
-            cairo_set_line_join(cairo_ctx, args[0].i);
+            cairo_set_line_join(ctx->cairo_ctx, args[0].i);
             break;
 
         case CMD_SETLINEWIDTH:
             ASSERT_ARGS(1);
-            cairo_set_line_width(cairo_ctx, args[0].d);
+            cairo_set_line_width(ctx->cairo_ctx, args[0].d);
             break;
 
         case CMD_STROKE:
             ASSERT_ARGS(0);
-            cairo_stroke_preserve(cairo_ctx);
+            cairo_stroke_preserve(ctx->cairo_ctx);
             break;
 
         case CMD_T_CURVE_TO:
             ASSERT_ARGS(2);
-            quad_curve_to(cairo_ctx, rcp, 0, NAN, NAN, args[0].d, args[1].d);
+            quad_curve_to(ctx, 0, NAN, NAN, args[0].d, args[1].d);
             break;
         }
 
@@ -846,7 +910,7 @@ static int script_eval(
             break;
 
         default:
-            rcp->valid = 0;
+            ctx->rcp.valid = 0;
         }
     }
 
@@ -932,14 +996,16 @@ static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixel
 static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     int ret;
     cairo_surface_t* surface;
-    cairo_t *cairo_ctx;
-    double var_values[VAR_COUNT];
 
     FilterLink *inl = ff_filter_link(inlink);
     AVFilterLink *outlink = inlink->dst->outputs[0];
     AVFilterContext *filter_ctx = inlink->dst;
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
-    struct ReflectedControlPoints rcp = { .valid = 0 };
+
+    struct ScriptEvalContext eval_ctx = {
+        .log_ctx = drawvg_ctx,
+        .rcp = { .valid = 0 },
+    };
 
     // Draw directly on the frame data.
     surface = cairo_image_surface_create_for_data(
@@ -955,16 +1021,16 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
         return AVERROR_EXTERNAL;
     }
 
-    cairo_ctx = cairo_create(surface);
+    eval_ctx.cairo_ctx = cairo_create(surface);
 
-    var_values[VAR_N] = inl->frame_count_out;
-    var_values[VAR_T] = frame->pts == AV_NOPTS_VALUE ? NAN : frame->pts * av_q2d(inlink->time_base);
-    var_values[VAR_W] = inlink->w;
-    var_values[VAR_H] = inlink->h;
+    eval_ctx.vars[VAR_N] = inl->frame_count_out;
+    eval_ctx.vars[VAR_T] = frame->pts == AV_NOPTS_VALUE ? NAN : frame->pts * av_q2d(inlink->time_base);
+    eval_ctx.vars[VAR_W] = inlink->w;
+    eval_ctx.vars[VAR_H] = inlink->h;
 
-    ret = script_eval(drawvg_ctx, &drawvg_ctx->script, cairo_ctx, &rcp, var_values);
+    ret = script_eval(&eval_ctx, &drawvg_ctx->script);
 
-    cairo_destroy(cairo_ctx);
+    cairo_destroy(eval_ctx.cairo_ctx);
     cairo_surface_destroy(surface);
 
     if (ret != 0) {
