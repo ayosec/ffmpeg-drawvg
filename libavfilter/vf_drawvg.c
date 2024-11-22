@@ -33,19 +33,45 @@
 
 #include "avfilter.h"
 #include "filters.h"
+#include "textutils.h"
 #include "video.h"
 
 struct DrawVGContext;
 
+enum {
+    VAR_N,
+    VAR_T,
+    VAR_W,
+    VAR_H,
+};
+
+static const char *const var_names[] = {
+    "n",
+    "t",
+    "w",
+    "h",
+    NULL
+};
+
+#define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
+
 enum ScriptInstruction {
     CMD_LINETO = 1,
     CMD_MOVETO,
+    CMD_Q_CURVE_TO,
     CMD_REL_LINETO,
     CMD_REL_MOVETO,
+    CMD_REL_Q_CURVE_TO,
+    CMD_REL_T_CURVE_TO,
+    CMD_RESTORE,
     CMD_SAVE,
+    CMD_SCALE,
+    CMD_SCALEXY,
     CMD_SETLINECAP,
     CMD_SETLINEJOIN,
+    CMD_SETLINEWIDTH,
     CMD_STROKE,
+    CMD_T_CURVE_TO,
 };
 
 // Instruction arguments.
@@ -132,18 +158,30 @@ struct ScriptInstructionSpec {
 //
 // The array must be sorted in ascending order by `name`.
 struct ScriptInstructionSpec instruction_specs[] = {
-    { CMD_LINETO,      "L",           { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_MOVETO,      "M",           { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_LINETO,  "l",           { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_LINETO,      "lineto",      { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_MOVETO,  "m",           { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_MOVETO,      "moveto",      { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_LINETO,  "rlineto",     { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_MOVETO,  "rmoveto",     { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_SAVE,        "save",        { ARG_SYNTAX_NONE } },
-    { CMD_SETLINECAP,  "setlinecap",  { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
-    { CMD_SETLINEJOIN, "setlinejoin", { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
-    { CMD_STROKE,      "stroke",      { ARG_SYNTAX_NONE } },
+    { CMD_LINETO,         "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_MOVETO,         "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { CMD_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_MOVETO,     "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_MOVETO,         "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_Q_CURVE_TO, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { CMD_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { CMD_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
+    { CMD_REL_LINETO,     "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_MOVETO,     "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_Q_CURVE_TO, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { CMD_REL_T_CURVE_TO, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_SAVE,           "save",               { ARG_SYNTAX_NONE } },
+    { CMD_SCALE,          "scale",              { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { CMD_SCALEXY,        "scalexy",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_SETLINECAP,     "setlinecap",         { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
+    { CMD_SETLINEJOIN,    "setlinejoin",        { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
+    { CMD_SETLINEWIDTH,   "setlinewidth",       { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { CMD_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
+    { CMD_REL_T_CURVE_TO, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
 };
 
 #define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(instruction_specs)
@@ -307,7 +345,7 @@ static int parse_literal(struct ScriptParserToken *token, double *out) {
     char buf[128];
     char *endptr;
 
-    *out = FP_NAN;
+    *out = NAN;
 
     if (token->length >= sizeof(buf)) {
         return -1;
@@ -367,102 +405,97 @@ static int script_parse_statement(
     } while(0)
 
     switch (spec->syntax.type) {
-        case ARG_SYNTAX_NONE:
-            ADD_STATEMENT();
-            return 0;
+    case ARG_SYNTAX_NONE:
+        ADD_STATEMENT();
+        return 0;
 
-        case ARG_SYNTAX_SETS:
+    case ARG_SYNTAX_SETS:
 add_set:
-            while (statement.args_count < spec->syntax.num) {
-                struct ScriptArgument arg;
+        while (statement.args_count < spec->syntax.num) {
+            struct ScriptArgument arg;
 
-                ret = script_parser_scan(ctx, parser, &token, 1);
-                if (ret != 0) {
-                    goto fail;
-                }
-
-                switch (token.type) {
-                    case TOKEN_LITERAL:
-                        ret = parse_literal(&token, &arg.literal);
-                        if (ret != 0) {
-                            goto fail;
-                        }
-
-                        arg.type = SA_LITERAL;
-                        ADD_ARG(arg);
-                        break;
-
-                    case TOKEN_EXPR:
-                        slice = av_memdup(token.lexeme, token.length + 1);
-                        slice[token.length] = '\0';
-
-                        ret = av_expr_parse(
-                            &arg.expr,
-                            slice,
-                            NULL, // TODO
-                            NULL,
-                            NULL,
-                            NULL,
-                            NULL,
-                            0, // ??
-                            ctx
-                        );
-
-                        av_freep(&slice);
-
-                        if (ret != 0) {
-                            goto fail;
-                        }
-
-                        arg.type = SA_AV_EXPR;
-                        ADD_ARG(arg);
-
-                        break;
-
-                    default:
-                        av_log(ctx, AV_LOG_ERROR, "expected numeric argument at position %zu\n",
-                            token.position);
-                        goto fail;
-                }
-            }
-
-            ADD_STATEMENT();
-
-            // Add a new set if the next token is numeric.
-            if (
-                script_parser_scan(ctx, parser, &token, 0) == 0
-                && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
-            ) {
-                statement.args = NULL;
-                statement.args_count = 0;
-                goto add_set;
-            }
-
-            return 0;
-
-        case ARG_SYNTAX_CONST:
             ret = script_parser_scan(ctx, parser, &token, 1);
             if (ret != 0) {
                 goto fail;
             }
 
-            for (const struct ScriptConstant *c = spec->syntax.consts; c->name != NULL; c++) {
-                if (
-                    strncmp(token.lexeme, c->name, token.length) == 0
-                    && token.length == strlen(c->name)
-                ) {
-                    struct ScriptArgument arg = {
-                        .type = SA_CONST,
-                        .constant = c->value,
-                    };
-
-                    ADD_ARG(arg);
-                    ADD_STATEMENT();
-                    return 0;
+            switch (token.type) {
+            case TOKEN_LITERAL:
+                ret = parse_literal(&token, &arg.literal);
+                if (ret != 0) {
+                    av_log(ctx, AV_LOG_ERROR, "invalid number '%.*s' at position %zu\n",
+                        (int)token.length, token.lexeme, token.position);
+                    goto fail;
                 }
-            }
 
+                arg.type = SA_LITERAL;
+                ADD_ARG(arg);
+                break;
+
+            case TOKEN_EXPR:
+                slice = av_memdup(token.lexeme, token.length + 1);
+                slice[token.length] = '\0';
+
+                ret = av_expr_parse(&arg.expr, slice, var_names, NULL, NULL, NULL, NULL, 0, ctx);
+
+                av_freep(&slice);
+
+                if (ret != 0) {
+                    goto fail;
+                }
+
+                arg.type = SA_AV_EXPR;
+                ADD_ARG(arg);
+
+                break;
+
+            default:
+                av_log(ctx, AV_LOG_ERROR, "expected numeric argument at position %zu\n",
+                    token.position);
+                goto fail;
+            }
+        }
+
+        ADD_STATEMENT();
+
+        // Repeat this instruction with another set if the next token is numeric.
+        if (
+            script_parser_scan(ctx, parser, &token, 0) == 0
+            && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
+        ) {
+            statement.args = NULL;
+            statement.args_count = 0;
+            goto add_set;
+        }
+
+        return 0;
+
+    case ARG_SYNTAX_CONST:
+        ret = script_parser_scan(ctx, parser, &token, 1);
+        if (ret != 0) {
             goto fail;
+        }
+
+        for (const struct ScriptConstant *c = spec->syntax.consts; c->name != NULL; c++) {
+            if (
+                strncmp(token.lexeme, c->name, token.length) == 0
+                && token.length == strlen(c->name)
+            ) {
+                struct ScriptArgument arg = {
+                    .type = SA_CONST,
+                    .constant = c->value,
+                };
+
+                ADD_ARG(arg);
+                ADD_STATEMENT();
+                return 0;
+            }
+        }
+
+        av_log(ctx, AV_LOG_ERROR, "invalid argument '%.*s' at position %zu\n",
+            (int)token.length, token.lexeme, token.position);
+
+        goto fail;
     }
 
 #undef ADD_ARG
@@ -521,7 +554,7 @@ static int script_parse(
             }
         }
 
-        av_log(ctx, AV_LOG_ERROR, "Invalid token at position %zu: %.*s\n",
+        av_log(ctx, AV_LOG_ERROR, "Invalid token at position %zu: '%.*s'\n",
             token.position, (int)token.length, token.lexeme);
 
         goto fail;
@@ -534,14 +567,220 @@ fail:
     return AVERROR(EINVAL);
 }
 
+// Track control points from previous curve operation, for T and S instructions.
+//
+// https://www.w3.org/TR/SVG/paths.html#ReflectedControlPoints
+struct ReflectedControlPoints {
+    int valid;
+    double cubic_x;
+    double cubic_y;
+    double quad_x;
+    double quad_y;
+};
+
+// Render a quadratic bezier from the current point to `x, y`, The control point
+// is specified by `x1, y1`.
+//
+// If the control point is NAN, use the reflected point.
+//
+// cairo only supports cubic cuvers, so we have to transform the control points.
+static void quad_curve_to(
+    cairo_t *cairo_ctx,
+    struct ReflectedControlPoints *rcp,
+    int relative,
+    double x1,
+    double y1,
+    double x,
+    double y
+) {
+    double cpx, cpy;        // Current point.
+    double xa, ya, xb, yb;  // Control points for the cubic curve.
+
+    int use_reflected = isnan(x1);
+
+    cairo_get_current_point(cairo_ctx, &cpx, &cpy);
+
+    if (relative) {
+        if (!use_reflected) {
+            x1 += cpx;
+            y1 += cpy;
+        }
+
+        x += cpx;
+        y += cpy;
+    }
+
+    if (use_reflected) {
+        if (rcp->valid) {
+            x1 = rcp->cubic_x;
+            y1 = rcp->cubic_y;
+        } else {
+            x1 = cpx;
+            y1 = cpy;
+        }
+    }
+
+    xa = (cpx + 2 * x1) / 3;
+    ya = (cpy + 2 * y1) / 3;
+    xb = (x + 2 * x1) / 3;
+    yb = (y + 2 * y1) / 3;
+    cairo_curve_to(cairo_ctx, xa, ya, xb, yb, x, y);
+
+    rcp->valid = 1;
+    rcp->cubic_x = 2 * x - x1;
+    rcp->cubic_y = 2 * y - y1;
+    rcp->quad_x = x1;
+    rcp->quad_y = y1;
+}
+
+// Execute the cairo functions for the given script.
+static int script_eval(
+    struct DrawVGContext *ctx,
+    const struct Script *script,
+    cairo_t *cairo_ctx,
+    struct ReflectedControlPoints *rcp,
+    const double vars[VAR_COUNT]
+) {
+#define ASSERT_ARGS(n) \
+    do {                                                  \
+        if (statement->args_count != n) {                 \
+            /* This is a bug in the parser */             \
+            av_log(ctx, AV_LOG_ERROR,                     \
+                "Instruction %d expects %d arguments.\n", \
+                statement->inst, n                        \
+            );                                            \
+        }                                                 \
+    } while(0);
+
+    union { double d; int i; } args[8];
+
+    for (int st_number = 0; st_number < script->statements_count; st_number++) {
+        struct ScriptStatement *statement = &script->statements[st_number];
+
+        for (int arg = 0; arg < statement->args_count; arg++) {
+            const struct ScriptArgument *a = &statement->args[arg];
+            switch (a->type) {
+            case SA_CONST:
+                args[arg].i = a->constant;
+                break;
+
+            case SA_LITERAL:
+                args[arg].d = a->literal;
+                break;
+
+            case SA_AV_EXPR:
+                args[arg].d = av_expr_eval(a->expr, vars, NULL);
+                break;
+            }
+        }
+
+        switch (statement->inst) {
+        case CMD_LINETO:
+            ASSERT_ARGS(2);
+            cairo_line_to(cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case CMD_MOVETO:
+            ASSERT_ARGS(2);
+            cairo_move_to(cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case CMD_Q_CURVE_TO:
+            ASSERT_ARGS(4);
+            quad_curve_to(cairo_ctx, rcp, 0, args[0].d, args[1].d, args[2].d, args[3].d);
+            break;
+
+        case CMD_REL_LINETO:
+            ASSERT_ARGS(2);
+            cairo_rel_line_to(cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case CMD_REL_MOVETO:
+            ASSERT_ARGS(2);
+            cairo_rel_move_to(cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case CMD_REL_Q_CURVE_TO:
+            ASSERT_ARGS(4);
+            quad_curve_to(cairo_ctx, rcp, 1, args[0].d, args[1].d, args[2].d, args[3].d);
+            break;
+
+        case CMD_REL_T_CURVE_TO:
+            ASSERT_ARGS(2);
+            quad_curve_to(cairo_ctx, rcp, 1, NAN, NAN, args[0].d, args[1].d);
+            break;
+
+        case CMD_RESTORE:
+            ASSERT_ARGS(0);
+            cairo_restore(cairo_ctx);
+            break;
+
+        case CMD_SAVE:
+            ASSERT_ARGS(0);
+            cairo_save(cairo_ctx);
+            break;
+
+        case CMD_SCALE:
+            ASSERT_ARGS(1);
+            cairo_scale(cairo_ctx, args[0].d, args[0].d);
+            break;
+
+        case CMD_SCALEXY:
+            ASSERT_ARGS(2);
+            cairo_scale(cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case CMD_SETLINECAP:
+            ASSERT_ARGS(1);
+            cairo_set_line_cap(cairo_ctx, args[0].i);
+            break;
+
+        case CMD_SETLINEJOIN:
+            ASSERT_ARGS(1);
+            cairo_set_line_join(cairo_ctx, args[0].i);
+            break;
+
+        case CMD_SETLINEWIDTH:
+            ASSERT_ARGS(1);
+            cairo_set_line_width(cairo_ctx, args[0].d);
+            break;
+
+        case CMD_STROKE:
+            ASSERT_ARGS(0);
+            cairo_stroke_preserve(cairo_ctx);
+            break;
+
+        case CMD_T_CURVE_TO:
+            ASSERT_ARGS(2);
+            quad_curve_to(cairo_ctx, rcp, 0, NAN, NAN, args[0].d, args[1].d);
+            break;
+        }
+
+        // Discard reflected points if the last instruction is not
+        // a cubic or quadratic curve.
+        switch (statement->inst) {
+        case CMD_Q_CURVE_TO:
+        case CMD_REL_Q_CURVE_TO:
+        case CMD_REL_T_CURVE_TO:
+        case CMD_T_CURVE_TO:
+            break;
+
+        default:
+            rcp->valid = 0;
+        }
+    }
+
+    return 0;
+}
 
 
 typedef struct DrawVGContext {
     const AVClass *class;
 
-    cairo_format_t cairo_format;     ///< equivalent to AVPixelFormat
+    cairo_format_t cairo_format;    ///< equivalent to AVPixelFormat
 
-    uint8_t *script_source;
+    uint8_t *script_text;           ///< inline source.
+    uint8_t *script_file;           ///< file with the script.
     struct Script script;
 } DrawVGContext;
 
@@ -549,32 +788,32 @@ typedef struct DrawVGContext {
 
 #define FLAGS AV_OPT_FLAG_FILTERING_PARAM | AV_OPT_FLAG_VIDEO_PARAM
 
-#define OPT_SCRIPT(name) \
-    {                                            \
-        name,                                    \
-        "script source to render the graphics.", \
-        OFFSET(script_source),                   \
-        AV_OPT_TYPE_STRING,                      \
-        { .str = NULL },                         \
-        0, 0,                                    \
-        FLAGS                                    \
+#define OPT(name, field, help) \
+    {                          \
+        name,                  \
+        help,                  \
+        OFFSET(field),         \
+        AV_OPT_TYPE_STRING,    \
+        { .str = NULL },       \
+        0, 0,                  \
+        FLAGS                  \
     }
 
 static const AVOption drawvg_options[]= {
-    OPT_SCRIPT("script"),
-    OPT_SCRIPT("s"),
+    OPT("script", script_text, "script source to draw the graphics"),
+    OPT("s",      script_text, "script source to draw the graphics"),
+    OPT("file",   script_file, "file to load the script source"),
     { NULL }
 };
 
 #undef OFFSET
 #undef FLAGS
-#undef OPT_SCRIPT
-#undef OPT_ARGN
+#undef OPT
 
 
 AVFILTER_DEFINE_CLASS(drawvg);
 
-static const enum AVPixelFormat pixel_fmts_drawvg[] = {
+static const enum AVPixelFormat drawvg_pix_fmts[] = {
     AV_PIX_FMT_BGRA,
     AV_PIX_FMT_BGR0,
     AV_PIX_FMT_RGB565LE,
@@ -585,7 +824,7 @@ static const enum AVPixelFormat pixel_fmts_drawvg[] = {
 // Return the cairo equivalent to AVPixelFormat.
 static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixelFormat format) {
     // This array must have the same order of `pixel_fmts_drawvg`.
-    const cairo_format_t pixel_fmt_map[] = {
+    const cairo_format_t format_map[] = {
         CAIRO_FORMAT_ARGB32, // cairo expects pre-multiplied alpha.
         CAIRO_FORMAT_RGB24,
         CAIRO_FORMAT_RGB16_565,
@@ -595,9 +834,9 @@ static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixel
 
     const char* pix_fmt_name = av_get_pix_fmt_name(format);
 
-    for (int i = 0; pixel_fmts_drawvg[i] != AV_PIX_FMT_NONE; i++) {
-        if (pixel_fmts_drawvg[i] == format) {
-            cairo_format_t fmt = pixel_fmt_map[i];
+    for (int i = 0; FF_ARRAY_ELEMS(format_map); i++) {
+        if (drawvg_pix_fmts[i] == format) {
+            cairo_format_t fmt = format_map[i];
 
             av_log(ctx, AV_LOG_TRACE, "Use cairo_format_t#%d for %s\n",
                 fmt, pix_fmt_name);
@@ -611,13 +850,16 @@ static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixel
 }
 
 static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
+    int ret;
     cairo_surface_t* surface;
-    cairo_t *cr;
+    cairo_t *cairo_ctx;
+    double var_values[VAR_COUNT];
 
-    /*FilterLink *inl = ff_filter_link(inlink);*/
+    FilterLink *inl = ff_filter_link(inlink);
     AVFilterLink *outlink = inlink->dst->outputs[0];
     AVFilterContext *filter_ctx = inlink->dst;
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
+    struct ReflectedControlPoints rcp = { .valid = 0 };
 
     // Draw directly on the frame data.
     surface = cairo_image_surface_create_for_data(
@@ -633,47 +875,31 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
         return AVERROR_EXTERNAL;
     }
 
-    cr = cairo_create(surface);
+    cairo_ctx = cairo_create(surface);
 
-    // Simple example.
-    cairo_save(cr);
-    cairo_set_source_rgba(cr, 1, 0, 0, 0.9);
-    cairo_set_line_width(cr, 30);
-    cairo_translate(cr, frame->width/2, frame->height/2);
-    cairo_arc(cr, 0, 0, frame->width/3, 0, 2 * M_PI);
-    cairo_stroke(cr);
-    cairo_restore(cr);
+    var_values[VAR_N] = inl->frame_count_out;
+    var_values[VAR_T] = frame->pts == AV_NOPTS_VALUE ? NAN : frame->pts * av_q2d(inlink->time_base);
+    var_values[VAR_W] = inlink->w;
+    var_values[VAR_H] = inlink->h;
 
-    cairo_set_line_width(cr, 5);
-    cairo_set_source_rgba(cr, 0, 1, 0, 1);
-    cairo_translate(cr, 0, frame->height/2);
-    cairo_scale(cr, 1, frame->pts / 40.0 + 0.5);
-    cairo_set_font_size(cr, frame->width/3);
-    cairo_move_to(cr, 0, -frame->width/3);
-    cairo_text_path(cr, "xyz");
-    cairo_stroke(cr);
+    ret = script_eval(drawvg_ctx, &drawvg_ctx->script, cairo_ctx, &rcp, var_values);
 
+    cairo_destroy(cairo_ctx);
     cairo_surface_destroy(surface);
+
+    if (ret != 0) {
+        return ret;
+    }
 
     return ff_filter_frame(outlink, frame);
 }
 
 static int drawvg_config_props(AVFilterLink *inlink) {
-    const AVPixFmtDescriptor *desc;
     AVFilterContext *filter_ctx = inlink->dst;
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
     // Find the cairo format equivalent to the format of the frame,
     // so cairo can draw directly on the frame data.
-    //
-    // Cairo is compatible only with packed pixel formats.
-
-    desc = av_pix_fmt_desc_get(inlink->format);
-    if (desc->flags & AV_PIX_FMT_FLAG_BITSTREAM == 0) {
-        av_log(drawvg_ctx, AV_LOG_ERROR, "Expected packed pixel format, received: %s\n",
-            desc->name);
-        return AVERROR(EINVAL);
-    }
 
     drawvg_ctx->cairo_format = cairo_format_from_pix_fmt(drawvg_ctx, inlink->format);
     if (drawvg_ctx->cairo_format == CAIRO_FORMAT_INVALID) {
@@ -684,8 +910,22 @@ static int drawvg_config_props(AVFilterLink *inlink) {
 }
 
 static av_cold int drawvg_init(AVFilterContext *ctx) {
-    // TODO parse script
-    return 0;
+    DrawVGContext *drawvg = ctx->priv;
+
+    if (drawvg->script_file != NULL) {
+        int ret = ff_load_textfile(
+            ctx,
+            (const char *)drawvg->script_file,
+            &drawvg->script_text,
+            NULL
+        );
+
+        if (ret != 0) {
+            return ret;
+        }
+    }
+
+    return script_parse(drawvg, drawvg->script_text, &drawvg->script);
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {
@@ -695,8 +935,9 @@ static av_cold void drawvg_uninit(AVFilterContext *ctx) {
 
 static const AVFilterPad drawvg_inputs[] = {
     {
-        .name = "default",
-        .type = AVMEDIA_TYPE_VIDEO,
+        .name         = "default",
+        .type         = AVMEDIA_TYPE_VIDEO,
+        .flags        = AVFILTERPAD_FLAG_NEEDS_WRITABLE,
         .filter_frame = drawvg_filter_frame,
         .config_props = drawvg_config_props,
     },
@@ -712,5 +953,5 @@ const AVFilter ff_vf_drawvg = {
     .uninit      = drawvg_uninit,
     FILTER_INPUTS(drawvg_inputs),
     FILTER_OUTPUTS(ff_video_default_filterpad),
-    FILTER_PIXFMTS_ARRAY(pixel_fmts_drawvg),
+    FILTER_PIXFMTS_ARRAY(drawvg_pix_fmts),
 };

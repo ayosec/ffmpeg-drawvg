@@ -24,37 +24,64 @@
 
 // Mock for cairo functions.
 //
-// `MOCK_FN_n` macros define wrappers for functions that only
-// receive `n` arguments of type `double`.
+// `MOCK_FN_n` macros define wrappers for functions that only receive `n`
+// arguments of type `double`.
+//
+// `MOCK_FN_I` macro wrap a function that receives a single integer value.
 
-#define MOCK_FN_0(func) \
+static double current_point_x;
+static double current_point_y;
+
+static void update_current_point(const char *func, double x, double y) {
+    // Update current point only if the function name contains `_to`.
+    if (strstr(func, "_to") == NULL) {
+        return;
+    }
+
+    if (strstr(func, "_rel_") == NULL) {
+        current_point_x = x;
+        current_point_y = y;
+    } else {
+        current_point_x += x;
+        current_point_y += y;
+    }
+}
+
+#define MOCK_FN_0(func)      \
     void func(cairo_t* cr) { \
         puts(#func);         \
     }
 
-#define MOCK_FN_1(func) \
+#define MOCK_FN_1(func)                 \
     void func(cairo_t* cr, double a0) { \
-        printf(#func " %g\n", a0);      \
+        printf(#func " %.1f\n", a0);      \
     }
 
-#define MOCK_FN_2(func) \
+#define MOCK_FN_2(func)                            \
     void func(cairo_t* cr, double a0, double a1) { \
-        printf(#func " %g %g\n", a0, a1);          \
+        update_current_point(#func, a0, a1);       \
+        printf(#func " %.1f %.1f\n", a0, a1);          \
     }
 
-#define MOCK_FN_4(func) \
+#define MOCK_FN_4(func)                                                  \
     void func(cairo_t* cr, double a0, double a1, double a2, double a3) { \
-        printf(#func " %g %g %g %g\n", a0, a1, a2, a3);                  \
+        printf(#func " %.1f %.1f %.1f %.1f\n", a0, a1, a2, a3);                  \
     }
 
-#define MOCK_FN_5(func) \
+#define MOCK_FN_5(func)                                                             \
     void func(cairo_t* cr, double a0, double a1, double a2, double a3, double a4) { \
-        printf(#func " %g %g %g %g %g\n", a0, a1, a2, a3, a4);                      \
+        printf(#func " %.1f %.1f %.1f %.1f %.1f\n", a0, a1, a2, a3, a4);                      \
     }
 
-#define MOCK_FN_6(func) \
+#define MOCK_FN_6(func)                                                                        \
     void func(cairo_t* cr, double a0, double a1, double a2, double a3, double a4, double a5) { \
-        printf(#func " %g %g %g %g %g %g\n", a0, a1, a2, a3, a4, a5);                          \
+        update_current_point(#func, a4, a5);                                                   \
+        printf(#func " %.1f %.1f %.1f %.1f %.1f %.1f\n", a0, a1, a2, a3, a4, a5);                          \
+    }
+
+#define MOCK_FN_I(func, type)          \
+    void func(cairo_t* cr, type i) {   \
+        printf(#func " %d\n", (int)i); \
     }
 
 MOCK_FN_5(cairo_arc);
@@ -74,6 +101,8 @@ MOCK_FN_1(cairo_rotate);
 MOCK_FN_0(cairo_save);
 MOCK_FN_2(cairo_scale);
 MOCK_FN_1(cairo_set_font_size);
+MOCK_FN_I(cairo_set_line_cap, cairo_line_cap_t);
+MOCK_FN_I(cairo_set_line_join, cairo_line_join_t);
 MOCK_FN_1(cairo_set_line_width);
 MOCK_FN_1(cairo_set_miter_limit);
 MOCK_FN_4(cairo_set_source_rgba);
@@ -81,8 +110,8 @@ MOCK_FN_0(cairo_stroke_preserve);
 MOCK_FN_2(cairo_translate);
 
 void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
-    *x = 100;
-    *y = 200;
+    *x = current_point_x;
+    *y = current_point_y;
 }
 
 // Veify that the `command_specs` is sorted. This is required because
@@ -103,19 +132,30 @@ static void check_sort_cmd_specs(void) {
         }
     }
 
-    printf("%s: %d failures\n\n", __func__, failures);
+    printf("%s: %d failures\n", __func__, failures);
 }
 
 // Compile and run a script.
 static void check_script(const char* source) {
     int ret;
     struct Script script;
+    double vars[VAR_COUNT] = { 1, 2, 4, 8 };
+    struct ReflectedControlPoints rcp = { .valid = 0 };
 
-    printf("%s: %s\n", __func__, source);
+    printf("\n---\n%s: {%s}\n", __func__, source);
+
+    current_point_x = 0;
+    current_point_y = 0;
 
     ret = script_parse(NULL, source, &script);
     if (ret != 0) {
         printf("%s: script_parse = %d\n", __func__, ret);
+        return;
+    }
+
+    ret = script_eval(NULL, &script, NULL, &rcp, vars);
+    if (ret != 0) {
+        printf("%s: script_eval = %d\n", __func__, ret);
         return;
     }
 
@@ -126,7 +166,31 @@ int main(void)
 {
     check_sort_cmd_specs();
 
-    check_script("save setlinecap round M 0 (4 * (1 + 0.5)) lineto 10 20 stroke");
+    check_script(
+        "save\n"
+        "scale 1 scalexy 2 3\n"
+        "setlinejoin miter\n"
+        "setlinecap round\n"
+        "M 0 (PI * (1 + 0.5))\n"
+        "lineto 10 20\n"
+        "restore\n"
+        "stroke"
+    );
+
+    // From a SVG <path>.
+    check_script("M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0");
+
+    // Detect unclosed expressions.
+    check_script("M 0 (1*(t+1)");
+
+    // Invalid instruction.
+    check_script("save invalid 1 2");
+
+    // Invalid constant.
+    check_script("setlinecap unknown m 10 20");
+
+    // Missing arguments.
+    check_script("M 0 1 2");
 
     return 0;
 }
