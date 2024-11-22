@@ -56,7 +56,8 @@ static const char *const var_names[] = {
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
 enum ScriptInstruction {
-    CMD_LINETO = 1,
+    CMD_CLOSE_PATH = 1,
+    CMD_LINETO,
     CMD_MOVETO,
     CMD_Q_CURVE_TO,
     CMD_REL_LINETO,
@@ -67,6 +68,7 @@ enum ScriptInstruction {
     CMD_SAVE,
     CMD_SCALE,
     CMD_SCALEXY,
+    CMD_SETCOLOR,
     CMD_SETLINECAP,
     CMD_SETLINEJOIN,
     CMD_SETLINEWIDTH,
@@ -80,12 +82,14 @@ struct ScriptArgument {
         SA_CONST = 1,
         SA_LITERAL,
         SA_AV_EXPR,
+        SA_COLOR,
     } type;
 
     union {
         int constant;
         double literal;
         AVExpr *expr;
+        uint8_t color[4];
     };
 };
 
@@ -140,6 +144,12 @@ struct ScriptArgumentSyntax {
         // The instruction expects a single argument, which is a keyword
         // from the array in the field `const_names`.
         ARG_SYNTAX_CONST,
+
+        // The argument is a color, or a list of colors.
+        //
+        // `num` indicates the maximum number of arguments, or `0` if
+        // it accepts any number of colors.
+        ARG_SYNTAX_COLORS,
     } type;
 
     union {
@@ -162,6 +172,8 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { CMD_MOVETO,         "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { CMD_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
+    { CMD_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
     { CMD_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_REL_MOVETO,     "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -176,12 +188,14 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { CMD_SAVE,           "save",               { ARG_SYNTAX_NONE } },
     { CMD_SCALE,          "scale",              { ARG_SYNTAX_SETS, { .num = 1 } } },
     { CMD_SCALEXY,        "scalexy",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_SETCOLOR,       "setcolor",           { ARG_SYNTAX_COLORS, { .num = 1 } } },
     { CMD_SETLINECAP,     "setlinecap",         { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
     { CMD_SETLINEJOIN,    "setlinejoin",        { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
     { CMD_SETLINEWIDTH,   "setlinewidth",       { ARG_SYNTAX_SETS, { .num = 1 } } },
     { CMD_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
     { CMD_REL_T_CURVE_TO, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_CLOSE_PATH,     "z",                  { ARG_SYNTAX_NONE } },
 };
 
 #define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(instruction_specs)
@@ -232,6 +246,11 @@ struct ScriptParserToken {
     size_t position;
     size_t length;
 };
+
+#define TOKEN_IS_KEYWORD(token, keyword)      \
+    ((token)->type == TOKEN_WORD              \
+        && strlen(keyword) == (token)->length \
+        && strncmp((token)->lexeme, keyword, (token)->length) == 0)
 
 // Return the next token in the source.
 //
@@ -368,6 +387,7 @@ static int script_parse_statement(
 ) {
     int ret;
     char *slice;
+
     struct ScriptParserToken token;
 
     struct ScriptStatement statement = {
@@ -496,6 +516,46 @@ add_set:
             (int)token.length, token.lexeme, token.position);
 
         goto fail;
+
+    case ARG_SYNTAX_COLORS:
+        for (
+            int arg_count = 0;
+            spec->syntax.num == 0 || arg_count < spec->syntax.num;
+            arg_count++
+        ) {
+            struct ScriptArgument arg = {
+                .type = SA_COLOR,
+                .color = { 0 },
+            };
+
+            ret = script_parser_scan(ctx, parser, &token, 0);
+            if (ret != 0) {
+                goto fail;
+            }
+
+            // Consume all colors until we find `end` or a non-color.
+            if (TOKEN_IS_KEYWORD(&token, "end") || token.type == TOKEN_EOF) {
+                break;
+            }
+
+            ret = av_parse_color(arg.color, token.lexeme, token.length, ctx);
+            if (ret != 0) {
+                break;
+            }
+
+            ADD_ARG(arg);
+
+            // Advance the parser to the next token.
+            script_parser_scan(ctx, parser, &token, 1);
+        }
+
+        if (statement.args_count == 0 || statement.args_count != spec->syntax.num) {
+            av_log(ctx, AV_LOG_ERROR, "expected a color at position %zu\n", token.position);
+            goto fail;
+        }
+
+        ADD_STATEMENT();
+        return 0;
     }
 
 #undef ADD_ARG
@@ -652,7 +712,7 @@ static int script_eval(
         }                                                 \
     } while(0);
 
-    union { double d; int i; } args[8];
+    union { double d; int i; const uint8_t *c; } args[8];
 
     for (int st_number = 0; st_number < script->statements_count; st_number++) {
         struct ScriptStatement *statement = &script->statements[st_number];
@@ -671,10 +731,19 @@ static int script_eval(
             case SA_AV_EXPR:
                 args[arg].d = av_expr_eval(a->expr, vars, NULL);
                 break;
+
+            case SA_COLOR:
+                args[arg].c = a->color;
+                break;
             }
         }
 
         switch (statement->inst) {
+        case CMD_CLOSE_PATH:
+            ASSERT_ARGS(0);
+            cairo_close_path(cairo_ctx);
+            break;
+
         case CMD_LINETO:
             ASSERT_ARGS(2);
             cairo_line_to(cairo_ctx, args[0].d, args[1].d);
@@ -728,6 +797,17 @@ static int script_eval(
         case CMD_SCALEXY:
             ASSERT_ARGS(2);
             cairo_scale(cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case CMD_SETCOLOR:
+            ASSERT_ARGS(1);
+            cairo_set_source_rgba(
+                cairo_ctx,
+                args[0].c[0] / 255.0,
+                args[0].c[1] / 255.0,
+                args[0].c[2] / 255.0,
+                args[0].c[3] / 255.0
+            );
             break;
 
         case CMD_SETLINECAP:

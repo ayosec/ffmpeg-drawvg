@@ -173,6 +173,7 @@ int main(void)
         "setlinecap round\n"
         "M 0 (PI * (1 + 0.5))\n"
         "lineto 10 20\n"
+        "setcolor red\n"
         "restore\n"
         "stroke"
     );
