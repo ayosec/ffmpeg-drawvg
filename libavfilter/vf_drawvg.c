@@ -56,46 +56,48 @@ static const char *const var_names[] = {
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
 enum ScriptInstruction {
-    INS_ARC = 1,              /// arc (cx cy radius angle1 angle2)
-    INS_ARC_NEG,              /// arcn (cx cy radius angle1 angle2)
-    INS_ARC_REL,              /// rarc (dcx dcy radius angle1 angle2)
-    INS_CIRCLE,               /// circle (cx cy radius)
-    INS_CLOSE_PATH,           /// Z, z, closepath
-    INS_COLOR_STOP,           /// colorstop (offset color)
-    INS_CURVE_TO,             /// C, curveto (x1 y1 x2 y2 x y)
-    INS_CURVE_TO_REL,         /// c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
-    INS_ELLIPSE,              /// ellipse (cx cy rx ry)
-    INS_FILL,                 /// fill
-    INS_FILL_EO,              /// eofill
-    INS_HORZ,                 /// H (x)
-    INS_HORZ_REL,             /// h (dx)
-    INS_LINEAR_GRAD,          /// lineargrad (x0 y0 x1 y1)
-    INS_LINE_TO,              /// L, lineto (x y)
-    INS_LINE_TO_REL,          /// l, rlineto (dx dy)
-    INS_MOVE_TO,              /// M, moveto (x y)
-    INS_MOVE_TO_REL,          /// m, rmoveto (dx dy)
-    INS_NEW_PATH,             /// newpath
-    INS_Q_CURVE_TO,           /// Q, quadcurveto (x1 y1 x y)
-    INS_Q_CURVE_TO_REL,       /// q, rquadcurveto (dx1 dy1 dx dy)
-    INS_RADIAL_GRAD,          /// radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
-    INS_RECT,                 /// rect (x y width height)
-    INS_RESTORE,              /// restore
-    INS_ROTATE,               /// rotate (angle)
-    INS_SAVE,                 /// save
-    INS_SCALE,                /// scale (s)
-    INS_SCALEXY,              /// scalexy (sx sy)
-    INS_SETCOLOR,             /// setcolor (color)
-    INS_SETLINECAP,           /// setlinecap (cap)
-    INS_SETLINEJOIN,          /// setlinejoin (join)
-    INS_SETLINEWIDTH,         /// setlinewidth (width)
-    INS_STROKE,               /// stroke
-    INS_S_CURVE_TO,           /// S, smoothcurveto (x2 y2 x y)
-    INS_S_CURVE_TO_REL,       /// s, rsmoothcurveto (dx2 dy2 dx dy)
-    INS_TRANSLATE,            /// translate (tx ty)
-    INS_T_CURVE_TO,           /// T, smoothquadcurveto (x y)
-    INS_T_CURVE_TO_REL,       /// t, rsmoothquadcurveto (dx dy)
-    INS_VERT,                 /// V (y)
-    INS_VERT_REL,             /// v (dy)
+    INS_ARC = 1,                /// arc (cx cy radius angle1 angle2)
+    INS_ARC_NEG,                /// arcn (cx cy radius angle1 angle2)
+    INS_ARC_REL,                /// rarc (dcx dcy radius angle1 angle2)
+    INS_CIRCLE,                 /// circle (cx cy radius)
+    INS_CLOSE_PATH,             /// Z, z, closepath
+    INS_COLOR_STOP,             /// colorstop (offset color)
+    INS_CURVE_TO,               /// C, curveto (x1 y1 x2 y2 x y)
+    INS_CURVE_TO_REL,           /// c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
+    INS_ELLIPSE,                /// ellipse (cx cy rx ry)
+    INS_FILL,                   /// fill
+    INS_FILL_EO,                /// eofill
+    INS_HORZ,                   /// H (x)
+    INS_HORZ_REL,               /// h (dx)
+    INS_LINEAR_GRAD,            /// lineargrad (x0 y0 x1 y1)
+    INS_LINE_TO,                /// L, lineto (x y)
+    INS_LINE_TO_REL,            /// l, rlineto (dx dy)
+    INS_MOVE_TO,                /// M, moveto (x y)
+    INS_MOVE_TO_REL,            /// m, rmoveto (dx dy)
+    INS_NEW_PATH,               /// newpath
+    INS_Q_CURVE_TO,             /// Q, quadcurveto (x1 y1 x y)
+    INS_Q_CURVE_TO_REL,         /// q, rquadcurveto (dx1 dy1 dx dy)
+    INS_RADIAL_GRAD,            /// radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
+    INS_RECT,                   /// rect (x y width height)
+    INS_RESET_DASH,             /// resetdash
+    INS_RESTORE,                /// restore
+    INS_ROTATE,                 /// rotate (angle)
+    INS_SAVE,                   /// save
+    INS_SCALE,                  /// scale (s)
+    INS_SCALEXY,                /// scalexy (sx sy)
+    INS_SETCOLOR,               /// setcolor (color)
+    INS_SETLINECAP,             /// setlinecap (cap)
+    INS_SETLINEJOIN,            /// setlinejoin (join)
+    INS_SETLINEWIDTH,           /// setlinewidth (width)
+    INS_SET_DASH,               /// setdash (length)
+    INS_STROKE,                 /// stroke
+    INS_S_CURVE_TO,             /// S, smoothcurveto (x2 y2 x y)
+    INS_S_CURVE_TO_REL,         /// s, rsmoothcurveto (dx2 dy2 dx dy)
+    INS_TRANSLATE,              /// translate (tx ty)
+    INS_T_CURVE_TO,             /// T, smoothquadcurveto (x y)
+    INS_T_CURVE_TO_REL,         /// t, rsmoothquadcurveto (dx dy)
+    INS_VERT,                   /// V (y)
+    INS_VERT_REL,               /// v (dy)
 };
 
 // Instruction arguments.
@@ -234,6 +236,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_ARC_REL,        "rarc",                { ARG_SYNTAX_SETS, { .num = 5 } } },
     { INS_CURVE_TO_REL,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_RECT,           "rect",               { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_RESET_DASH,     "resetdash",          { ARG_SYNTAX_NONE } },
     { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
     { INS_LINE_TO_REL,    "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_MOVE_TO_REL,    "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -246,6 +249,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_SCALE,          "scale",              { ARG_SYNTAX_SET, { .num = 1 } } },
     { INS_SCALEXY,        "scalexy",            { ARG_SYNTAX_SET, { .num = 2 } } },
     { INS_SETCOLOR,       "setcolor",           { ARG_SYNTAX_COLORS, { .num = 1 } } },
+    { INS_SET_DASH,       "setdash",            { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_SETLINECAP,     "setlinecap",         { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
     { INS_SETLINEJOIN,    "setlinejoin",        { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
     { INS_SETLINEWIDTH,   "setlinewidth",       { ARG_SYNTAX_SET, { .num = 1 } } },
@@ -604,11 +608,7 @@ static int script_parse_statement(
         goto fail;
 
     case ARG_SYNTAX_COLORS:
-        for (
-            int arg_count = 0;
-            spec->syntax.num == 0 || arg_count < spec->syntax.num;
-            arg_count++
-        ) {
+        while (statement.args_count < spec->syntax.num) {
             struct ScriptArgument arg = {
                 .type = SA_COLOR,
                 .color = { 0 },
@@ -619,25 +619,16 @@ static int script_parse_statement(
                 goto fail;
             }
 
-            // Consume all colors until we find `end` or a non-color.
-            if (TOKEN_IS_KEYWORD(&token, "end") || token.type == TOKEN_EOF) {
-                break;
-            }
-
             ret = av_parse_color(arg.color, token.lexeme, token.length, ctx);
             if (ret != 0) {
-                break;
+                av_log(ctx, AV_LOG_ERROR, "expected a color at position %zu\n", token.position);
+                goto fail;
             }
 
             ADD_ARG(arg);
 
             // Advance the parser to the next token.
             script_parser_scan(ctx, parser, &token, 1);
-        }
-
-        if (statement.args_count == 0 || statement.args_count != spec->syntax.num) {
-            av_log(ctx, AV_LOG_ERROR, "expected a color at position %zu\n", token.position);
-            goto fail;
         }
 
         ADD_STATEMENT();
@@ -1149,6 +1140,10 @@ static int script_eval(
             );
             break;
 
+        case INS_RESET_DASH:
+            cairo_set_dash(state->cairo_ctx, NULL, 0, 0);
+            break;
+
         case INS_RECT:
             ASSERT_ARGS(4);
             cairo_rectangle(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d);
@@ -1207,6 +1202,31 @@ static int script_eval(
         case INS_SETLINEWIDTH:
             ASSERT_ARGS(1);
             cairo_set_line_width(state->cairo_ctx, args[0].d);
+            break;
+
+        case INS_SET_DASH:
+            ASSERT_ARGS(1);
+
+            {
+                int num;
+                double *dashes, dbuf[16];
+
+                num = cairo_get_dash_count(state->cairo_ctx);
+
+                if (num + 1 < FF_ARRAY_ELEMS(dbuf)) {
+                    dashes = dbuf;
+                } else {
+                    dashes = av_calloc(num + 1, sizeof(double));
+                }
+
+                cairo_get_dash(state->cairo_ctx, dashes, NULL);
+                dashes[num] = args[0].d;
+                cairo_set_dash(state->cairo_ctx, dashes, num + 1, 0);
+
+                if (dashes != dbuf) {
+                    av_freep(&dashes);
+                }
+            }
             break;
 
         case INS_STROKE:
