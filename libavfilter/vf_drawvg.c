@@ -58,6 +58,7 @@ static const char *const var_names[] = {
 enum ScriptInstruction {
     INS_CLOSE_PATH = 1,
     INS_COLOR_STOP,
+    INS_CURVE_TO,
     INS_FILL,
     INS_HORZ,
     INS_LINEAR_GRAD,
@@ -66,10 +67,12 @@ enum ScriptInstruction {
     INS_NEW_PATH,
     INS_Q_CURVE_TO,
     INS_RADIAL_GRAD,
+    INS_REL_CURVE_TO,
     INS_REL_HORZ,
     INS_REL_LINETO,
     INS_REL_MOVETO,
     INS_REL_Q_CURVE_TO,
+    INS_REL_S_CURVE_TO,
     INS_REL_T_CURVE_TO,
     INS_REL_VERT,
     INS_RESTORE,
@@ -81,6 +84,7 @@ enum ScriptInstruction {
     INS_SETLINEJOIN,
     INS_SETLINEWIDTH,
     INS_STROKE,
+    INS_S_CURVE_TO,
     INS_T_CURVE_TO,
     INS_VERT,
 };
@@ -105,6 +109,8 @@ struct ScriptArgument {
 // Script statements.
 struct ScriptStatement {
     enum ScriptInstruction inst;
+    const char* inst_name;
+
     struct ScriptArgument *args;
     int args_count;
 };
@@ -187,15 +193,19 @@ struct ScriptInstructionSpec {
 //
 // The array must be sorted in ascending order by `name`.
 struct ScriptInstructionSpec instruction_specs[] = {
+    { INS_CURVE_TO,       "C",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_HORZ,           "H",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_LINETO,         "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_MOVETO,         "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_S_CURVE_TO,     "S",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
+    { INS_REL_CURVE_TO,   "c",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
     { INS_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
+    { INS_CURVE_TO,       "curveto",            { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_FILL,           "fill",               { ARG_SYNTAX_NONE } },
     { INS_REL_HORZ,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -207,11 +217,14 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_REL_Q_CURVE_TO, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
+    { INS_REL_CURVE_TO,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
     { INS_REL_LINETO,     "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_REL_MOVETO,     "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_REL_Q_CURVE_TO, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_REL_S_CURVE_TO, "rsmoothcurveto",     { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_REL_T_CURVE_TO, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_REL_S_CURVE_TO, "s",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_SAVE,           "save",               { ARG_SYNTAX_NONE } },
     { INS_SCALE,          "scale",              { ARG_SYNTAX_SET, { .num = 1 } } },
     { INS_SCALEXY,        "scalexy",            { ARG_SYNTAX_SET, { .num = 2 } } },
@@ -219,6 +232,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_SETLINECAP,     "setlinecap",         { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
     { INS_SETLINEJOIN,    "setlinejoin",        { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
     { INS_SETLINEWIDTH,   "setlinewidth",       { ARG_SYNTAX_SET, { .num = 1 } } },
+    { INS_S_CURVE_TO,     "smoothcurveto",      { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
     { INS_REL_T_CURVE_TO, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -474,6 +488,7 @@ static int script_parse_statement(
 
     struct ScriptStatement statement = {
         .inst = spec->inst,
+        .inst_name = spec->name,
         .args = NULL,
         .args_count = 0,
     };
@@ -759,21 +774,73 @@ static void quad_curve_to(
     double x,
     double y
 ) {
-    double cpx, cpy;        // Current point.
+    double x0 = 0, y0 = 0;  // Current point.
     double xa, ya, xb, yb;  // Control points for the cubic curve.
 
     int use_reflected = isnan(x1);
 
-    cairo_get_current_point(state->cairo_ctx, &cpx, &cpy);
+    cairo_get_current_point(state->cairo_ctx, &x0, &y0);
 
     if (relative) {
         if (!use_reflected) {
-            x1 += cpx;
-            y1 += cpy;
+            x1 += x0;
+            y1 += y0;
         }
 
-        x += cpx;
-        y += cpy;
+        x += x0;
+        y += y0;
+    }
+
+    if (use_reflected) {
+        if (state->rcp.valid) {
+            x1 = state->rcp.quad_x;
+            y1 = state->rcp.quad_y;
+        } else {
+            x1 = x0;
+            y1 = y0;
+        }
+    }
+
+    xa = (x0 + 2 * x1) / 3;
+    ya = (y0 + 2 * y1) / 3;
+    xb = (x + 2 * x1) / 3;
+    yb = (y + 2 * y1) / 3;
+    cairo_curve_to(state->cairo_ctx, xa, ya, xb, yb, x, y);
+
+    state->rcp.valid = 1;
+    state->rcp.cubic_x = x1;
+    state->rcp.cubic_y = y1;
+    state->rcp.quad_x = 2 * x - x1;
+    state->rcp.quad_y = 2 * y - y1;
+}
+
+// Similar to quad_curve_to, but for cubic curves.
+static void cubic_curve_to(
+    struct ScriptEvalState *state,
+    int relative,
+    double x1,
+    double y1,
+    double x2,
+    double y2,
+    double x,
+    double y
+) {
+    double x0 = 0, y0 = 0; // Current point.
+
+    int use_reflected = isnan(x1);
+
+    cairo_get_current_point(state->cairo_ctx, &x0, &y0);
+
+    if (relative) {
+        if (!use_reflected) {
+            x1 += x0;
+            y1 += y0;
+        }
+
+        x += x0;
+        y += y0;
+        x2 += x0;
+        y2 += y0;
     }
 
     if (use_reflected) {
@@ -781,22 +848,18 @@ static void quad_curve_to(
             x1 = state->rcp.cubic_x;
             y1 = state->rcp.cubic_y;
         } else {
-            x1 = cpx;
-            y1 = cpy;
+            x1 = x0;
+            y1 = y0;
         }
     }
 
-    xa = (cpx + 2 * x1) / 3;
-    ya = (cpy + 2 * y1) / 3;
-    xb = (x + 2 * x1) / 3;
-    yb = (y + 2 * y1) / 3;
-    cairo_curve_to(state->cairo_ctx, xa, ya, xb, yb, x, y);
+    cairo_curve_to(state->cairo_ctx, x1, y1, x2, y2, x, y);
 
     state->rcp.valid = 1;
-    state->rcp.cubic_x = 2 * x - x1;
-    state->rcp.cubic_y = 2 * y - y1;
-    state->rcp.quad_x = x1;
-    state->rcp.quad_y = y1;
+    state->rcp.cubic_x = 2 * x - x2;
+    state->rcp.cubic_y = 2 * y - y2;
+    state->rcp.quad_x = x2;
+    state->rcp.quad_y = y2;
 }
 
 // Execute the cairo functions for the given script.
@@ -805,15 +868,15 @@ static int script_eval(
     const struct Script *script
 ) {
 #define ASSERT_ARGS(n) \
-    do {                                                  \
-        if (statement->args_count != n) {                 \
-            /* This is a bug in the parser */             \
-            av_log(state->log_ctx, AV_LOG_ERROR,          \
-                "Instruction %d expects %d arguments.\n", \
-                statement->inst, n                        \
-            );                                            \
-            return 0;                                     \
-        }                                                 \
+    do {                                                    \
+        if (statement->args_count != n) {                   \
+            /* This is a bug in the parser */               \
+            av_log(state->log_ctx, AV_LOG_ERROR,            \
+                "Instruction '%s' expects %d arguments.\n", \
+                statement->inst_name, n                     \
+            );                                              \
+            return 0;                                       \
+        }                                                   \
     } while(0);
 
     union {
@@ -890,6 +953,20 @@ static int script_eval(
             );
             break;
 
+        case INS_CURVE_TO:
+            ASSERT_ARGS(6);
+            cubic_curve_to(
+                state,
+                0,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d,
+                args[4].d,
+                args[5].d
+            );
+            break;
+
         case INS_FILL:
             ASSERT_ARGS(0);
             cairo_fill_preserve(state->cairo_ctx);
@@ -947,6 +1024,20 @@ static int script_eval(
             );
             break;
 
+        case INS_REL_CURVE_TO:
+            ASSERT_ARGS(6);
+            cubic_curve_to(
+                state,
+                1,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d,
+                args[4].d,
+                args[5].d
+            );
+            break;
+
         case INS_REL_LINETO:
             ASSERT_ARGS(2);
             cairo_rel_line_to(state->cairo_ctx, args[0].d, args[1].d);
@@ -960,6 +1051,20 @@ static int script_eval(
         case INS_REL_Q_CURVE_TO:
             ASSERT_ARGS(4);
             quad_curve_to(state, 1, args[0].d, args[1].d, args[2].d, args[3].d);
+            break;
+
+        case INS_REL_S_CURVE_TO:
+            ASSERT_ARGS(4);
+            cubic_curve_to(
+                state,
+                1,
+                NAN,
+                NAN,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d
+            );
             break;
 
         case INS_REL_T_CURVE_TO:
@@ -988,11 +1093,12 @@ static int script_eval(
             break;
 
         case INS_SETCOLOR:
+            ASSERT_ARGS(1);
+
             if (state->pattern_builder != NULL) {
                 cairo_pattern_destroy(state->pattern_builder);
             }
 
-            ASSERT_ARGS(1);
             state->pattern_builder = cairo_pattern_create_rgba(
                 args[0].c[0] / 255.0,
                 args[0].c[1] / 255.0,
@@ -1019,6 +1125,20 @@ static int script_eval(
         case INS_STROKE:
             ASSERT_ARGS(0);
             cairo_stroke_preserve(state->cairo_ctx);
+            break;
+
+        case INS_S_CURVE_TO:
+            ASSERT_ARGS(4);
+            cubic_curve_to(
+                state,
+                0,
+                NAN,
+                NAN,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d
+            );
             break;
 
         case INS_T_CURVE_TO:
@@ -1056,9 +1176,13 @@ static int script_eval(
         // Discard reflected points if the last instruction is not
         // a cubic or quadratic curve.
         switch (statement->inst) {
+        case INS_CURVE_TO:
         case INS_Q_CURVE_TO:
+        case INS_REL_CURVE_TO:
         case INS_REL_Q_CURVE_TO:
+        case INS_REL_S_CURVE_TO:
         case INS_REL_T_CURVE_TO:
+        case INS_S_CURVE_TO:
         case INS_T_CURVE_TO:
             break;
 

@@ -86,3 +86,10 @@ M 0 1 2
 >>
 av_log[16]: expected numeric argument at position 7
 check_script: script_parse = -22
+
+---
+check_script:
+<<
+M 0 (1 + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n)
+>>
+cairo_move_to 0.0 101.0
