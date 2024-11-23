@@ -132,6 +132,22 @@ void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
     *y = current_point_y;
 }
 
+void cairo_set_source (cairo_t *cr, cairo_pattern_t *source) {
+    double r, g, b, a;
+
+    printf("%s", __func__);
+
+    switch (cairo_pattern_get_type(source)) {
+    case CAIRO_PATTERN_TYPE_SOLID:
+        cairo_pattern_get_rgba(source, &r, &g, &b, &a);
+        printf(" rgba(%.1f %.1f %.1f %.1f)", r, g, b, a);
+        break;
+
+    }
+
+    printf("\n");
+}
+
 // Veify that the `command_specs` is sorted. This is required because
 // the search is done with `bsearch(3)`.
 static void check_sort_cmd_specs(void) {
@@ -184,6 +200,8 @@ static void check_script(const char* source) {
 
 int main(void)
 {
+    char buf[512];
+
     check_sort_cmd_specs();
 
     check_script(
@@ -216,6 +234,15 @@ int main(void)
 
     // Missing arguments.
     check_script("M 0 1 2");
+
+    // Long expressions. The parser must use malloc.
+    memset(buf, 0, sizeof(buf));
+    strncat(buf, "M 0 (1", sizeof(buf) - 1);
+    for (int i = 0; i < 100; i++) {
+        strncat(buf, " + n", sizeof(buf) - 1);
+    }
+    strncat(buf, ")", sizeof(buf) - 1);
+    check_script(buf);
 
     return 0;
 }

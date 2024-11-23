@@ -56,33 +56,33 @@ static const char *const var_names[] = {
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
 enum ScriptInstruction {
-    CMD_CLOSE_PATH = 1,
-    CMD_COLOR_STOP,
-    CMD_FILL,
-    CMD_HORZ,
-    CMD_LINEAR_GRAD,
-    CMD_LINETO,
-    CMD_MOVETO,
-    CMD_NEW_PATH,
-    CMD_Q_CURVE_TO,
-    CMD_RADIAL_GRAD,
-    CMD_REL_HORZ,
-    CMD_REL_LINETO,
-    CMD_REL_MOVETO,
-    CMD_REL_Q_CURVE_TO,
-    CMD_REL_T_CURVE_TO,
-    CMD_REL_VERT,
-    CMD_RESTORE,
-    CMD_SAVE,
-    CMD_SCALE,
-    CMD_SCALEXY,
-    CMD_SETCOLOR,
-    CMD_SETLINECAP,
-    CMD_SETLINEJOIN,
-    CMD_SETLINEWIDTH,
-    CMD_STROKE,
-    CMD_T_CURVE_TO,
-    CMD_VERT,
+    INS_CLOSE_PATH = 1,
+    INS_COLOR_STOP,
+    INS_FILL,
+    INS_HORZ,
+    INS_LINEAR_GRAD,
+    INS_LINETO,
+    INS_MOVETO,
+    INS_NEW_PATH,
+    INS_Q_CURVE_TO,
+    INS_RADIAL_GRAD,
+    INS_REL_HORZ,
+    INS_REL_LINETO,
+    INS_REL_MOVETO,
+    INS_REL_Q_CURVE_TO,
+    INS_REL_T_CURVE_TO,
+    INS_REL_VERT,
+    INS_RESTORE,
+    INS_SAVE,
+    INS_SCALE,
+    INS_SCALEXY,
+    INS_SETCOLOR,
+    INS_SETLINECAP,
+    INS_SETLINEJOIN,
+    INS_SETLINEWIDTH,
+    INS_STROKE,
+    INS_T_CURVE_TO,
+    INS_VERT,
 };
 
 // Instruction arguments.
@@ -124,14 +124,14 @@ static struct ScriptConstant consts_line_cap[] = {
     { "butt", CAIRO_LINE_CAP_BUTT },
     { "round", CAIRO_LINE_CAP_ROUND },
     { "square", CAIRO_LINE_CAP_SQUARE },
-    { 0, 0 },
+    { NULL, 0 },
 };
 
 static struct ScriptConstant consts_line_join[] = {
     { "bevel", CAIRO_LINE_JOIN_BEVEL },
     { "miter", CAIRO_LINE_JOIN_MITER },
     { "round", CAIRO_LINE_JOIN_ROUND },
-    { 0, 0 },
+    { NULL, 0 },
 };
 
 // Syntax of the instruction arguments.
@@ -187,43 +187,43 @@ struct ScriptInstructionSpec {
 //
 // The array must be sorted in ascending order by `name`.
 struct ScriptInstructionSpec instruction_specs[] = {
-    { CMD_HORZ,           "H",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { CMD_LINETO,         "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_MOVETO,         "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { CMD_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { CMD_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
-    { CMD_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
-    { CMD_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
-    { CMD_FILL,           "fill",               { ARG_SYNTAX_NONE } },
-    { CMD_REL_HORZ,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { CMD_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_LINEAR_GRAD,    "lineargrad",         { ARG_SYNTAX_SET, { .num = 4 } } },
-    { CMD_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_MOVETO,     "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_MOVETO,         "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_NEW_PATH,       "newpath",            { ARG_SYNTAX_NONE } },
-    { CMD_REL_Q_CURVE_TO, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { CMD_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { CMD_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
-    { CMD_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
-    { CMD_REL_LINETO,     "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_MOVETO,     "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_Q_CURVE_TO, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { CMD_REL_T_CURVE_TO, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_SAVE,           "save",               { ARG_SYNTAX_NONE } },
-    { CMD_SCALE,          "scale",              { ARG_SYNTAX_SET, { .num = 1 } } },
-    { CMD_SCALEXY,        "scalexy",            { ARG_SYNTAX_SET, { .num = 2 } } },
-    { CMD_SETCOLOR,       "setcolor",           { ARG_SYNTAX_COLORS, { .num = 1 } } },
-    { CMD_SETLINECAP,     "setlinecap",         { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
-    { CMD_SETLINEJOIN,    "setlinejoin",        { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
-    { CMD_SETLINEWIDTH,   "setlinewidth",       { ARG_SYNTAX_SET, { .num = 1 } } },
-    { CMD_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
-    { CMD_REL_T_CURVE_TO, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { CMD_REL_VERT,       "v",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { CMD_CLOSE_PATH,     "z",                  { ARG_SYNTAX_NONE } },
+    { INS_HORZ,           "H",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { INS_LINETO,         "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_MOVETO,         "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { INS_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
+    { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
+    { INS_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
+    { INS_FILL,           "fill",               { ARG_SYNTAX_NONE } },
+    { INS_REL_HORZ,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { INS_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_LINEAR_GRAD,    "lineargrad",         { ARG_SYNTAX_SET, { .num = 4 } } },
+    { INS_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_REL_MOVETO,     "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_MOVETO,         "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_NEW_PATH,       "newpath",            { ARG_SYNTAX_NONE } },
+    { INS_REL_Q_CURVE_TO, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
+    { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
+    { INS_REL_LINETO,     "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_REL_MOVETO,     "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_REL_Q_CURVE_TO, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_REL_T_CURVE_TO, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_SAVE,           "save",               { ARG_SYNTAX_NONE } },
+    { INS_SCALE,          "scale",              { ARG_SYNTAX_SET, { .num = 1 } } },
+    { INS_SCALEXY,        "scalexy",            { ARG_SYNTAX_SET, { .num = 2 } } },
+    { INS_SETCOLOR,       "setcolor",           { ARG_SYNTAX_COLORS, { .num = 1 } } },
+    { INS_SETLINECAP,     "setlinecap",         { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
+    { INS_SETLINEJOIN,    "setlinejoin",        { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
+    { INS_SETLINEWIDTH,   "setlinewidth",       { ARG_SYNTAX_SET, { .num = 1 } } },
+    { INS_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
+    { INS_REL_T_CURVE_TO, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_REL_VERT,       "v",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { INS_CLOSE_PATH,     "z",                  { ARG_SYNTAX_NONE } },
 };
 
 #define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(instruction_specs)
@@ -404,12 +404,11 @@ static void script_free(struct Script *script) {
 static int parse_numeric_argument(
     struct DrawVGContext *ctx,
     struct ScriptParser *parser,
-    struct Script *script,
     struct ScriptArgument *arg
 ) {
     int ret;
     char buf[128];
-    char *slice;
+    char *lexeme, *endp;
     struct ScriptParserToken token;
 
     ret = script_parser_scan(ctx, parser, &token, 1);
@@ -417,48 +416,48 @@ static int parse_numeric_argument(
         return ret;
     }
 
+    // Convert the lexeme to a NUL-terminated string.
+    if (token.length < sizeof(buf)) {
+        lexeme = buf;
+    } else {
+        lexeme = av_malloc(token.length + 1);
+    }
+
+    memcpy(lexeme, token.lexeme, token.length);
+    lexeme[token.length] = '\0';
+
     switch (token.type) {
     case TOKEN_LITERAL:
-        if (token.length >= sizeof(buf)) {
-            return -1;
-        }
-
-        memcpy(buf, token.lexeme, token.length);
-        buf[token.length] = '\0';
-
         arg->type = SA_LITERAL;
-        arg->literal = strtod(buf, &slice);
+        arg->literal = strtod(buf, &endp);
 
-        if (*slice != '\0') {
+        if (*endp != '\0') {
             av_log(ctx, AV_LOG_ERROR, "invalid number '%.*s' at position %zu\n",
                 (int)token.length, token.lexeme, token.position);
-            return AVERROR(EINVAL);
+            ret = AVERROR(EINVAL);
         }
-
-        return 0;
+        break;
 
     case TOKEN_EXPR:
-        slice = av_memdup(token.lexeme, token.length + 1);
-        slice[token.length] = '\0';
-
-        ret = av_expr_parse(&arg->expr, slice, var_names, NULL, NULL, NULL, NULL, 0, ctx);
-
-        av_freep(&slice);
-
-        if (ret != 0) {
-            return ret;
-        }
-
         arg->type = SA_AV_EXPR;
+        ret = av_expr_parse(&arg->expr, lexeme, var_names, NULL, NULL, NULL, NULL, 0, ctx);
         break;
 
     default:
         av_log(ctx, AV_LOG_ERROR, "expected numeric argument at position %zu\n",
             token.position);
-            return AVERROR(EINVAL);
+        ret = AVERROR(EINVAL);
     }
 
-    return 0;
+    if (lexeme != buf) {
+        av_freep(&lexeme);
+    }
+
+    if (ret != 0) {
+        memset(arg, 0, sizeof(*arg));
+    }
+
+    return ret;
 }
 
 // Extract the arguments for an instruction, and add a new statement
@@ -520,7 +519,7 @@ static int script_parse_statement(
         do {
             while (statement.args_count < spec->syntax.num) {
                 struct ScriptArgument arg;
-                ret = parse_numeric_argument(ctx, parser, script, &arg);
+                ret = parse_numeric_argument(ctx, parser, &arg);
 
                 if (ret != 0) {
                     goto fail;
@@ -617,7 +616,7 @@ static int script_parse_statement(
             struct ScriptArgument arg1;
 
             // First argument must be a numeric value.
-            ret = parse_numeric_argument(ctx, parser, script, &arg0);
+            ret = parse_numeric_argument(ctx, parser, &arg0);
             if (ret != 0)
                 goto fail;
 
@@ -857,9 +856,10 @@ static int script_eval(
         // stroke/fill instructions.
         if (state->pattern_builder != NULL) {
             switch (statement->inst) {
-            case CMD_FILL:
-            case CMD_SAVE:
-            case CMD_STROKE:
+            case INS_FILL:
+            case INS_SAVE:
+            case INS_STROKE:
+            case INS_RESTORE:
                 cairo_set_source(state->cairo_ctx, state->pattern_builder);
                 cairo_pattern_destroy(state->pattern_builder);
                 state->pattern_builder = NULL;
@@ -868,12 +868,12 @@ static int script_eval(
 
         // Execute the instruction.
         switch (statement->inst) {
-        case CMD_CLOSE_PATH:
+        case INS_CLOSE_PATH:
             ASSERT_ARGS(0);
             cairo_close_path(state->cairo_ctx);
             break;
 
-        case CMD_COLOR_STOP:
+        case INS_COLOR_STOP:
             if (state->pattern_builder == NULL) {
                 av_log(state->log_ctx, AV_LOG_ERROR, "colorstop with no gradient.\n");
                 break;
@@ -890,12 +890,12 @@ static int script_eval(
             );
             break;
 
-        case CMD_FILL:
+        case INS_FILL:
             ASSERT_ARGS(0);
             cairo_fill_preserve(state->cairo_ctx);
             break;
 
-        case CMD_LINEAR_GRAD:
+        case INS_LINEAR_GRAD:
             ASSERT_ARGS(4);
 
             if (state->pattern_builder != NULL) {
@@ -910,27 +910,27 @@ static int script_eval(
             );
             break;
 
-        case CMD_LINETO:
+        case INS_LINETO:
             ASSERT_ARGS(2);
             cairo_line_to(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
-        case CMD_MOVETO:
+        case INS_MOVETO:
             ASSERT_ARGS(2);
             cairo_move_to(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
-        case CMD_NEW_PATH:
+        case INS_NEW_PATH:
             ASSERT_ARGS(0);
             cairo_new_path(state->cairo_ctx);
             break;
 
-        case CMD_Q_CURVE_TO:
+        case INS_Q_CURVE_TO:
             ASSERT_ARGS(4);
             quad_curve_to(state, 0, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
-        case CMD_RADIAL_GRAD:
+        case INS_RADIAL_GRAD:
             ASSERT_ARGS(6);
 
             if (state->pattern_builder != NULL) {
@@ -947,50 +947,53 @@ static int script_eval(
             );
             break;
 
-        case CMD_REL_LINETO:
+        case INS_REL_LINETO:
             ASSERT_ARGS(2);
             cairo_rel_line_to(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
-        case CMD_REL_MOVETO:
+        case INS_REL_MOVETO:
             ASSERT_ARGS(2);
             cairo_rel_move_to(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
-        case CMD_REL_Q_CURVE_TO:
+        case INS_REL_Q_CURVE_TO:
             ASSERT_ARGS(4);
             quad_curve_to(state, 1, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
-        case CMD_REL_T_CURVE_TO:
+        case INS_REL_T_CURVE_TO:
             ASSERT_ARGS(2);
             quad_curve_to(state, 1, NAN, NAN, args[0].d, args[1].d);
             break;
 
-        case CMD_RESTORE:
+        case INS_RESTORE:
             ASSERT_ARGS(0);
             cairo_restore(state->cairo_ctx);
             break;
 
-        case CMD_SAVE:
+        case INS_SAVE:
             ASSERT_ARGS(0);
             cairo_save(state->cairo_ctx);
             break;
 
-        case CMD_SCALE:
+        case INS_SCALE:
             ASSERT_ARGS(1);
             cairo_scale(state->cairo_ctx, args[0].d, args[0].d);
             break;
 
-        case CMD_SCALEXY:
+        case INS_SCALEXY:
             ASSERT_ARGS(2);
             cairo_scale(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
-        case CMD_SETCOLOR:
+        case INS_SETCOLOR:
+            if (state->pattern_builder != NULL) {
+                cairo_pattern_destroy(state->pattern_builder);
+            }
+
             ASSERT_ARGS(1);
-            cairo_set_source_rgba(
-                state->cairo_ctx,
+            state->pattern_builder = cairo_pattern_create_rgba(
                 args[0].c[0] / 255.0,
                 args[0].c[1] / 255.0,
                 args[0].c[2] / 255.0,
@@ -998,35 +1001,35 @@ static int script_eval(
             );
             break;
 
-        case CMD_SETLINECAP:
+        case INS_SETLINECAP:
             ASSERT_ARGS(1);
             cairo_set_line_cap(state->cairo_ctx, args[0].i);
             break;
 
-        case CMD_SETLINEJOIN:
+        case INS_SETLINEJOIN:
             ASSERT_ARGS(1);
             cairo_set_line_join(state->cairo_ctx, args[0].i);
             break;
 
-        case CMD_SETLINEWIDTH:
+        case INS_SETLINEWIDTH:
             ASSERT_ARGS(1);
             cairo_set_line_width(state->cairo_ctx, args[0].d);
             break;
 
-        case CMD_STROKE:
+        case INS_STROKE:
             ASSERT_ARGS(0);
             cairo_stroke_preserve(state->cairo_ctx);
             break;
 
-        case CMD_T_CURVE_TO:
+        case INS_T_CURVE_TO:
             ASSERT_ARGS(2);
             quad_curve_to(state, 0, NAN, NAN, args[0].d, args[1].d);
             break;
 
-        case CMD_REL_HORZ:
-        case CMD_HORZ:
-        case CMD_REL_VERT:
-        case CMD_VERT:
+        case INS_REL_HORZ:
+        case INS_HORZ:
+        case INS_REL_VERT:
+        case INS_VERT:
             ASSERT_ARGS(1);
 
             {
@@ -1038,10 +1041,10 @@ static int script_eval(
                 }
 
                 switch (statement->inst) {
-                    case CMD_HORZ:     x  = d; break;
-                    case CMD_VERT:     y  = d; break;
-                    case CMD_REL_HORZ: x += d; break;
-                    case CMD_REL_VERT: y += d; break;
+                    case INS_HORZ:     x  = d; break;
+                    case INS_VERT:     y  = d; break;
+                    case INS_REL_HORZ: x += d; break;
+                    case INS_REL_VERT: y += d; break;
                 }
 
                 cairo_line_to(state->cairo_ctx, x, y);
@@ -1053,10 +1056,10 @@ static int script_eval(
         // Discard reflected points if the last instruction is not
         // a cubic or quadratic curve.
         switch (statement->inst) {
-        case CMD_Q_CURVE_TO:
-        case CMD_REL_Q_CURVE_TO:
-        case CMD_REL_T_CURVE_TO:
-        case CMD_T_CURVE_TO:
+        case INS_Q_CURVE_TO:
+        case INS_REL_Q_CURVE_TO:
+        case INS_REL_T_CURVE_TO:
+        case INS_T_CURVE_TO:
             break;
 
         default:
@@ -1128,7 +1131,7 @@ static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixel
 
     const char* pix_fmt_name = av_get_pix_fmt_name(format);
 
-    for (int i = 0; FF_ARRAY_ELEMS(format_map); i++) {
+    for (int i = 0; i < FF_ARRAY_ELEMS(drawvg_pix_fmts); i++) {
         if (drawvg_pix_fmts[i] == format) {
             cairo_format_t fmt = format_map[i];
 
@@ -1183,6 +1186,10 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
 
     cairo_destroy(eval_state.cairo_ctx);
     cairo_surface_destroy(surface);
+
+    if (eval_state.pattern_builder != NULL) {
+        cairo_pattern_destroy(eval_state.pattern_builder);
+    }
 
     if (ret != 0) {
         return ret;

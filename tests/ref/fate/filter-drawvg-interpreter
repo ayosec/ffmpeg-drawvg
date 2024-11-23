@@ -27,7 +27,7 @@ cairo_line_to 20.0 2.0
 cairo_line_to 23.0 2.0
 cairo_line_to 4.0 2.0
 cairo_line_to 10.0 20.0
-cairo_set_source_rgba 1.0 0.0 0.0 1.0
+cairo_set_source rgba(1.0 0.0 0.0 1.0)
 cairo_restore
 cairo_stroke_preserve
 
