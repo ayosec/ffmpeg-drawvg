@@ -47,6 +47,7 @@ enum {
     VAR_H,
     VAR_CX,
     VAR_CY,
+    VAR_DURATION,
 };
 
 static const char *const var_names[] = {
@@ -56,6 +57,7 @@ static const char *const var_names[] = {
     "h",
     "cx",
     "cy",
+    "duration",
     NULL
 };
 
@@ -786,6 +788,7 @@ static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
 
     cairo_new_sub_path(c);
     cairo_arc(c, 0, 0, rx, 0, 2 * M_PI);
+    cairo_close_path(c);
     cairo_new_sub_path(c);
 
     cairo_restore(c);
@@ -1421,6 +1424,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     eval_state.vars[VAR_T] = frame->pts == AV_NOPTS_VALUE ? NAN : frame->pts * av_q2d(inlink->time_base);
     eval_state.vars[VAR_W] = inlink->w;
     eval_state.vars[VAR_H] = inlink->h;
+    eval_state.vars[VAR_DURATION] = frame->duration * av_q2d(inlink->time_base);
 
     ret = script_eval(&eval_state, &drawvg_ctx->script);
 
