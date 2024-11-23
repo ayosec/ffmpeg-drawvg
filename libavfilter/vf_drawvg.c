@@ -58,9 +58,11 @@ static const char *const var_names[] = {
 enum ScriptInstruction {
     CMD_CLOSE_PATH = 1,
     CMD_COLOR_STOP,
+    CMD_FILL,
     CMD_LINEAR_GRAD,
     CMD_LINETO,
     CMD_MOVETO,
+    CMD_NEW_PATH,
     CMD_Q_CURVE_TO,
     CMD_RADIAL_GRAD,
     CMD_REL_LINETO,
@@ -155,7 +157,9 @@ struct ScriptArgumentSyntax {
         ARG_SYNTAX_COLORS,
 
         // The instruction expects a number and a color.
-        ARG_SYNTAX_NUM_COLOR,
+        //
+        // If `num` is `1`, the instruction expects a sequence of sets.
+        ARG_SYNTAX_NUMBER_COLOR,
     } type;
 
     union {
@@ -180,12 +184,14 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { CMD_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
     { CMD_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
-    { CMD_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUM_COLOR } },
+    { CMD_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
+    { CMD_FILL,           "fill",               { ARG_SYNTAX_NONE } },
     { CMD_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_LINEAR_GRAD,    "lineargrad",         { ARG_SYNTAX_SETS, { .num = 4 } } },
     { CMD_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_REL_MOVETO,     "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_MOVETO,         "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_NEW_PATH,       "newpath",            { ARG_SYNTAX_NONE } },
     { CMD_REL_Q_CURVE_TO, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { CMD_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
     { CMD_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SETS, { .num = 6 } } },
@@ -439,7 +445,6 @@ static int script_parse_statement(
 ) {
     int ret;
 
-    struct ScriptArgument arg;
     struct ScriptParserToken token;
 
     struct ScriptStatement statement = {
@@ -474,6 +479,9 @@ static int script_parse_statement(
         if (r == NULL) {                \
             goto fail;                  \
         }                               \
+                                        \
+        statement.args = NULL;          \
+        statement.args_count = 0;       \
     } while(0)
 
     switch (spec->syntax.type) {
@@ -484,6 +492,7 @@ static int script_parse_statement(
     case ARG_SYNTAX_SETS:
 add_set:
         while (statement.args_count < spec->syntax.num) {
+            struct ScriptArgument arg;
             ret = parse_numeric_argument(ctx, parser, script, &arg);
 
             if (ret != 0) {
@@ -500,8 +509,6 @@ add_set:
             script_parser_scan(ctx, parser, &token, 0) == 0
             && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
         ) {
-            statement.args = NULL;
-            statement.args_count = 0;
             goto add_set;
         }
 
@@ -574,37 +581,42 @@ add_set:
         ADD_STATEMENT();
         return 0;
 
-    case ARG_SYNTAX_NUM_COLOR:
+    case ARG_SYNTAX_NUMBER_COLOR:
+        do {
 
-        // Parse offset.
-        ret = parse_numeric_argument(ctx, parser, script, &arg);
-        if (ret != 0)
-            goto fail;
+            struct ScriptArgument arg0;
+            struct ScriptArgument arg1;
 
-        ADD_ARG(arg);
+            // First argument must be a numeric value.
+            ret = parse_numeric_argument(ctx, parser, script, &arg0);
+            if (ret != 0)
+                goto fail;
 
-        // Parse color.
-        ret = script_parser_scan(ctx, parser, &token, 1);
-        if (ret != 0)
-            goto fail;
 
-        arg.type = SA_COLOR,
-        ret = av_parse_color(arg.color, token.lexeme, token.length, ctx);
-        if (ret != 0)
-            break;
+            // Second argument must be a color.
+            ret = script_parser_scan(ctx, parser, &token, 1);
+            if (ret != 0)
+                goto fail;
 
-        ret = script_parser_scan(ctx, parser, &token, 0);
-        if (ret != 0)
-            goto fail;
+            arg1.type = SA_COLOR,
+            ret = av_parse_color(arg1.color, token.lexeme, token.length, ctx);
+            if (ret != 0) {
+                av_log(ctx, AV_LOG_ERROR, "expected a color at position %zu\n", token.position);
+                goto fail;
+            }
 
-        ADD_ARG(arg);
+            ADD_ARG(arg0);
+            ADD_ARG(arg1);
+            ADD_STATEMENT();
 
-        if (TOKEN_IS_KEYWORD(&token, "end") || token.type == TOKEN_EOF) {
-            script_parser_scan(ctx, parser, &token, 1);
-            break;
-        }
+        } while(
+            // Repeat the instruction if `num == 1`, and the next
+            // token is a numeric value.
+            spec->syntax.num != 0
+                && script_parser_scan(ctx, parser, &token, 0) == 0
+                && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
+        );
 
-        ADD_STATEMENT();
         return 0;
     }
 
@@ -681,6 +693,8 @@ struct ScriptEvalContext {
     void *log_ctx;
 
     cairo_t *cairo_ctx;
+
+    cairo_pattern_t *pattern_builder;
 
     double vars[VAR_COUNT];
 
@@ -771,7 +785,7 @@ static int script_eval(
         double d;
         int i;
         const uint8_t *c;
-    } args[32];
+    } args[8];
 
     for (int st_number = 0; st_number < script->statements_count; st_number++) {
         struct ScriptStatement *statement = &script->statements[st_number];
@@ -802,10 +816,62 @@ static int script_eval(
             }
         }
 
+        // If the instruction uses a pending pattern (like a solid color
+        // or a gradient), set it to the cairo context before executing
+        // stroke/fill instructions.
+        if (ctx->pattern_builder != NULL) {
+            switch (statement->inst) {
+            case CMD_FILL:
+            case CMD_SAVE:
+            case CMD_STROKE:
+                cairo_set_source(ctx->cairo_ctx, ctx->pattern_builder);
+                cairo_pattern_destroy(ctx->pattern_builder);
+                ctx->pattern_builder = NULL;
+            }
+        }
+
+        // Execute the instruction.
         switch (statement->inst) {
         case CMD_CLOSE_PATH:
             ASSERT_ARGS(0);
             cairo_close_path(ctx->cairo_ctx);
+            break;
+
+        case CMD_COLOR_STOP:
+            if (ctx->pattern_builder == NULL) {
+                av_log(ctx->log_ctx, AV_LOG_ERROR, "colorstop with no gradient.\n");
+                break;
+            }
+
+            ASSERT_ARGS(2);
+            cairo_pattern_add_color_stop_rgba(
+                ctx->pattern_builder,
+                args[0].d,
+                args[1].c[0] / 255.0,
+                args[1].c[1] / 255.0,
+                args[1].c[2] / 255.0,
+                args[1].c[3] / 255.0
+            );
+            break;
+
+        case CMD_FILL:
+            ASSERT_ARGS(0);
+            cairo_fill_preserve(ctx->cairo_ctx);
+            break;
+
+        case CMD_LINEAR_GRAD:
+            ASSERT_ARGS(4);
+
+            if (ctx->pattern_builder != NULL) {
+                cairo_pattern_destroy(ctx->pattern_builder);
+            }
+
+            ctx->pattern_builder = cairo_pattern_create_linear(
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d
+            );
             break;
 
         case CMD_LINETO:
@@ -818,9 +884,31 @@ static int script_eval(
             cairo_move_to(ctx->cairo_ctx, args[0].d, args[1].d);
             break;
 
+        case CMD_NEW_PATH:
+            ASSERT_ARGS(0);
+            cairo_new_path(ctx->cairo_ctx);
+            break;
+
         case CMD_Q_CURVE_TO:
             ASSERT_ARGS(4);
             quad_curve_to(ctx, 0, args[0].d, args[1].d, args[2].d, args[3].d);
+            break;
+
+        case CMD_RADIAL_GRAD:
+            ASSERT_ARGS(6);
+
+            if (ctx->pattern_builder != NULL) {
+                cairo_pattern_destroy(ctx->pattern_builder);
+            }
+
+            ctx->pattern_builder = cairo_pattern_create_radial(
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d,
+                args[4].d,
+                args[5].d
+            );
             break;
 
         case CMD_REL_LINETO:
@@ -1004,6 +1092,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
 
     struct ScriptEvalContext eval_ctx = {
         .log_ctx = drawvg_ctx,
+        .pattern_builder = NULL,
         .rcp = { .valid = 0 },
     };
 
