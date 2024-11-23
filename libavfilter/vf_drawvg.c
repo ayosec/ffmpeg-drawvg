@@ -56,37 +56,37 @@ static const char *const var_names[] = {
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
 enum ScriptInstruction {
-    INS_CLOSE_PATH = 1,
-    INS_COLOR_STOP,
-    INS_CURVE_TO,
-    INS_FILL,
-    INS_HORZ,
-    INS_LINEAR_GRAD,
-    INS_LINETO,
-    INS_MOVETO,
-    INS_NEW_PATH,
-    INS_Q_CURVE_TO,
-    INS_RADIAL_GRAD,
-    INS_REL_CURVE_TO,
-    INS_REL_HORZ,
-    INS_REL_LINETO,
-    INS_REL_MOVETO,
-    INS_REL_Q_CURVE_TO,
-    INS_REL_S_CURVE_TO,
-    INS_REL_T_CURVE_TO,
-    INS_REL_VERT,
-    INS_RESTORE,
-    INS_SAVE,
-    INS_SCALE,
-    INS_SCALEXY,
-    INS_SETCOLOR,
-    INS_SETLINECAP,
-    INS_SETLINEJOIN,
-    INS_SETLINEWIDTH,
-    INS_STROKE,
-    INS_S_CURVE_TO,
-    INS_T_CURVE_TO,
-    INS_VERT,
+    INS_CLOSE_PATH = 1,       /// Z, z, closepath
+    INS_COLOR_STOP,           /// colorstop
+    INS_CURVE_TO,             /// C, curveto
+    INS_CURVE_TO_REL,         /// c, rcurveto
+    INS_FILL,                 /// fill
+    INS_HORZ,                 /// H
+    INS_HORZ_REL,             /// h
+    INS_LINEAR_GRAD,          /// lineargrad
+    INS_LINE_TO,              /// L, lineto
+    INS_LINE_TO_REL,          /// l, rlineto
+    INS_MOVE_TO,              /// M, moveto
+    INS_MOVE_TO_REL,          /// m, rmoveto
+    INS_NEW_PATH,             /// newpath
+    INS_Q_CURVE_TO,           /// Q, quadcurveto
+    INS_Q_CURVE_TO_REL,       /// q, rquadcurveto
+    INS_RADIAL_GRAD,          /// radialgrad
+    INS_RESTORE,              /// restore
+    INS_SAVE,                 /// save
+    INS_SCALE,                /// scale
+    INS_SCALEXY,              /// scalexy
+    INS_SETCOLOR,             /// setcolor
+    INS_SETLINECAP,           /// setlinecap
+    INS_SETLINEJOIN,          /// setlinejoin
+    INS_SETLINEWIDTH,         /// setlinewidth
+    INS_STROKE,               /// stroke
+    INS_S_CURVE_TO,           /// S, smoothcurveto
+    INS_S_CURVE_TO_REL,       /// s, rsmoothcurveto
+    INS_T_CURVE_TO,           /// T, smoothquadcurveto
+    INS_T_CURVE_TO_REL,       /// t, rsmoothquadcurveto
+    INS_VERT,                 /// V
+    INS_VERT_REL,             /// v
 };
 
 // Instruction arguments.
@@ -195,36 +195,36 @@ struct ScriptInstructionSpec {
 struct ScriptInstructionSpec instruction_specs[] = {
     { INS_CURVE_TO,       "C",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_HORZ,           "H",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_LINETO,         "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_MOVETO,         "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_LINE_TO,        "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_MOVE_TO,        "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_S_CURVE_TO,     "S",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
-    { INS_REL_CURVE_TO,   "c",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
+    { INS_CURVE_TO_REL,   "c",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
     { INS_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
     { INS_CURVE_TO,       "curveto",            { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_FILL,           "fill",               { ARG_SYNTAX_NONE } },
-    { INS_REL_HORZ,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_HORZ_REL,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { INS_LINE_TO_REL,    "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_LINEAR_GRAD,    "lineargrad",         { ARG_SYNTAX_SET, { .num = 4 } } },
-    { INS_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_REL_MOVETO,     "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_MOVETO,         "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_LINE_TO,        "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_MOVE_TO_REL,    "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_MOVE_TO,        "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_NEW_PATH,       "newpath",            { ARG_SYNTAX_NONE } },
-    { INS_REL_Q_CURVE_TO, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_Q_CURVE_TO_REL, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
-    { INS_REL_CURVE_TO,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
+    { INS_CURVE_TO_REL,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
-    { INS_REL_LINETO,     "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_REL_MOVETO,     "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_REL_Q_CURVE_TO, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_REL_S_CURVE_TO, "rsmoothcurveto",     { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_REL_T_CURVE_TO, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_REL_S_CURVE_TO, "s",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_LINE_TO_REL,    "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_MOVE_TO_REL,    "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_Q_CURVE_TO_REL, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_S_CURVE_TO_REL, "rsmoothcurveto",     { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_T_CURVE_TO_REL, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_S_CURVE_TO_REL, "s",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_SAVE,           "save",               { ARG_SYNTAX_NONE } },
     { INS_SCALE,          "scale",              { ARG_SYNTAX_SET, { .num = 1 } } },
     { INS_SCALEXY,        "scalexy",            { ARG_SYNTAX_SET, { .num = 2 } } },
@@ -235,8 +235,8 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_S_CURVE_TO,     "smoothcurveto",      { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
-    { INS_REL_T_CURVE_TO, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_REL_VERT,       "v",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
+    { INS_T_CURVE_TO_REL, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_VERT_REL,       "v",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_CLOSE_PATH,     "z",                  { ARG_SYNTAX_NONE } },
 };
 
@@ -967,6 +967,20 @@ static int script_eval(
             );
             break;
 
+        case INS_CURVE_TO_REL:
+            ASSERT_ARGS(6);
+            cubic_curve_to(
+                state,
+                1,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d,
+                args[4].d,
+                args[5].d
+            );
+            break;
+
         case INS_FILL:
             ASSERT_ARGS(0);
             cairo_fill_preserve(state->cairo_ctx);
@@ -987,14 +1001,24 @@ static int script_eval(
             );
             break;
 
-        case INS_LINETO:
+        case INS_LINE_TO:
             ASSERT_ARGS(2);
             cairo_line_to(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
-        case INS_MOVETO:
+        case INS_LINE_TO_REL:
+            ASSERT_ARGS(2);
+            cairo_rel_line_to(state->cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case INS_MOVE_TO:
             ASSERT_ARGS(2);
             cairo_move_to(state->cairo_ctx, args[0].d, args[1].d);
+            break;
+
+        case INS_MOVE_TO_REL:
+            ASSERT_ARGS(2);
+            cairo_rel_move_to(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
         case INS_NEW_PATH:
@@ -1005,6 +1029,11 @@ static int script_eval(
         case INS_Q_CURVE_TO:
             ASSERT_ARGS(4);
             quad_curve_to(state, 0, args[0].d, args[1].d, args[2].d, args[3].d);
+            break;
+
+        case INS_Q_CURVE_TO_REL:
+            ASSERT_ARGS(4);
+            quad_curve_to(state, 1, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
         case INS_RADIAL_GRAD:
@@ -1022,54 +1051,6 @@ static int script_eval(
                 args[4].d,
                 args[5].d
             );
-            break;
-
-        case INS_REL_CURVE_TO:
-            ASSERT_ARGS(6);
-            cubic_curve_to(
-                state,
-                1,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d,
-                args[4].d,
-                args[5].d
-            );
-            break;
-
-        case INS_REL_LINETO:
-            ASSERT_ARGS(2);
-            cairo_rel_line_to(state->cairo_ctx, args[0].d, args[1].d);
-            break;
-
-        case INS_REL_MOVETO:
-            ASSERT_ARGS(2);
-            cairo_rel_move_to(state->cairo_ctx, args[0].d, args[1].d);
-            break;
-
-        case INS_REL_Q_CURVE_TO:
-            ASSERT_ARGS(4);
-            quad_curve_to(state, 1, args[0].d, args[1].d, args[2].d, args[3].d);
-            break;
-
-        case INS_REL_S_CURVE_TO:
-            ASSERT_ARGS(4);
-            cubic_curve_to(
-                state,
-                1,
-                NAN,
-                NAN,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d
-            );
-            break;
-
-        case INS_REL_T_CURVE_TO:
-            ASSERT_ARGS(2);
-            quad_curve_to(state, 1, NAN, NAN, args[0].d, args[1].d);
             break;
 
         case INS_RESTORE:
@@ -1141,30 +1122,47 @@ static int script_eval(
             );
             break;
 
+        case INS_S_CURVE_TO_REL:
+            ASSERT_ARGS(4);
+            cubic_curve_to(
+                state,
+                1,
+                NAN,
+                NAN,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d
+            );
+            break;
+
         case INS_T_CURVE_TO:
             ASSERT_ARGS(2);
             quad_curve_to(state, 0, NAN, NAN, args[0].d, args[1].d);
             break;
 
-        case INS_REL_HORZ:
+        case INS_T_CURVE_TO_REL:
+            ASSERT_ARGS(2);
+            quad_curve_to(state, 1, NAN, NAN, args[0].d, args[1].d);
+            break;
+
         case INS_HORZ:
-        case INS_REL_VERT:
+        case INS_HORZ_REL:
         case INS_VERT:
+        case INS_VERT_REL:
             ASSERT_ARGS(1);
 
-            {
-                double x = 0, y = 0;
+            if (cairo_has_current_point(state->cairo_ctx)) {
+                double x, y;
                 double d = args[0].d;
 
-                if (cairo_has_current_point(state->cairo_ctx)) {
-                    cairo_get_current_point(state->cairo_ctx, &x, &y);
-                }
+                cairo_get_current_point(state->cairo_ctx, &x, &y);
 
                 switch (statement->inst) {
                     case INS_HORZ:     x  = d; break;
                     case INS_VERT:     y  = d; break;
-                    case INS_REL_HORZ: x += d; break;
-                    case INS_REL_VERT: y += d; break;
+                    case INS_HORZ_REL: x += d; break;
+                    case INS_VERT_REL: y += d; break;
                 }
 
                 cairo_line_to(state->cairo_ctx, x, y);
@@ -1177,13 +1175,13 @@ static int script_eval(
         // a cubic or quadratic curve.
         switch (statement->inst) {
         case INS_CURVE_TO:
+        case INS_CURVE_TO_REL:
         case INS_Q_CURVE_TO:
-        case INS_REL_CURVE_TO:
-        case INS_REL_Q_CURVE_TO:
-        case INS_REL_S_CURVE_TO:
-        case INS_REL_T_CURVE_TO:
+        case INS_Q_CURVE_TO_REL:
         case INS_S_CURVE_TO:
+        case INS_S_CURVE_TO_REL:
         case INS_T_CURVE_TO:
+        case INS_T_CURVE_TO_REL:
             break;
 
         default:
