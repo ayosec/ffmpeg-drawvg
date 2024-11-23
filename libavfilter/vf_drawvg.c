@@ -56,7 +56,10 @@ static const char *const var_names[] = {
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
 enum ScriptInstruction {
-    INS_CIRCLE = 1,           /// circle (cx cy radius)
+    INS_ARC = 1,              /// arc (cx cy radius angle1 angle2)
+    INS_ARC_NEG,              /// arcn (cx cy radius angle1 angle2)
+    INS_ARC_REL,              /// rarc (dcx dcy radius angle1 angle2)
+    INS_CIRCLE,               /// circle (cx cy radius)
     INS_CLOSE_PATH,           /// Z, z, closepath
     INS_COLOR_STOP,           /// colorstop (offset color)
     INS_CURVE_TO,             /// C, curveto (x1 y1 x2 y2 x y)
@@ -206,6 +209,8 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
+    { INS_ARC,            "arc",                { ARG_SYNTAX_SETS, { .num = 5 } } },
+    { INS_ARC_NEG,        "arcn",               { ARG_SYNTAX_SETS, { .num = 5 } } },
     { INS_CURVE_TO_REL,   "c",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_CIRCLE,         "circle",             { ARG_SYNTAX_SETS, { .num = 3 } } },
     { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
@@ -224,6 +229,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_Q_CURVE_TO_REL, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
+    { INS_ARC_REL,        "rarc",                { ARG_SYNTAX_SETS, { .num = 5 } } },
     { INS_CURVE_TO_REL,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_RECT,           "rect",               { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
@@ -760,7 +766,8 @@ struct ScriptEvalState {
     //
     // https://www.w3.org/TR/SVG/paths.html#ReflectedControlPoints
     struct {
-        int valid;
+        enum { RCP_NONE, RCP_VALID, RCP_UPDATED } status;
+
         double cubic_x;
         double cubic_y;
         double quad_x;
@@ -817,7 +824,7 @@ static void quad_curve_to(
     }
 
     if (use_reflected) {
-        if (state->rcp.valid) {
+        if (state->rcp.status != RCP_NONE) {
             x1 = state->rcp.quad_x;
             y1 = state->rcp.quad_y;
         } else {
@@ -832,7 +839,7 @@ static void quad_curve_to(
     yb = (y + 2 * y1) / 3;
     cairo_curve_to(state->cairo_ctx, xa, ya, xb, yb, x, y);
 
-    state->rcp.valid = 1;
+    state->rcp.status = RCP_UPDATED;
     state->rcp.cubic_x = x1;
     state->rcp.cubic_y = y1;
     state->rcp.quad_x = 2 * x - x1;
@@ -869,7 +876,7 @@ static void cubic_curve_to(
     }
 
     if (use_reflected) {
-        if (state->rcp.valid) {
+        if (state->rcp.status != RCP_NONE) {
             x1 = state->rcp.cubic_x;
             y1 = state->rcp.cubic_y;
         } else {
@@ -880,7 +887,7 @@ static void cubic_curve_to(
 
     cairo_curve_to(state->cairo_ctx, x1, y1, x2, y2, x, y);
 
-    state->rcp.valid = 1;
+    state->rcp.status = RCP_UPDATED;
     state->rcp.cubic_x = 2 * x - x2;
     state->rcp.cubic_y = 2 * y - y2;
     state->rcp.quad_x = x2;
@@ -957,6 +964,47 @@ static int script_eval(
 
         // Execute the instruction.
         switch (statement->inst) {
+        case INS_ARC:
+            ASSERT_ARGS(5);
+            cairo_arc(
+                state->cairo_ctx,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d,
+                args[4].d
+            );
+            break;
+
+        case INS_ARC_NEG:
+            ASSERT_ARGS(5);
+            cairo_arc_negative(
+                state->cairo_ctx,
+                args[0].d,
+                args[1].d,
+                args[2].d,
+                args[3].d,
+                args[4].d
+            );
+            break;
+
+        case INS_ARC_REL:
+            ASSERT_ARGS(5);
+            if (cairo_has_current_point(state->cairo_ctx)) {
+                double x, y;
+                cairo_get_current_point(state->cairo_ctx, &x, &y);
+
+                cairo_arc(
+                    state->cairo_ctx,
+                    x + args[0].d,
+                    y + args[1].d,
+                    args[2].d,
+                    args[3].d,
+                    args[4].d
+                );
+                break;
+            }
+
         case INS_CIRCLE:
             ASSERT_ARGS(3);
             draw_ellipse(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[2].d);
@@ -1220,21 +1268,12 @@ static int script_eval(
             break;
         }
 
-        // Discard reflected points if the last instruction is not
-        // a cubic or quadratic curve.
-        switch (statement->inst) {
-        case INS_CURVE_TO:
-        case INS_CURVE_TO_REL:
-        case INS_Q_CURVE_TO:
-        case INS_Q_CURVE_TO_REL:
-        case INS_S_CURVE_TO:
-        case INS_S_CURVE_TO_REL:
-        case INS_T_CURVE_TO:
-        case INS_T_CURVE_TO_REL:
-            break;
-
-        default:
-            state->rcp.valid = 0;
+        // Discard reflected points if the last instruction did not
+        // set new points.
+        if (state->rcp.status == RCP_UPDATED) {
+            state->rcp.status = RCP_VALID;
+        } else {
+            state->rcp.status = RCP_NONE;
         }
     }
 
@@ -1329,7 +1368,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     struct ScriptEvalState eval_state = {
         .log_ctx = drawvg_ctx,
         .pattern_builder = NULL,
-        .rcp = { .valid = 0 },
+        .rcp = { .status = RCP_NONE },
     };
 
     // Draw directly on the frame data.

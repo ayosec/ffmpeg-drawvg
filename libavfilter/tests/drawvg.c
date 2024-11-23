@@ -174,7 +174,7 @@ static void check_script(const char* source) {
     int ret;
     struct Script script;
     struct ScriptEvalState state = {
-        .rcp = { .valid = 0 },
+        .rcp = { .status = RCP_NONE },
         .vars = { 1, 2, 4, 8 },
     };
 
