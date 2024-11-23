@@ -59,16 +59,19 @@ enum ScriptInstruction {
     CMD_CLOSE_PATH = 1,
     CMD_COLOR_STOP,
     CMD_FILL,
+    CMD_HORZ,
     CMD_LINEAR_GRAD,
     CMD_LINETO,
     CMD_MOVETO,
     CMD_NEW_PATH,
     CMD_Q_CURVE_TO,
     CMD_RADIAL_GRAD,
+    CMD_REL_HORZ,
     CMD_REL_LINETO,
     CMD_REL_MOVETO,
     CMD_REL_Q_CURVE_TO,
     CMD_REL_T_CURVE_TO,
+    CMD_REL_VERT,
     CMD_RESTORE,
     CMD_SAVE,
     CMD_SCALE,
@@ -79,6 +82,7 @@ enum ScriptInstruction {
     CMD_SETLINEWIDTH,
     CMD_STROKE,
     CMD_T_CURVE_TO,
+    CMD_VERT,
 };
 
 // Instruction arguments.
@@ -183,14 +187,17 @@ struct ScriptInstructionSpec {
 //
 // The array must be sorted in ascending order by `name`.
 struct ScriptInstructionSpec instruction_specs[] = {
+    { CMD_HORZ,           "H",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { CMD_LINETO,         "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_MOVETO,         "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { CMD_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { CMD_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
     { CMD_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
     { CMD_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
     { CMD_FILL,           "fill",               { ARG_SYNTAX_NONE } },
+    { CMD_REL_HORZ,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { CMD_REL_LINETO,     "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_LINEAR_GRAD,    "lineargrad",         { ARG_SYNTAX_SET, { .num = 4 } } },
     { CMD_LINETO,         "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -215,6 +222,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { CMD_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { CMD_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
     { CMD_REL_T_CURVE_TO, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { CMD_REL_VERT,       "v",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { CMD_CLOSE_PATH,     "z",                  { ARG_SYNTAX_NONE } },
 };
 
@@ -786,6 +794,7 @@ static int script_eval(
                 "Instruction %d expects %d arguments.\n", \
                 statement->inst, n                        \
             );                                            \
+            return 0;                                     \
         }                                                 \
     } while(0);
 
@@ -993,6 +1002,30 @@ static int script_eval(
         case CMD_T_CURVE_TO:
             ASSERT_ARGS(2);
             quad_curve_to(state, 0, NAN, NAN, args[0].d, args[1].d);
+            break;
+
+        case CMD_REL_HORZ:
+        case CMD_HORZ:
+        case CMD_REL_VERT:
+        case CMD_VERT:
+            ASSERT_ARGS(1);
+            {
+                double x = 0, y = 0;
+                double d = args[0].d;
+
+                if (cairo_has_current_point(state->cairo_ctx)) {
+                    cairo_get_current_point(state->cairo_ctx, &x, &y);
+                }
+
+                switch (statement->inst) {
+                    case CMD_HORZ:     x  = d; break;
+                    case CMD_VERT:     y  = d; break;
+                    case CMD_REL_HORZ: x += d; break;
+                    case CMD_REL_VERT: y += d; break;
+                }
+
+                cairo_line_to(state->cairo_ctx, x, y);
+            }
             break;
         }
 

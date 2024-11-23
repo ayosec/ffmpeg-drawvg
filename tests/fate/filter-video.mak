@@ -597,7 +597,8 @@ fate-filter-tiltandshift-422: CMD = framecrc -c:v pgmyuv -i $(SRC) -flags +bitex
 fate-filter-tiltandshift-444: CMD = framecrc -c:v pgmyuv -i $(SRC) -flags +bitexact -vf scale=sws_flags=+accurate_rnd+bitexact,format=yuv444p,tiltandshift
 
 FATE_FILTER_VSYNTH_VIDEO_FILTER-$(CONFIG_DRAWVG_FILTER) += fate-filter-drawvg-video
-fate-filter-drawvg-video: CMD = video_filter scale,format=bgr0,drawvg=s=v10h10v10
+fate-filter-drawvg-video: SCRIPT = $(SRC_PATH)/tests/ref/lavf/drawvg
+fate-filter-drawvg-video: CMD = video_filter scale,format=bgr0,drawvg=file=$(SCRIPT)
 
 tests/pixfmts.mak: TAG = GEN
 tests/pixfmts.mak: ffmpeg$(PROGSSUF)$(EXESUF) | tests

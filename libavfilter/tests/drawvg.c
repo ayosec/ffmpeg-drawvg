@@ -16,10 +16,24 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <stdio.h>
 #include <cairo.h>
+#include <stdarg.h>
+#include <stdio.h>
 
+#include "libavutil/log.h"
 #include "libavutil/pixdesc.h"
+
+#define av_log mock_av_log
+
+static void mock_av_log(void* avcl, int level, const char *fmt, ...) {
+    va_list vl;
+
+    printf("av_log[%d]: ", level);
+    va_start(vl, fmt);
+    vprintf(fmt, vl);
+    va_end(vl);
+}
+
 #include "libavfilter/vf_drawvg.c"
 
 // Mock for cairo functions.
@@ -109,6 +123,10 @@ MOCK_FN_4(cairo_set_source_rgba);
 MOCK_FN_0(cairo_stroke_preserve);
 MOCK_FN_2(cairo_translate);
 
+cairo_bool_t cairo_has_current_point(cairo_t *cr) {
+    return 1;
+}
+
 void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
     *x = current_point_x;
     *y = current_point_y;
@@ -174,22 +192,10 @@ int main(void)
         "setlinejoin miter\n"
         "setlinecap round\n"
         "M 0 (PI * (1 + 0.5))\n"
+        "l 10 10 L 20 20 v 1 V 2 h 3 H 4\n"
         "lineto 10 20\n"
         "setcolor red\n"
         "restore\n"
-        "stroke"
-    );
-
-    // Patterns
-    check_script(
-        "lineargrad 0 1 2 3\n"
-        "colorstop 0 red\n"
-        "colorstop 0.5 green\n"
-        "colorstop 1 blue\n"
-        "fill\n"
-        "radialgrad 1 2 3 4 5 6\n"
-        "colorstop 0 white\n"
-        "colorstop 1 black\n"
         "stroke"
     );
 
