@@ -1,7 +1,9 @@
 check_sort_cmd_specs: 0 failures
 
 ---
-check_script: {save
+check_script:
+<<
+save
 scale 1 scalexy 2 3
 setlinejoin miter
 setlinecap round
@@ -10,7 +12,8 @@ l 10 10 L 20 20 v 1 V 2 h 3 H 4
 lineto 10 20
 setcolor red
 restore
-stroke}
+stroke
+>>
 cairo_save
 cairo_scale 1.0 1.0
 cairo_scale 2.0 3.0
@@ -29,7 +32,21 @@ cairo_restore
 cairo_stroke_preserve
 
 ---
-check_script: {M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0}
+check_script:
+<<
+// a b
+save
+// c d
+restore //
+>>
+cairo_save
+cairo_restore
+
+---
+check_script:
+<<
+M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0
+>>
 cairo_move_to 10.0 50.0
 cairo_curve_to 20.0 33.3 30.0 33.3 40.0 50.0
 cairo_curve_to 50.0 66.7 60.0 66.7 70.0 50.0
@@ -39,21 +56,33 @@ cairo_curve_to 140.0 33.3 150.0 33.3 160.0 50.0
 cairo_curve_to 170.0 66.7 180.0 66.7 190.0 50.0
 
 ---
-check_script: {M 0 (1*(t+1)}
+check_script:
+<<
+M 0 (1*(t+1)
+>>
 av_log[16]: unclosed '(' at position 4
 check_script: script_parse = -22
 
 ---
-check_script: {save invalid 1 2}
+check_script:
+<<
+save invalid 1 2
+>>
 av_log[16]: Invalid token at position 5: 'invalid'
 check_script: script_parse = -22
 
 ---
-check_script: {setlinecap unknown m 10 20}
+check_script:
+<<
+setlinecap unknown m 10 20
+>>
 av_log[16]: invalid argument 'unknown' at position 11
 check_script: script_parse = -22
 
 ---
-check_script: {M 0 1 2}
+check_script:
+<<
+M 0 1 2
+>>
 av_log[16]: expected numeric argument at position 7
 check_script: script_parse = -22

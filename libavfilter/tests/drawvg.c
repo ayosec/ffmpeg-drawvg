@@ -162,7 +162,7 @@ static void check_script(const char* source) {
         .vars = { 1, 2, 4, 8 },
     };
 
-    printf("\n---\n%s: {%s}\n", __func__, source);
+    printf("\n---\n%s:\n<<\n%s\n>>\n", __func__, source);
 
     current_point_x = 0;
     current_point_y = 0;
@@ -198,6 +198,9 @@ int main(void)
         "restore\n"
         "stroke"
     );
+
+    // Comments.
+    check_script("// a b\nsave\n// c d\nrestore //");
 
     // From a SVG <path>.
     check_script("M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0");

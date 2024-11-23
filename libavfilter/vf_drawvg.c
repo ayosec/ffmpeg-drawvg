@@ -264,6 +264,7 @@ struct ScriptParser {
 
 struct ScriptParserToken {
     enum {
+        TOKEN_COMMENT,
         TOKEN_EOF,
         TOKEN_EXPR,
         TOKEN_LITERAL,
@@ -353,6 +354,17 @@ static int script_parser_scan(
         token->type = TOKEN_LITERAL;
         token->length = strcspn(token->lexeme, WORD_SEPARATOR);
         break;
+
+    case '/':
+        // Return a comment if the next character is also '/',
+        // and a word if not.
+        if (source[cursor + 1] == '/') {
+            token->type = TOKEN_COMMENT;
+            token->length = strcspn(token->lexeme, "\n");
+            break;
+        }
+
+        /* fallthrough */
 
     default:
         token->type = TOKEN_WORD;
@@ -666,36 +678,43 @@ static int script_parse(
     script->statements = NULL;
     script->statements_count = 0;
 
-    for(;;) {
+    for (;;) {
         int ret;
         struct ScriptParserToken token;
+        struct ScriptInstructionSpec *inst;
 
         ret = script_parser_scan(ctx, &parser, &token, 1);
         if (ret != 0) {
             goto fail;
         }
 
-        if (token.type == TOKEN_EOF) {
+        switch (token.type) {
+        case TOKEN_COMMENT:
             break;
-        }
 
-        if (token.type == TOKEN_WORD) {
+        case TOKEN_EOF:
+            return 0;
+
+        case TOKEN_WORD:
             // Expect a valid instruction.
-            struct ScriptInstructionSpec *inst = script_get_instruction(token.lexeme, token.length);
+            inst = script_get_instruction(token.lexeme, token.length);
             if (inst != NULL) {
                 ret = script_parse_statement(ctx, &parser, script, inst);
                 if (ret != 0) {
                     goto fail;
                 }
 
-                continue;
+                break;
             }
+
+            /* fallthrough */
+
+        default:
+            av_log(ctx, AV_LOG_ERROR, "Invalid token at position %zu: '%.*s'\n",
+                token.position, (int)token.length, token.lexeme);
+
+            goto fail;
         }
-
-        av_log(ctx, AV_LOG_ERROR, "Invalid token at position %zu: '%.*s'\n",
-            token.position, (int)token.length, token.lexeme);
-
-        goto fail;
     }
 
     return 0;
@@ -1009,6 +1028,7 @@ static int script_eval(
         case CMD_REL_VERT:
         case CMD_VERT:
             ASSERT_ARGS(1);
+
             {
                 double x = 0, y = 0;
                 double d = args[0].d;
@@ -1026,6 +1046,7 @@ static int script_eval(
 
                 cairo_line_to(state->cairo_ctx, x, y);
             }
+
             break;
         }
 
