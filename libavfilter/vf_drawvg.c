@@ -38,11 +38,15 @@
 
 struct DrawVGContext;
 
+// Variables to evaluate expressions.
+
 enum {
     VAR_N,
     VAR_T,
     VAR_W,
     VAR_H,
+    VAR_CX,
+    VAR_CY,
 };
 
 static const char *const var_names[] = {
@@ -50,6 +54,8 @@ static const char *const var_names[] = {
     "t",
     "w",
     "h",
+    "cx",
+    "cy",
     NULL
 };
 
@@ -58,7 +64,6 @@ static const char *const var_names[] = {
 enum ScriptInstruction {
     INS_ARC = 1,                /// arc (cx cy radius angle1 angle2)
     INS_ARC_NEG,                /// arcn (cx cy radius angle1 angle2)
-    INS_ARC_REL,                /// rarc (dcx dcy radius angle1 angle2)
     INS_CIRCLE,                 /// circle (cx cy radius)
     INS_CLOSE_PATH,             /// Z, z, closepath
     INS_COLOR_STOP,             /// colorstop (offset color)
@@ -233,7 +238,6 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_Q_CURVE_TO_REL, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
-    { INS_ARC_REL,        "rarc",                { ARG_SYNTAX_SETS, { .num = 5 } } },
     { INS_CURVE_TO_REL,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_RECT,           "rect",               { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RESET_DASH,     "resetdash",          { ARG_SYNTAX_NONE } },
@@ -906,6 +910,8 @@ static int script_eval(
         }                                                   \
     } while(0);
 
+    double cx, cy; // Current point.
+
     union {
         double d;
         int i;
@@ -919,6 +925,16 @@ static int script_eval(
             av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
             return AVERROR(E2BIG);
         }
+
+        if (cairo_has_current_point(state->cairo_ctx)) {
+            cairo_get_current_point(state->cairo_ctx, &cx, &cy);
+        } else {
+            cx = NAN;
+            cy = NAN;
+        }
+
+        state->vars[VAR_CX] = cx;
+        state->vars[VAR_CY] = cy;
 
         for (int arg = 0; arg < statement->args_count; arg++) {
             const struct ScriptArgument *a = &statement->args[arg];
@@ -982,23 +998,6 @@ static int script_eval(
                 args[4].d
             );
             break;
-
-        case INS_ARC_REL:
-            ASSERT_ARGS(5);
-            if (cairo_has_current_point(state->cairo_ctx)) {
-                double x, y;
-                cairo_get_current_point(state->cairo_ctx, &x, &y);
-
-                cairo_arc(
-                    state->cairo_ctx,
-                    x + args[0].d,
-                    y + args[1].d,
-                    args[2].d,
-                    args[3].d,
-                    args[4].d
-                );
-                break;
-            }
 
         case INS_CIRCLE:
             ASSERT_ARGS(3);
@@ -1284,19 +1283,16 @@ static int script_eval(
             ASSERT_ARGS(1);
 
             if (cairo_has_current_point(state->cairo_ctx)) {
-                double x, y;
                 double d = args[0].d;
 
-                cairo_get_current_point(state->cairo_ctx, &x, &y);
-
                 switch (statement->inst) {
-                    case INS_HORZ:     x  = d; break;
-                    case INS_VERT:     y  = d; break;
-                    case INS_HORZ_REL: x += d; break;
-                    case INS_VERT_REL: y += d; break;
+                    case INS_HORZ:     cx  = d; break;
+                    case INS_VERT:     cy  = d; break;
+                    case INS_HORZ_REL: cx += d; break;
+                    case INS_VERT_REL: cy += d; break;
                 }
 
-                cairo_line_to(state->cairo_ctx, x, y);
+                cairo_line_to(state->cairo_ctx, cx, cy);
             }
 
             break;
