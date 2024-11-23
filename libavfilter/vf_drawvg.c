@@ -67,6 +67,8 @@ enum ScriptInstruction {
     INS_ARC = 1,                /// arc (cx cy radius angle1 angle2)
     INS_ARC_NEG,                /// arcn (cx cy radius angle1 angle2)
     INS_CIRCLE,                 /// circle (cx cy radius)
+    INS_CLIP,                   /// clip
+    INS_CLIP_EO,                /// eoclip
     INS_CLOSE_PATH,             /// Z, z, closepath
     INS_COLOR_STOP,             /// colorstop (offset color)
     INS_CURVE_TO,               /// C, curveto (x1 y1 x2 y2 x y)
@@ -86,6 +88,7 @@ enum ScriptInstruction {
     INS_Q_CURVE_TO_REL,         /// q, rquadcurveto (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            /// radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
     INS_RECT,                   /// rect (x y width height)
+    INS_RESET_CLIP,             /// resetclip
     INS_RESET_DASH,             /// resetdash
     INS_RESTORE,                /// restore
     INS_ROTATE,                 /// rotate (angle)
@@ -224,10 +227,12 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_ARC_NEG,        "arcn",               { ARG_SYNTAX_SETS, { .num = 5 } } },
     { INS_CURVE_TO_REL,   "c",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_CIRCLE,         "circle",             { ARG_SYNTAX_SETS, { .num = 3 } } },
+    { INS_CLIP,           "clip",               { ARG_SYNTAX_NONE } },
     { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
     { INS_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
     { INS_CURVE_TO,       "curveto",            { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_ELLIPSE,        "ellipse",            { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_CLIP_EO,        "eoclip",             { ARG_SYNTAX_NONE } },
     { INS_FILL_EO,        "eofill",             { ARG_SYNTAX_NONE } },
     { INS_FILL,           "fill",               { ARG_SYNTAX_NONE } },
     { INS_HORZ_REL,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
@@ -242,6 +247,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
     { INS_CURVE_TO_REL,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_RECT,           "rect",               { ARG_SYNTAX_SETS, { .num = 4 } } },
+    { INS_RESET_CLIP,     "resetclip",          { ARG_SYNTAX_NONE } },
     { INS_RESET_DASH,     "resetdash",          { ARG_SYNTAX_NONE } },
     { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
     { INS_LINE_TO_REL,    "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -1007,6 +1013,19 @@ static int script_eval(
             draw_ellipse(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[2].d);
             break;
 
+        case INS_CLIP:
+        case INS_CLIP_EO:
+            ASSERT_ARGS(0);
+            cairo_set_fill_rule(
+                state->cairo_ctx,
+                statement->inst == INS_CLIP ?
+                    CAIRO_FILL_RULE_WINDING :
+                    CAIRO_FILL_RULE_EVEN_ODD
+            );
+
+            cairo_clip(state->cairo_ctx);
+            break;
+
         case INS_CLOSE_PATH:
             ASSERT_ARGS(0);
             cairo_close_path(state->cairo_ctx);
@@ -1140,6 +1159,10 @@ static int script_eval(
                 args[4].d,
                 args[5].d
             );
+            break;
+
+        case INS_RESET_CLIP:
+            cairo_reset_clip(state->cairo_ctx);
             break;
 
         case INS_RESET_DASH:
