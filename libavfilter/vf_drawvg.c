@@ -56,38 +56,41 @@ static const char *const var_names[] = {
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
 enum ScriptInstruction {
-    INS_CLOSE_PATH = 1,       /// Z, z, closepath
-    INS_COLOR_STOP,           /// colorstop
-    INS_CURVE_TO,             /// C, curveto
-    INS_CURVE_TO_REL,         /// c, rcurveto
+    INS_CIRCLE = 1,           /// circle (cx cy radius)
+    INS_CLOSE_PATH,           /// Z, z, closepath
+    INS_COLOR_STOP,           /// colorstop (offset color)
+    INS_CURVE_TO,             /// C, curveto (x1 y1 x2 y2 x y)
+    INS_CURVE_TO_REL,         /// c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
+    INS_ELLIPSE,              /// ellipse (cx cy rx ry)
     INS_FILL,                 /// fill
     INS_FILL_EO,              /// eofill
-    INS_HORZ,                 /// H
-    INS_HORZ_REL,             /// h
-    INS_LINEAR_GRAD,          /// lineargrad
-    INS_LINE_TO,              /// L, lineto
-    INS_LINE_TO_REL,          /// l, rlineto
-    INS_MOVE_TO,              /// M, moveto
-    INS_MOVE_TO_REL,          /// m, rmoveto
+    INS_HORZ,                 /// H (x)
+    INS_HORZ_REL,             /// h (dx)
+    INS_LINEAR_GRAD,          /// lineargrad (x0 y0 x1 y1)
+    INS_LINE_TO,              /// L, lineto (x y)
+    INS_LINE_TO_REL,          /// l, rlineto (dx dy)
+    INS_MOVE_TO,              /// M, moveto (x y)
+    INS_MOVE_TO_REL,          /// m, rmoveto (dx dy)
     INS_NEW_PATH,             /// newpath
-    INS_Q_CURVE_TO,           /// Q, quadcurveto
-    INS_Q_CURVE_TO_REL,       /// q, rquadcurveto
-    INS_RADIAL_GRAD,          /// radialgrad
+    INS_Q_CURVE_TO,           /// Q, quadcurveto (x1 y1 x y)
+    INS_Q_CURVE_TO_REL,       /// q, rquadcurveto (dx1 dy1 dx dy)
+    INS_RADIAL_GRAD,          /// radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
+    INS_RECT,                 /// rect (x y width height)
     INS_RESTORE,              /// restore
     INS_SAVE,                 /// save
-    INS_SCALE,                /// scale
-    INS_SCALEXY,              /// scalexy
-    INS_SETCOLOR,             /// setcolor
-    INS_SETLINECAP,           /// setlinecap
-    INS_SETLINEJOIN,          /// setlinejoin
-    INS_SETLINEWIDTH,         /// setlinewidth
+    INS_SCALE,                /// scale (s)
+    INS_SCALEXY,              /// scalexy (sx sy)
+    INS_SETCOLOR,             /// setcolor (color)
+    INS_SETLINECAP,           /// setlinecap (cap)
+    INS_SETLINEJOIN,          /// setlinejoin (join)
+    INS_SETLINEWIDTH,         /// setlinewidth (width)
     INS_STROKE,               /// stroke
-    INS_S_CURVE_TO,           /// S, smoothcurveto
-    INS_S_CURVE_TO_REL,       /// s, rsmoothcurveto
-    INS_T_CURVE_TO,           /// T, smoothquadcurveto
-    INS_T_CURVE_TO_REL,       /// t, rsmoothquadcurveto
-    INS_VERT,                 /// V
-    INS_VERT_REL,             /// v
+    INS_S_CURVE_TO,           /// S, smoothcurveto (x2 y2 x y)
+    INS_S_CURVE_TO_REL,       /// s, rsmoothcurveto (dx2 dy2 dx dy)
+    INS_T_CURVE_TO,           /// T, smoothquadcurveto (x y)
+    INS_T_CURVE_TO_REL,       /// t, rsmoothquadcurveto (dx dy)
+    INS_VERT,                 /// V (y)
+    INS_VERT_REL,             /// v (dy)
 };
 
 // Instruction arguments.
@@ -204,9 +207,11 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
     { INS_CURVE_TO_REL,   "c",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
+    { INS_CIRCLE,         "circle",             { ARG_SYNTAX_SETS, { .num = 3 } } },
     { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
     { INS_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
     { INS_CURVE_TO,       "curveto",            { ARG_SYNTAX_SETS, { .num = 6 } } },
+    { INS_ELLIPSE,        "ellipse",            { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_FILL_EO,        "eofill",             { ARG_SYNTAX_NONE } },
     { INS_FILL,           "fill",               { ARG_SYNTAX_NONE } },
     { INS_HORZ_REL,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
@@ -220,6 +225,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
     { INS_CURVE_TO_REL,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
+    { INS_RECT,           "rect",               { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
     { INS_LINE_TO_REL,    "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_MOVE_TO_REL,    "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -762,6 +768,23 @@ struct ScriptEvalState {
     } rcp;
 };
 
+static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
+    cairo_save(c);
+    cairo_translate(c, x, y);
+
+    if (rx != ry) {
+        // Cairo does not support ellipses, but it can be created by
+        // adjusting the transformation matrix.
+        cairo_scale(c, 1, ry / rx);
+    }
+
+    cairo_new_sub_path(c);
+    cairo_arc(c, 0, 0, rx, 0, 2 * M_PI);
+    cairo_new_sub_path(c);
+
+    cairo_restore(c);
+}
+
 // Render a quadratic bezier from the current point to `x, y`, The control point
 // is specified by `x1, y1`.
 //
@@ -934,6 +957,11 @@ static int script_eval(
 
         // Execute the instruction.
         switch (statement->inst) {
+        case INS_CIRCLE:
+            ASSERT_ARGS(3);
+            draw_ellipse(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[2].d);
+            break;
+
         case INS_CLOSE_PATH:
             ASSERT_ARGS(0);
             cairo_close_path(state->cairo_ctx);
@@ -982,6 +1010,11 @@ static int script_eval(
                 args[4].d,
                 args[5].d
             );
+            break;
+
+        case INS_ELLIPSE:
+            ASSERT_ARGS(4);
+            draw_ellipse(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
         case INS_FILL:
@@ -1062,6 +1095,11 @@ static int script_eval(
                 args[4].d,
                 args[5].d
             );
+            break;
+
+        case INS_RECT:
+            ASSERT_ARGS(4);
+            cairo_rectangle(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
         case INS_RESTORE:
