@@ -139,7 +139,7 @@ static void check_sort_cmd_specs(void) {
 static void check_script(const char* source) {
     int ret;
     struct Script script;
-    struct ScriptEvalContext ctx = {
+    struct ScriptEvalState state = {
         .rcp = { .valid = 0 },
         .vars = { 1, 2, 4, 8 },
     };
@@ -155,7 +155,7 @@ static void check_script(const char* source) {
         return;
     }
 
-    ret = script_eval(&ctx, &script);
+    ret = script_eval(&state, &script);
     if (ret != 0) {
         printf("%s: script_eval = %d\n", __func__, ret);
         return;
