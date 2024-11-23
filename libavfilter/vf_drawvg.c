@@ -61,6 +61,7 @@ enum ScriptInstruction {
     INS_CURVE_TO,             /// C, curveto
     INS_CURVE_TO_REL,         /// c, rcurveto
     INS_FILL,                 /// fill
+    INS_FILL_EO,              /// eofill
     INS_HORZ,                 /// H
     INS_HORZ_REL,             /// h
     INS_LINEAR_GRAD,          /// lineargrad
@@ -206,6 +207,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
     { INS_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
     { INS_CURVE_TO,       "curveto",            { ARG_SYNTAX_SETS, { .num = 6 } } },
+    { INS_FILL_EO,        "eofill",             { ARG_SYNTAX_NONE } },
     { INS_FILL,           "fill",               { ARG_SYNTAX_NONE } },
     { INS_HORZ_REL,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_LINE_TO_REL,    "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -920,9 +922,10 @@ static int script_eval(
         if (state->pattern_builder != NULL) {
             switch (statement->inst) {
             case INS_FILL:
+            case INS_FILL_EO:
+            case INS_RESTORE:
             case INS_SAVE:
             case INS_STROKE:
-            case INS_RESTORE:
                 cairo_set_source(state->cairo_ctx, state->pattern_builder);
                 cairo_pattern_destroy(state->pattern_builder);
                 state->pattern_builder = NULL;
@@ -982,7 +985,15 @@ static int script_eval(
             break;
 
         case INS_FILL:
+        case INS_FILL_EO:
             ASSERT_ARGS(0);
+            cairo_set_fill_rule(
+                state->cairo_ctx,
+                statement->inst == INS_FILL ?
+                    CAIRO_FILL_RULE_WINDING :
+                    CAIRO_FILL_RULE_EVEN_ODD
+            );
+
             cairo_fill_preserve(state->cairo_ctx);
             break;
 
