@@ -80,6 +80,7 @@ enum ScriptInstruction {
     INS_RADIAL_GRAD,          /// radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
     INS_RECT,                 /// rect (x y width height)
     INS_RESTORE,              /// restore
+    INS_ROTATE,               /// rotate (angle)
     INS_SAVE,                 /// save
     INS_SCALE,                /// scale (s)
     INS_SCALEXY,              /// scalexy (sx sy)
@@ -90,6 +91,7 @@ enum ScriptInstruction {
     INS_STROKE,               /// stroke
     INS_S_CURVE_TO,           /// S, smoothcurveto (x2 y2 x y)
     INS_S_CURVE_TO_REL,       /// s, rsmoothcurveto (dx2 dy2 dx dy)
+    INS_TRANSLATE,            /// translate (tx ty)
     INS_T_CURVE_TO,           /// T, smoothquadcurveto (x y)
     INS_T_CURVE_TO_REL,       /// t, rsmoothquadcurveto (dx dy)
     INS_VERT,                 /// V (y)
@@ -235,6 +237,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
     { INS_LINE_TO_REL,    "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_MOVE_TO_REL,    "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_ROTATE,         "rotate",             { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_Q_CURVE_TO_REL, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_S_CURVE_TO_REL, "rsmoothcurveto",     { ARG_SYNTAX_SETS, { .num = 4 } } },
     { INS_T_CURVE_TO_REL, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -250,6 +253,7 @@ struct ScriptInstructionSpec instruction_specs[] = {
     { INS_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
     { INS_T_CURVE_TO_REL, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
+    { INS_TRANSLATE,      "translate",          { ARG_SYNTAX_SETS, { .num = 2 } } },
     { INS_VERT_REL,       "v",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_CLOSE_PATH,     "z",                  { ARG_SYNTAX_NONE } },
 };
@@ -1155,6 +1159,11 @@ static int script_eval(
             cairo_restore(state->cairo_ctx);
             break;
 
+        case INS_ROTATE:
+            ASSERT_ARGS(1);
+            cairo_rotate(state->cairo_ctx, args[0].d);
+            break;
+
         case INS_SAVE:
             ASSERT_ARGS(0);
             cairo_save(state->cairo_ctx);
@@ -1231,6 +1240,11 @@ static int script_eval(
                 args[2].d,
                 args[3].d
             );
+            break;
+
+        case INS_TRANSLATE:
+            ASSERT_ARGS(2);
+            cairo_translate(state->cairo_ctx, args[0].d, args[1].d);
             break;
 
         case INS_T_CURVE_TO:
