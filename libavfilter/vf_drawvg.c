@@ -63,7 +63,7 @@ static const char *const var_names[] = {
 
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
-enum ScriptInstruction {
+enum DVGSInstruction {
     INS_ARC = 1,                /// arc (cx cy radius angle1 angle2)
     INS_ARC_NEG,                /// arcn (cx cy radius angle1 angle2)
     INS_CIRCLE,                 /// circle (cx cy radius)
@@ -111,7 +111,7 @@ enum ScriptInstruction {
 };
 
 // Instruction arguments.
-struct ScriptArgument {
+struct DVGSArgument {
     enum {
         SA_CONST = 1,
         SA_LITERAL,
@@ -127,34 +127,34 @@ struct ScriptArgument {
     };
 };
 
-// Script statements.
-struct ScriptStatement {
-    enum ScriptInstruction inst;
+// Program statements.
+struct DVGSStatement {
+    enum DVGSInstruction inst;
     const char* inst_name;
 
-    struct ScriptArgument *args;
+    struct DVGSArgument *args;
     int args_count;
 };
 
-struct Script {
-    struct ScriptStatement *statements;
+struct DVGSProgram {
+    struct DVGSStatement *statements;
     int statements_count;
 };
 
 // Constants used in some draw instructions, like `setlinejoin`.
-struct ScriptConstant {
+struct DVGSConstant {
     const char* name;
     int value;
 };
 
-static struct ScriptConstant consts_line_cap[] = {
+static struct DVGSConstant consts_line_cap[] = {
     { "butt", CAIRO_LINE_CAP_BUTT },
     { "round", CAIRO_LINE_CAP_ROUND },
     { "square", CAIRO_LINE_CAP_SQUARE },
     { NULL, 0 },
 };
 
-static struct ScriptConstant consts_line_join[] = {
+static struct DVGSConstant consts_line_join[] = {
     { "bevel", CAIRO_LINE_JOIN_BEVEL },
     { "miter", CAIRO_LINE_JOIN_MITER },
     { "round", CAIRO_LINE_JOIN_ROUND },
@@ -162,7 +162,7 @@ static struct ScriptConstant consts_line_join[] = {
 };
 
 // Syntax of the instruction arguments.
-struct ScriptArgumentSyntax {
+struct DVGSArgumentSyntax {
     enum {
         // The instruction does not expect any argument.
         ARG_SYNTAX_NONE = 1,
@@ -200,20 +200,20 @@ struct ScriptArgumentSyntax {
 
     union {
         int num;
-        const struct ScriptConstant *consts;
+        const struct DVGSConstant *consts;
     };
 };
 
-struct ScriptInstructionSpec {
-    enum ScriptInstruction inst;
+struct DVGSInstructionSpec {
+    enum DVGSInstruction inst;
     const char* name;
-    struct ScriptArgumentSyntax syntax;
+    struct DVGSArgumentSyntax syntax;
 };
 
 // Instructions available to the scripts.
 //
 // The array must be sorted in ascending order by `name`.
-struct ScriptInstructionSpec instruction_specs[] = {
+struct DVGSInstructionSpec instruction_specs[] = {
     { INS_CURVE_TO,       "C",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
     { INS_HORZ,           "H",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
     { INS_LINE_TO,        "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
@@ -279,15 +279,15 @@ struct ScriptInstructionSpec instruction_specs[] = {
 // Comparator for `ScriptInstructionSpec`, to be used with `bsearch(3)`.
 static int comparator_instruction_spec(const void *cs1, const void *cs2) {
     return strcmp(
-        ((struct ScriptInstructionSpec*)cs1)->name,
-        ((struct ScriptInstructionSpec*)cs2)->name
+        ((struct DVGSInstructionSpec*)cs1)->name,
+        ((struct DVGSInstructionSpec*)cs2)->name
     );
 }
 
 // Return the specs for the given instruction, or `NULL` if the name is not valid.
-static struct ScriptInstructionSpec* script_get_instruction(const char *name, size_t length) {
+static struct DVGSInstructionSpec* dvgs_get_instruction(const char *name, size_t length) {
     char bufname[64];
-    struct ScriptInstructionSpec key = { .name = bufname };
+    struct DVGSInstructionSpec key = { .name = bufname };
 
     if (length >= sizeof(bufname)) {
         return NULL;
@@ -305,12 +305,12 @@ static struct ScriptInstructionSpec* script_get_instruction(const char *name, si
     );
 }
 
-struct ScriptParser {
+struct DVGSParser {
     const char* source;
     size_t cursor;
 };
 
-struct ScriptParserToken {
+struct DVGSParserToken {
     enum {
         TOKEN_COMMENT,
         TOKEN_EOF,
@@ -336,10 +336,10 @@ struct ScriptParserToken {
 //                        the returned token.
 //
 // @return `0` on success, a negative `AVERROR` code on failure.
-static int script_parser_scan(
+static int parser_next_token(
     struct DrawVGContext *ctx,
-    struct ScriptParser *parser,
-    struct ScriptParserToken *token,
+    struct DVGSParser *parser,
+    struct DVGSParserToken *token,
     int advance
 ) {
 
@@ -427,14 +427,14 @@ static int script_parser_scan(
     return 0;
 }
 
-// Release the memory allocated by the script.
-static void script_free(struct Script *script) {
-    if (script->statements == NULL) {
+// Release the memory allocated by the program.
+static void dvgs_free(struct DVGSProgram *program) {
+    if (program->statements == NULL) {
         return;
     }
 
-    for (int i = 0; i < script->statements_count; i++) {
-        struct ScriptStatement *s = &script->statements[i];
+    for (int i = 0; i < program->statements_count; i++) {
+        struct DVGSStatement *s = &program->statements[i];
         if (s->args_count > 0) {
             for (int j = 0; j < s->args_count; j++) {
                 if (s->args[j].type == SA_AV_EXPR) {
@@ -446,20 +446,20 @@ static void script_free(struct Script *script) {
         }
     }
 
-    av_freep(&script->statements);
+    av_freep(&program->statements);
 }
 
 static int parse_numeric_argument(
     struct DrawVGContext *ctx,
-    struct ScriptParser *parser,
-    struct ScriptArgument *arg
+    struct DVGSParser *parser,
+    struct DVGSArgument *arg
 ) {
     int ret;
     char buf[128];
     char *lexeme, *endp;
-    struct ScriptParserToken token;
+    struct DVGSParserToken token;
 
-    ret = script_parser_scan(ctx, parser, &token, 1);
+    ret = parser_next_token(ctx, parser, &token, 1);
     if (ret != 0) {
         return ret;
     }
@@ -509,18 +509,18 @@ static int parse_numeric_argument(
 }
 
 // Extract the arguments for an instruction, and add a new statement
-// to the script.
-static int script_parse_statement(
+// to the program.
+static int dvgs_parse_statement(
     struct DrawVGContext *ctx,
-    struct ScriptParser *parser,
-    struct Script *script,
-    struct ScriptInstructionSpec *spec
+    struct DVGSParser *parser,
+    struct DVGSProgram *program,
+    struct DVGSInstructionSpec *spec
 ) {
     int ret;
 
-    struct ScriptParserToken token;
+    struct DVGSParserToken token;
 
-    struct ScriptStatement statement = {
+    struct DVGSStatement statement = {
         .inst = spec->inst,
         .inst_name = spec->name,
         .args = NULL,
@@ -542,20 +542,20 @@ static int script_parse_statement(
     } while(0)
 
 #define ADD_STATEMENT() \
-    do {                                \
-        void *r = av_dynarray2_add(     \
-            (void*)&script->statements, \
-            &script->statements_count,  \
-            sizeof(statement),          \
-            (void*)&statement           \
-        );                              \
-                                        \
-        if (r == NULL) {                \
-            goto fail;                  \
-        }                               \
-                                        \
-        statement.args = NULL;          \
-        statement.args_count = 0;       \
+    do {                                 \
+        void *r = av_dynarray2_add(      \
+            (void*)&program->statements, \
+            &program->statements_count,  \
+            sizeof(statement),           \
+            (void*)&statement            \
+        );                               \
+                                         \
+        if (r == NULL) {                 \
+            goto fail;                   \
+        }                                \
+                                         \
+        statement.args = NULL;           \
+        statement.args_count = 0;        \
     } while(0)
 
     switch (spec->syntax.type) {
@@ -567,7 +567,7 @@ static int script_parse_statement(
     case ARG_SYNTAX_SETS:
         do {
             while (statement.args_count < spec->syntax.num) {
-                struct ScriptArgument arg;
+                struct DVGSArgument arg;
                 ret = parse_numeric_argument(ctx, parser, &arg);
 
                 if (ret != 0) {
@@ -582,20 +582,20 @@ static int script_parse_statement(
             // Repeat this instruction with another set if the next
             // token is numeric.
             spec->syntax.type == ARG_SYNTAX_SETS
-                && script_parser_scan(ctx, parser, &token, 0) == 0
+                && parser_next_token(ctx, parser, &token, 0) == 0
                 && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
         );
 
         return 0;
 
     case ARG_SYNTAX_CONST:
-        ret = script_parser_scan(ctx, parser, &token, 1);
+        ret = parser_next_token(ctx, parser, &token, 1);
         if (ret != 0) {
             goto fail;
         }
 
         for (
-            const struct ScriptConstant *c = spec->syntax.consts;
+            const struct DVGSConstant *c = spec->syntax.consts;
             c->name != NULL;
             c++
         ) {
@@ -603,7 +603,7 @@ static int script_parse_statement(
                 strncmp(token.lexeme, c->name, token.length) == 0
                 && token.length == strlen(c->name)
             ) {
-                struct ScriptArgument arg = {
+                struct DVGSArgument arg = {
                     .type = SA_CONST,
                     .constant = c->value,
                 };
@@ -621,12 +621,12 @@ static int script_parse_statement(
 
     case ARG_SYNTAX_COLORS:
         while (statement.args_count < spec->syntax.num) {
-            struct ScriptArgument arg = {
+            struct DVGSArgument arg = {
                 .type = SA_COLOR,
                 .color = { 0 },
             };
 
-            ret = script_parser_scan(ctx, parser, &token, 0);
+            ret = parser_next_token(ctx, parser, &token, 0);
             if (ret != 0) {
                 goto fail;
             }
@@ -640,7 +640,7 @@ static int script_parse_statement(
             ADD_ARG(arg);
 
             // Advance the parser to the next token.
-            script_parser_scan(ctx, parser, &token, 1);
+            parser_next_token(ctx, parser, &token, 1);
         }
 
         ADD_STATEMENT();
@@ -648,8 +648,8 @@ static int script_parse_statement(
 
     case ARG_SYNTAX_NUMBER_COLOR:
         do {
-            struct ScriptArgument arg0;
-            struct ScriptArgument arg1;
+            struct DVGSArgument arg0;
+            struct DVGSArgument arg1;
 
             // First argument must be a numeric value.
             ret = parse_numeric_argument(ctx, parser, &arg0);
@@ -658,7 +658,7 @@ static int script_parse_statement(
 
 
             // Second argument must be a color.
-            ret = script_parser_scan(ctx, parser, &token, 1);
+            ret = parser_next_token(ctx, parser, &token, 1);
             if (ret != 0)
                 goto fail;
 
@@ -676,7 +676,7 @@ static int script_parse_statement(
             // Repeat the instruction if `num == 1`, and the next
             // token is numeric.
             spec->syntax.num != 0
-                && script_parser_scan(ctx, parser, &token, 0) == 0
+                && parser_next_token(ctx, parser, &token, 0) == 0
                 && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
         );
 
@@ -694,31 +694,28 @@ fail:
     return AVERROR(EINVAL);
 }
 
-// Parse a script and write the instructions to the `script` argument.
-//
-// @param[in]  source   Script source.
-// @param[out] script   Parsed script.
+// Parse a script to generate the program statements.
 //
 // @return `0` on success, a negative `AVERROR` code on failure.
-static int script_parse(
+static int dvgs_parse(
     struct DrawVGContext *ctx,
     const char *source,
-    struct Script *script
+    struct DVGSProgram *program
 ) {
-    struct ScriptParser parser = {
+    struct DVGSParser parser = {
         .source = source,
         .cursor = 0,
     };
 
-    script->statements = NULL;
-    script->statements_count = 0;
+    program->statements = NULL;
+    program->statements_count = 0;
 
     for (;;) {
         int ret;
-        struct ScriptParserToken token;
-        struct ScriptInstructionSpec *inst;
+        struct DVGSParserToken token;
+        struct DVGSInstructionSpec *inst;
 
-        ret = script_parser_scan(ctx, &parser, &token, 1);
+        ret = parser_next_token(ctx, &parser, &token, 1);
         if (ret != 0) {
             goto fail;
         }
@@ -732,9 +729,9 @@ static int script_parse(
 
         case TOKEN_WORD:
             // Expect a valid instruction.
-            inst = script_get_instruction(token.lexeme, token.length);
+            inst = dvgs_get_instruction(token.lexeme, token.length);
             if (inst != NULL) {
-                ret = script_parse_statement(ctx, &parser, script, inst);
+                ret = dvgs_parse_statement(ctx, &parser, program, inst);
                 if (ret != 0) {
                     goto fail;
                 }
@@ -755,11 +752,11 @@ static int script_parse(
     return 0;
 
 fail:
-    script_free(script);
+    dvgs_free(program);
     return AVERROR(EINVAL);
 }
 
-struct ScriptEvalState {
+struct DVGSEvalState {
     void *log_ctx;
 
     cairo_t *cairo_ctx;
@@ -807,7 +804,7 @@ static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
 //
 // cairo only supports cubic cuvers, so we have to transform the control points.
 static void quad_curve_to(
-    struct ScriptEvalState *state,
+    struct DVGSEvalState *state,
     int relative,
     double x1,
     double y1,
@@ -856,7 +853,7 @@ static void quad_curve_to(
 
 // Similar to quad_curve_to, but for cubic curves.
 static void cubic_curve_to(
-    struct ScriptEvalState *state,
+    struct DVGSEvalState *state,
     int relative,
     double x1,
     double y1,
@@ -903,9 +900,9 @@ static void cubic_curve_to(
 }
 
 // Execute the cairo functions for the given script.
-static int script_eval(
-    struct ScriptEvalState *state,
-    const struct Script *script
+static int dvgs_eval(
+    struct DVGSEvalState *state,
+    const struct DVGSProgram *program
 ) {
 #define ASSERT_ARGS(n) \
     do {                                                    \
@@ -927,8 +924,8 @@ static int script_eval(
         const uint8_t *c;
     } args[8];
 
-    for (int st_number = 0; st_number < script->statements_count; st_number++) {
-        struct ScriptStatement *statement = &script->statements[st_number];
+    for (int st_number = 0; st_number < program->statements_count; st_number++) {
+        struct DVGSStatement *statement = &program->statements[st_number];
 
         if (statement->args_count >= FF_ARRAY_ELEMS(args)) {
             av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
@@ -946,7 +943,7 @@ static int script_eval(
         state->vars[VAR_CY] = cy;
 
         for (int arg = 0; arg < statement->args_count; arg++) {
-            const struct ScriptArgument *a = &statement->args[arg];
+            const struct DVGSArgument *a = &statement->args[arg];
             switch (a->type) {
             case SA_CONST:
                 args[arg].i = a->constant;
@@ -1344,7 +1341,7 @@ typedef struct DrawVGContext {
 
     uint8_t *script_text;           ///< inline source.
     uint8_t *script_file;           ///< file with the script.
-    struct Script script;
+    struct DVGSProgram program;
 } DrawVGContext;
 
 #define OFFSET(x) offsetof(DrawVGContext, x)
@@ -1421,7 +1418,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     AVFilterContext *filter_ctx = inlink->dst;
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
-    struct ScriptEvalState eval_state = {
+    struct DVGSEvalState eval_state = {
         .log_ctx = drawvg_ctx,
         .pattern_builder = NULL,
         .rcp = { .status = RCP_NONE },
@@ -1449,7 +1446,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     eval_state.vars[VAR_H] = inlink->h;
     eval_state.vars[VAR_DURATION] = frame->duration * av_q2d(inlink->time_base);
 
-    ret = script_eval(&eval_state, &drawvg_ctx->script);
+    ret = dvgs_eval(&eval_state, &drawvg_ctx->program);
 
     cairo_destroy(eval_state.cairo_ctx);
     cairo_surface_destroy(surface);
@@ -1496,12 +1493,12 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
         }
     }
 
-    return script_parse(drawvg, drawvg->script_text, &drawvg->script);
+    return dvgs_parse(drawvg, drawvg->script_text, &drawvg->program);
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {
     DrawVGContext *drawvg = ctx->priv;
-    script_free(&drawvg->script);
+    dvgs_free(&drawvg->program);
 }
 
 static const AVFilterPad drawvg_inputs[] = {

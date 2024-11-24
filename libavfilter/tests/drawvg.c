@@ -172,8 +172,8 @@ static void check_sort_cmd_specs(void) {
 // Compile and run a script.
 static void check_script(const char* source) {
     int ret;
-    struct Script script;
-    struct ScriptEvalState state = {
+    struct DVGSProgram program;
+    struct DVGSEvalState state = {
         .rcp = { .status = RCP_NONE },
         .vars = { 1, 2, 4, 8 },
     };
@@ -183,19 +183,19 @@ static void check_script(const char* source) {
     current_point_x = 0;
     current_point_y = 0;
 
-    ret = script_parse(NULL, source, &script);
+    ret = dvgs_parse(NULL, source, &program);
     if (ret != 0) {
-        printf("%s: script_parse = %d\n", __func__, ret);
+        printf("%s: dvgs_parse = %d\n", __func__, ret);
         return;
     }
 
-    ret = script_eval(&state, &script);
+    ret = dvgs_eval(&state, &program);
     if (ret != 0) {
-        printf("%s: script_eval = %d\n", __func__, ret);
+        printf("%s: dvgs_eval = %d\n", __func__, ret);
         return;
     }
 
-    script_free(&script);
+    dvgs_free(&program);
 }
 
 int main(void)
