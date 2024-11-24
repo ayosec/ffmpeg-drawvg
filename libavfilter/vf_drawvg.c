@@ -94,6 +94,7 @@ enum VGSInstruction {
     INS_ELLIPSE,                ///<  ellipse (cx cy rx ry)
     INS_FILL,                   ///<  fill
     INS_FILL_EO,                ///<  eofill
+    INS_FINISH,                 ///<  finish
     INS_HORZ,                   ///<  H (x)
     INS_HORZ_REL,               ///<  h (dx)
     INS_IF,                     ///<  if (condition) { subprogram }
@@ -262,6 +263,7 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_CLIP_EO,        "eoclip",             { PARAMS_NONE } },
     { INS_FILL_EO,        "eofill",             { PARAMS_NONE } },
     { INS_FILL,           "fill",               { PARAMS_NONE } },
+    { INS_FINISH,         "finish",             { PARAMS_NONE } },
     { INS_HORZ_REL,       "h",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
     { INS_IF,             "if",                 { PARAMS_SUBPROGRAM, { .num = 1 } } },
     { INS_LINE_TO_REL,    "l",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
@@ -870,6 +872,8 @@ struct VGSEvalState {
     cairo_t *cairo_ctx;
     cairo_pattern_t *pattern_builder;
 
+    int interrupted;
+
     double vars[VAR_COUNT];
     struct VGSValueStackEntry *stack_values;
 
@@ -1277,11 +1281,15 @@ static int vgs_eval(
             cairo_fill_preserve(state->cairo_ctx);
             break;
 
+        case INS_FINISH:
+            state->interrupted = 1;
+            return 0;
+
         case INS_IF:
             ASSERT_ARGS(2);
             if (args[0].d != 0.0) {
                 int ret = vgs_eval(state, args[1].p);
-                if (ret != 0)
+                if (ret != 0 || state->interrupted != 0)
                     return ret;
             }
 
@@ -1379,6 +1387,10 @@ static int vgs_eval(
                 ret = vgs_eval(state, args[1].p);
                 if (ret != 0)
                     return ret;
+
+                // Ensure `interrupted` is reset after `repeat`, since
+                // it can be used to stop a loop.
+                state->interrupted = 0;
             }
 
             state->vars[VAR_I] = NAN;
@@ -1636,6 +1648,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
         .log_ctx = drawvg_ctx,
         .pattern_builder = NULL,
         .stack_values = NULL,
+        .interrupted = 0,
         .rcp = { .status = RCP_NONE },
     };
 
