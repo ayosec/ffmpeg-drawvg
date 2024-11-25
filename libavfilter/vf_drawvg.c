@@ -63,7 +63,7 @@ static const char *const var_names[] = {
 
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
-enum DVGSInstruction {
+enum VGSInstruction {
     INS_ARC = 1,                /// arc (cx cy radius angle1 angle2)
     INS_ARC_NEG,                /// arcn (cx cy radius angle1 angle2)
     INS_CIRCLE,                 /// circle (cx cy radius)
@@ -111,7 +111,7 @@ enum DVGSInstruction {
 };
 
 // Instruction arguments.
-struct DVGSArgument {
+struct VGSArgument {
     enum {
         SA_CONST = 1,
         SA_LITERAL,
@@ -128,33 +128,33 @@ struct DVGSArgument {
 };
 
 // Program statements.
-struct DVGSStatement {
-    enum DVGSInstruction inst;
+struct VGSStatement {
+    enum VGSInstruction inst;
     const char* inst_name;
 
-    struct DVGSArgument *args;
+    struct VGSArgument *args;
     int args_count;
 };
 
-struct DVGSProgram {
-    struct DVGSStatement *statements;
+struct VGSProgram {
+    struct VGSStatement *statements;
     int statements_count;
 };
 
 // Constants used in some draw instructions, like `setlinejoin`.
-struct DVGSConstant {
+struct VGSConstant {
     const char* name;
     int value;
 };
 
-static struct DVGSConstant consts_line_cap[] = {
+static struct VGSConstant consts_line_cap[] = {
     { "butt", CAIRO_LINE_CAP_BUTT },
     { "round", CAIRO_LINE_CAP_ROUND },
     { "square", CAIRO_LINE_CAP_SQUARE },
     { NULL, 0 },
 };
 
-static struct DVGSConstant consts_line_join[] = {
+static struct VGSConstant consts_line_join[] = {
     { "bevel", CAIRO_LINE_JOIN_BEVEL },
     { "miter", CAIRO_LINE_JOIN_MITER },
     { "round", CAIRO_LINE_JOIN_ROUND },
@@ -162,15 +162,15 @@ static struct DVGSConstant consts_line_join[] = {
 };
 
 // Syntax of the instruction arguments.
-struct DVGSArgumentSyntax {
+struct VGSParameters {
     enum {
         // The instruction does not expect any argument.
-        ARG_SYNTAX_NONE = 1,
+        PARAMS_NONE = 1,
 
         // The instruction expects a fixed number of numeric arguments.
         //
         // The field `num` must indicate the size of the set.
-        ARG_SYNTAX_SET,
+        PARAMS_NUMBERS,
 
         // The instruction expects a sequence of sets. The parser emits an
         // instruction for each complete set.
@@ -180,114 +180,114 @@ struct DVGSArgumentSyntax {
         // For example, the instruction `L` expects 2 arguments in each set,
         // so the script `L 10 10 20 20` emit two `lineto` instructions:
         // `L 10 20` and `L 20 20`.
-        ARG_SYNTAX_SETS,
+        PARAMS_NUMBERS_SEQS,
 
         // The instruction expects a single argument, which is a keyword
         // from the array in the field `const_names`.
-        ARG_SYNTAX_CONST,
+        PARAMS_CONSTANT,
 
         // The argument is a color, or a list of colors.
         //
         // `num` indicates the maximum number of arguments, or `0` if
         // it accepts any number of colors.
-        ARG_SYNTAX_COLORS,
+        PARAMS_COLORS,
 
         // The instruction expects a number and a color.
         //
         // If `num` is `1`, the instruction expects a sequence of sets.
-        ARG_SYNTAX_NUMBER_COLOR,
+        PARAMS_NUMBER_COLOR,
     } type;
 
     union {
         int num;
-        const struct DVGSConstant *consts;
+        const struct VGSConstant *consts;
     };
 };
 
-struct DVGSInstructionSpec {
-    enum DVGSInstruction inst;
+struct VGSInstructionSpec {
+    enum VGSInstruction inst;
     const char* name;
-    struct DVGSArgumentSyntax syntax;
+    struct VGSParameters params;
 };
 
 // Instructions available to the scripts.
 //
 // The array must be sorted in ascending order by `name`.
-struct DVGSInstructionSpec instruction_specs[] = {
-    { INS_CURVE_TO,       "C",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
-    { INS_HORZ,           "H",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_LINE_TO,        "L",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_MOVE_TO,        "M",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_Q_CURVE_TO,     "Q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_S_CURVE_TO,     "S",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_T_CURVE_TO,     "T",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_VERT,           "V",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_CLOSE_PATH,     "Z",                  { ARG_SYNTAX_NONE } },
-    { INS_ARC,            "arc",                { ARG_SYNTAX_SETS, { .num = 5 } } },
-    { INS_ARC_NEG,        "arcn",               { ARG_SYNTAX_SETS, { .num = 5 } } },
-    { INS_CURVE_TO_REL,   "c",                  { ARG_SYNTAX_SETS, { .num = 6 } } },
-    { INS_CIRCLE,         "circle",             { ARG_SYNTAX_SETS, { .num = 3 } } },
-    { INS_CLIP,           "clip",               { ARG_SYNTAX_NONE } },
-    { INS_CLOSE_PATH,     "closepath",          { ARG_SYNTAX_NONE } },
-    { INS_COLOR_STOP,     "colorstop",          { ARG_SYNTAX_NUMBER_COLOR, { .num = 1 } } },
-    { INS_CURVE_TO,       "curveto",            { ARG_SYNTAX_SETS, { .num = 6 } } },
-    { INS_ELLIPSE,        "ellipse",            { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_CLIP_EO,        "eoclip",             { ARG_SYNTAX_NONE } },
-    { INS_FILL_EO,        "eofill",             { ARG_SYNTAX_NONE } },
-    { INS_FILL,           "fill",               { ARG_SYNTAX_NONE } },
-    { INS_HORZ_REL,       "h",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_LINE_TO_REL,    "l",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_LINEAR_GRAD,    "lineargrad",         { ARG_SYNTAX_SET, { .num = 4 } } },
-    { INS_LINE_TO,        "lineto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_MOVE_TO_REL,    "m",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_MOVE_TO,        "moveto",             { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_NEW_PATH,       "newpath",            { ARG_SYNTAX_NONE } },
-    { INS_Q_CURVE_TO_REL, "q",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_Q_CURVE_TO,     "quadcurveto",        { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_RADIAL_GRAD,    "radialgrad",         { ARG_SYNTAX_SET, { .num = 6 } } },
-    { INS_CURVE_TO_REL,   "rcurveto",           { ARG_SYNTAX_SETS, { .num = 6 } } },
-    { INS_RECT,           "rect",               { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_RESET_CLIP,     "resetclip",          { ARG_SYNTAX_NONE } },
-    { INS_RESET_DASH,     "resetdash",          { ARG_SYNTAX_NONE } },
-    { INS_RESTORE,        "restore",            { ARG_SYNTAX_NONE } },
-    { INS_LINE_TO_REL,    "rlineto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_MOVE_TO_REL,    "rmoveto",            { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_ROTATE,         "rotate",             { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_Q_CURVE_TO_REL, "rquadcurveto",       { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_S_CURVE_TO_REL, "rsmoothcurveto",     { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_T_CURVE_TO_REL, "rsmoothquadcurveto", { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_S_CURVE_TO_REL, "s",                  { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_SAVE,           "save",               { ARG_SYNTAX_NONE } },
-    { INS_SCALE,          "scale",              { ARG_SYNTAX_SET, { .num = 1 } } },
-    { INS_SCALEXY,        "scalexy",            { ARG_SYNTAX_SET, { .num = 2 } } },
-    { INS_SETCOLOR,       "setcolor",           { ARG_SYNTAX_COLORS, { .num = 1 } } },
-    { INS_SET_DASH,       "setdash",            { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_SETLINECAP,     "setlinecap",         { ARG_SYNTAX_CONST, { .consts = consts_line_cap } } },
-    { INS_SETLINEJOIN,    "setlinejoin",        { ARG_SYNTAX_CONST, { .consts = consts_line_join } } },
-    { INS_SETLINEWIDTH,   "setlinewidth",       { ARG_SYNTAX_SET, { .num = 1 } } },
-    { INS_S_CURVE_TO,     "smoothcurveto",      { ARG_SYNTAX_SETS, { .num = 4 } } },
-    { INS_T_CURVE_TO,     "smoothquadcurveto",  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_STROKE,         "stroke",             { ARG_SYNTAX_NONE } },
-    { INS_T_CURVE_TO_REL, "t",                  { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_TRANSLATE,      "translate",          { ARG_SYNTAX_SETS, { .num = 2 } } },
-    { INS_VERT_REL,       "v",                  { ARG_SYNTAX_SETS, { .num = 1 } } },
-    { INS_CLOSE_PATH,     "z",                  { ARG_SYNTAX_NONE } },
+struct VGSInstructionSpec vgs_instructions[] = {
+    { INS_CURVE_TO,       "C",                  { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_HORZ,           "H",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_LINE_TO,        "L",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO,        "M",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_Q_CURVE_TO,     "Q",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_S_CURVE_TO,     "S",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_T_CURVE_TO,     "T",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_VERT,           "V",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_CLOSE_PATH,     "Z",                  { PARAMS_NONE } },
+    { INS_ARC,            "arc",                { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
+    { INS_ARC_NEG,        "arcn",               { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
+    { INS_CURVE_TO_REL,   "c",                  { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_CIRCLE,         "circle",             { PARAMS_NUMBERS_SEQS, { .num = 3 } } },
+    { INS_CLIP,           "clip",               { PARAMS_NONE } },
+    { INS_CLOSE_PATH,     "closepath",          { PARAMS_NONE } },
+    { INS_COLOR_STOP,     "colorstop",          { PARAMS_NUMBER_COLOR, { .num = 1 } } },
+    { INS_CURVE_TO,       "curveto",            { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_ELLIPSE,        "ellipse",            { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_CLIP_EO,        "eoclip",             { PARAMS_NONE } },
+    { INS_FILL_EO,        "eofill",             { PARAMS_NONE } },
+    { INS_FILL,           "fill",               { PARAMS_NONE } },
+    { INS_HORZ_REL,       "h",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_LINE_TO_REL,    "l",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_LINEAR_GRAD,    "lineargrad",         { PARAMS_NUMBERS, { .num = 4 } } },
+    { INS_LINE_TO,        "lineto",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO_REL,    "m",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO,        "moveto",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_NEW_PATH,       "newpath",            { PARAMS_NONE } },
+    { INS_Q_CURVE_TO_REL, "q",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_Q_CURVE_TO,     "quadcurveto",        { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_RADIAL_GRAD,    "radialgrad",         { PARAMS_NUMBERS, { .num = 6 } } },
+    { INS_CURVE_TO_REL,   "rcurveto",           { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_RECT,           "rect",               { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_RESET_CLIP,     "resetclip",          { PARAMS_NONE } },
+    { INS_RESET_DASH,     "resetdash",          { PARAMS_NONE } },
+    { INS_RESTORE,        "restore",            { PARAMS_NONE } },
+    { INS_LINE_TO_REL,    "rlineto",            { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO_REL,    "rmoveto",            { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_ROTATE,         "rotate",             { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_Q_CURVE_TO_REL, "rquadcurveto",       { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_S_CURVE_TO_REL, "rsmoothcurveto",     { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_T_CURVE_TO_REL, "rsmoothquadcurveto", { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_S_CURVE_TO_REL, "s",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_SAVE,           "save",               { PARAMS_NONE } },
+    { INS_SCALE,          "scale",              { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_SCALEXY,        "scalexy",            { PARAMS_NUMBERS, { .num = 2 } } },
+    { INS_SETCOLOR,       "setcolor",           { PARAMS_COLORS, { .num = 1 } } },
+    { INS_SET_DASH,       "setdash",            { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_SETLINECAP,     "setlinecap",         { PARAMS_CONSTANT, { .consts = consts_line_cap } } },
+    { INS_SETLINEJOIN,    "setlinejoin",        { PARAMS_CONSTANT, { .consts = consts_line_join } } },
+    { INS_SETLINEWIDTH,   "setlinewidth",       { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_S_CURVE_TO,     "smoothcurveto",      { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_T_CURVE_TO,     "smoothquadcurveto",  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_STROKE,         "stroke",             { PARAMS_NONE } },
+    { INS_T_CURVE_TO_REL, "t",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_TRANSLATE,      "translate",          { PARAMS_NUMBERS, { .num = 2 } } },
+    { INS_VERT_REL,       "v",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_CLOSE_PATH,     "z",                  { PARAMS_NONE } },
 };
 
-#define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(instruction_specs)
+#define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(vgs_instructions)
 
 // Comparator for `ScriptInstructionSpec`, to be used with `bsearch(3)`.
-static int comparator_instruction_spec(const void *cs1, const void *cs2) {
+static int vgs_comp_instruction_spec(const void *cs1, const void *cs2) {
     return strcmp(
-        ((struct DVGSInstructionSpec*)cs1)->name,
-        ((struct DVGSInstructionSpec*)cs2)->name
+        ((struct VGSInstructionSpec*)cs1)->name,
+        ((struct VGSInstructionSpec*)cs2)->name
     );
 }
 
 // Return the specs for the given instruction, or `NULL` if the name is not valid.
-static struct DVGSInstructionSpec* dvgs_get_instruction(const char *name, size_t length) {
+static struct VGSInstructionSpec* vgs_get_instruction(const char *name, size_t length) {
     char bufname[64];
-    struct DVGSInstructionSpec key = { .name = bufname };
+    struct VGSInstructionSpec key = { .name = bufname };
 
     if (length >= sizeof(bufname)) {
         return NULL;
@@ -298,19 +298,19 @@ static struct DVGSInstructionSpec* dvgs_get_instruction(const char *name, size_t
 
     return bsearch(
         &key,
-        instruction_specs,
+        vgs_instructions,
         INSTRUCTION_SPECS_COUNT,
-        sizeof(instruction_specs[0]),
-        comparator_instruction_spec
+        sizeof(vgs_instructions[0]),
+        vgs_comp_instruction_spec
     );
 }
 
-struct DVGSParser {
+struct VGSParser {
     const char* source;
     size_t cursor;
 };
 
-struct DVGSParserToken {
+struct VGSParserToken {
     enum {
         TOKEN_COMMENT,
         TOKEN_EOF,
@@ -336,10 +336,10 @@ struct DVGSParserToken {
 //                        the returned token.
 //
 // @return `0` on success, a negative `AVERROR` code on failure.
-static int parser_next_token(
+static int vgs_parser_next_token(
     struct DrawVGContext *ctx,
-    struct DVGSParser *parser,
-    struct DVGSParserToken *token,
+    struct VGSParser *parser,
+    struct VGSParserToken *token,
     int advance
 ) {
 
@@ -428,13 +428,13 @@ static int parser_next_token(
 }
 
 // Release the memory allocated by the program.
-static void dvgs_free(struct DVGSProgram *program) {
+static void vgs_free(struct VGSProgram *program) {
     if (program->statements == NULL) {
         return;
     }
 
     for (int i = 0; i < program->statements_count; i++) {
-        struct DVGSStatement *s = &program->statements[i];
+        struct VGSStatement *s = &program->statements[i];
         if (s->args_count > 0) {
             for (int j = 0; j < s->args_count; j++) {
                 if (s->args[j].type == SA_AV_EXPR) {
@@ -449,17 +449,17 @@ static void dvgs_free(struct DVGSProgram *program) {
     av_freep(&program->statements);
 }
 
-static int parse_numeric_argument(
+static int vgs_parse_numeric_argument(
     struct DrawVGContext *ctx,
-    struct DVGSParser *parser,
-    struct DVGSArgument *arg
+    struct VGSParser *parser,
+    struct VGSArgument *arg
 ) {
     int ret;
     char buf[128];
     char *lexeme, *endp;
-    struct DVGSParserToken token;
+    struct VGSParserToken token;
 
-    ret = parser_next_token(ctx, parser, &token, 1);
+    ret = vgs_parser_next_token(ctx, parser, &token, 1);
     if (ret != 0) {
         return ret;
     }
@@ -510,17 +510,17 @@ static int parse_numeric_argument(
 
 // Extract the arguments for an instruction, and add a new statement
 // to the program.
-static int dvgs_parse_statement(
+static int vgs_parse_statement(
     struct DrawVGContext *ctx,
-    struct DVGSParser *parser,
-    struct DVGSProgram *program,
-    struct DVGSInstructionSpec *spec
+    struct VGSParser *parser,
+    struct VGSProgram *program,
+    struct VGSInstructionSpec *spec
 ) {
     int ret;
 
-    struct DVGSParserToken token;
+    struct VGSParserToken token;
 
-    struct DVGSStatement statement = {
+    struct VGSStatement statement = {
         .inst = spec->inst,
         .inst_name = spec->name,
         .args = NULL,
@@ -558,17 +558,17 @@ static int dvgs_parse_statement(
         statement.args_count = 0;        \
     } while(0)
 
-    switch (spec->syntax.type) {
-    case ARG_SYNTAX_NONE:
+    switch (spec->params.type) {
+    case PARAMS_NONE:
         ADD_STATEMENT();
         return 0;
 
-    case ARG_SYNTAX_SET:
-    case ARG_SYNTAX_SETS:
+    case PARAMS_NUMBERS:
+    case PARAMS_NUMBERS_SEQS:
         do {
-            while (statement.args_count < spec->syntax.num) {
-                struct DVGSArgument arg;
-                ret = parse_numeric_argument(ctx, parser, &arg);
+            while (statement.args_count < spec->params.num) {
+                struct VGSArgument arg;
+                ret = vgs_parse_numeric_argument(ctx, parser, &arg);
 
                 if (ret != 0) {
                     goto fail;
@@ -581,21 +581,21 @@ static int dvgs_parse_statement(
         } while(
             // Repeat this instruction with another set if the next
             // token is numeric.
-            spec->syntax.type == ARG_SYNTAX_SETS
-                && parser_next_token(ctx, parser, &token, 0) == 0
+            spec->params.type == PARAMS_NUMBERS_SEQS
+                && vgs_parser_next_token(ctx, parser, &token, 0) == 0
                 && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
         );
 
         return 0;
 
-    case ARG_SYNTAX_CONST:
-        ret = parser_next_token(ctx, parser, &token, 1);
+    case PARAMS_CONSTANT:
+        ret = vgs_parser_next_token(ctx, parser, &token, 1);
         if (ret != 0) {
             goto fail;
         }
 
         for (
-            const struct DVGSConstant *c = spec->syntax.consts;
+            const struct VGSConstant *c = spec->params.consts;
             c->name != NULL;
             c++
         ) {
@@ -603,7 +603,7 @@ static int dvgs_parse_statement(
                 strncmp(token.lexeme, c->name, token.length) == 0
                 && token.length == strlen(c->name)
             ) {
-                struct DVGSArgument arg = {
+                struct VGSArgument arg = {
                     .type = SA_CONST,
                     .constant = c->value,
                 };
@@ -619,14 +619,14 @@ static int dvgs_parse_statement(
 
         goto fail;
 
-    case ARG_SYNTAX_COLORS:
-        while (statement.args_count < spec->syntax.num) {
-            struct DVGSArgument arg = {
+    case PARAMS_COLORS:
+        while (statement.args_count < spec->params.num) {
+            struct VGSArgument arg = {
                 .type = SA_COLOR,
                 .color = { 0 },
             };
 
-            ret = parser_next_token(ctx, parser, &token, 0);
+            ret = vgs_parser_next_token(ctx, parser, &token, 0);
             if (ret != 0) {
                 goto fail;
             }
@@ -640,25 +640,25 @@ static int dvgs_parse_statement(
             ADD_ARG(arg);
 
             // Advance the parser to the next token.
-            parser_next_token(ctx, parser, &token, 1);
+            vgs_parser_next_token(ctx, parser, &token, 1);
         }
 
         ADD_STATEMENT();
         return 0;
 
-    case ARG_SYNTAX_NUMBER_COLOR:
+    case PARAMS_NUMBER_COLOR:
         do {
-            struct DVGSArgument arg0;
-            struct DVGSArgument arg1;
+            struct VGSArgument arg0;
+            struct VGSArgument arg1;
 
             // First argument must be a numeric value.
-            ret = parse_numeric_argument(ctx, parser, &arg0);
+            ret = vgs_parse_numeric_argument(ctx, parser, &arg0);
             if (ret != 0)
                 goto fail;
 
 
             // Second argument must be a color.
-            ret = parser_next_token(ctx, parser, &token, 1);
+            ret = vgs_parser_next_token(ctx, parser, &token, 1);
             if (ret != 0)
                 goto fail;
 
@@ -675,8 +675,8 @@ static int dvgs_parse_statement(
         } while(
             // Repeat the instruction if `num == 1`, and the next
             // token is numeric.
-            spec->syntax.num != 0
-                && parser_next_token(ctx, parser, &token, 0) == 0
+            spec->params.num != 0
+                && vgs_parser_next_token(ctx, parser, &token, 0) == 0
                 && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
         );
 
@@ -697,12 +697,12 @@ fail:
 // Parse a script to generate the program statements.
 //
 // @return `0` on success, a negative `AVERROR` code on failure.
-static int dvgs_parse(
+static int vgs_parse(
     struct DrawVGContext *ctx,
     const char *source,
-    struct DVGSProgram *program
+    struct VGSProgram *program
 ) {
-    struct DVGSParser parser = {
+    struct VGSParser parser = {
         .source = source,
         .cursor = 0,
     };
@@ -712,10 +712,10 @@ static int dvgs_parse(
 
     for (;;) {
         int ret;
-        struct DVGSParserToken token;
-        struct DVGSInstructionSpec *inst;
+        struct VGSParserToken token;
+        struct VGSInstructionSpec *inst;
 
-        ret = parser_next_token(ctx, &parser, &token, 1);
+        ret = vgs_parser_next_token(ctx, &parser, &token, 1);
         if (ret != 0) {
             goto fail;
         }
@@ -729,9 +729,9 @@ static int dvgs_parse(
 
         case TOKEN_WORD:
             // Expect a valid instruction.
-            inst = dvgs_get_instruction(token.lexeme, token.length);
+            inst = vgs_get_instruction(token.lexeme, token.length);
             if (inst != NULL) {
-                ret = dvgs_parse_statement(ctx, &parser, program, inst);
+                ret = vgs_parse_statement(ctx, &parser, program, inst);
                 if (ret != 0) {
                     goto fail;
                 }
@@ -752,11 +752,11 @@ static int dvgs_parse(
     return 0;
 
 fail:
-    dvgs_free(program);
+    vgs_free(program);
     return AVERROR(EINVAL);
 }
 
-struct DVGSEvalState {
+struct VGSEvalState {
     void *log_ctx;
 
     cairo_t *cairo_ctx;
@@ -804,7 +804,7 @@ static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
 //
 // cairo only supports cubic cuvers, so we have to transform the control points.
 static void quad_curve_to(
-    struct DVGSEvalState *state,
+    struct VGSEvalState *state,
     int relative,
     double x1,
     double y1,
@@ -853,7 +853,7 @@ static void quad_curve_to(
 
 // Similar to quad_curve_to, but for cubic curves.
 static void cubic_curve_to(
-    struct DVGSEvalState *state,
+    struct VGSEvalState *state,
     int relative,
     double x1,
     double y1,
@@ -900,9 +900,9 @@ static void cubic_curve_to(
 }
 
 // Execute the cairo functions for the given script.
-static int dvgs_eval(
-    struct DVGSEvalState *state,
-    const struct DVGSProgram *program
+static int vgs_eval(
+    struct VGSEvalState *state,
+    const struct VGSProgram *program
 ) {
 #define ASSERT_ARGS(n) \
     do {                                                    \
@@ -925,7 +925,7 @@ static int dvgs_eval(
     } args[8];
 
     for (int st_number = 0; st_number < program->statements_count; st_number++) {
-        struct DVGSStatement *statement = &program->statements[st_number];
+        struct VGSStatement *statement = &program->statements[st_number];
 
         if (statement->args_count >= FF_ARRAY_ELEMS(args)) {
             av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
@@ -943,7 +943,7 @@ static int dvgs_eval(
         state->vars[VAR_CY] = cy;
 
         for (int arg = 0; arg < statement->args_count; arg++) {
-            const struct DVGSArgument *a = &statement->args[arg];
+            const struct VGSArgument *a = &statement->args[arg];
             switch (a->type) {
             case SA_CONST:
                 args[arg].i = a->constant;
@@ -1341,7 +1341,7 @@ typedef struct DrawVGContext {
 
     uint8_t *script_text;           ///< inline source.
     uint8_t *script_file;           ///< file with the script.
-    struct DVGSProgram program;
+    struct VGSProgram program;
 } DrawVGContext;
 
 #define OFFSET(x) offsetof(DrawVGContext, x)
@@ -1418,7 +1418,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     AVFilterContext *filter_ctx = inlink->dst;
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
-    struct DVGSEvalState eval_state = {
+    struct VGSEvalState eval_state = {
         .log_ctx = drawvg_ctx,
         .pattern_builder = NULL,
         .rcp = { .status = RCP_NONE },
@@ -1446,7 +1446,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     eval_state.vars[VAR_H] = inlink->h;
     eval_state.vars[VAR_DURATION] = frame->duration * av_q2d(inlink->time_base);
 
-    ret = dvgs_eval(&eval_state, &drawvg_ctx->program);
+    ret = vgs_eval(&eval_state, &drawvg_ctx->program);
 
     cairo_destroy(eval_state.cairo_ctx);
     cairo_surface_destroy(surface);
@@ -1493,12 +1493,12 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
         }
     }
 
-    return dvgs_parse(drawvg, drawvg->script_text, &drawvg->program);
+    return vgs_parse(drawvg, drawvg->script_text, &drawvg->program);
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {
     DrawVGContext *drawvg = ctx->priv;
-    dvgs_free(&drawvg->program);
+    vgs_free(&drawvg->program);
 }
 
 static const AVFilterPad drawvg_inputs[] = {

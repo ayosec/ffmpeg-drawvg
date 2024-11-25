@@ -154,14 +154,14 @@ static void check_sort_cmd_specs(void) {
     int failures = 0;
 
     for (int i = 0; i < INSTRUCTION_SPECS_COUNT  - 1; i++) {
-        if (comparator_instruction_spec(&instruction_specs[i], &instruction_specs[i]) != 0) {
+        if (vgs_comp_instruction_spec(&vgs_instructions[i], &vgs_instructions[i]) != 0) {
             printf("%s: comparator must return 0 for item %d\n", __func__, i);
             failures++;
         }
 
-        if (comparator_instruction_spec(&instruction_specs[i], &instruction_specs[i + 1]) >= 0) {
+        if (vgs_comp_instruction_spec(&vgs_instructions[i], &vgs_instructions[i + 1]) >= 0) {
             printf("%s: entry for '%s' must appear after '%s', at index %d\n",
-                __func__, instruction_specs[i].name, instruction_specs[i + 1].name, i);
+                __func__, vgs_instructions[i].name, vgs_instructions[i + 1].name, i);
             failures++;
         }
     }
@@ -172,8 +172,8 @@ static void check_sort_cmd_specs(void) {
 // Compile and run a script.
 static void check_script(const char* source) {
     int ret;
-    struct DVGSProgram program;
-    struct DVGSEvalState state = {
+    struct VGSProgram program;
+    struct VGSEvalState state = {
         .rcp = { .status = RCP_NONE },
         .vars = { 1, 2, 4, 8 },
     };
@@ -183,19 +183,19 @@ static void check_script(const char* source) {
     current_point_x = 0;
     current_point_y = 0;
 
-    ret = dvgs_parse(NULL, source, &program);
+    ret = vgs_parse(NULL, source, &program);
     if (ret != 0) {
-        printf("%s: dvgs_parse = %d\n", __func__, ret);
+        printf("%s: vgs_parse = %d\n", __func__, ret);
         return;
     }
 
-    ret = dvgs_eval(&state, &program);
+    ret = vgs_eval(&state, &program);
     if (ret != 0) {
-        printf("%s: dvgs_eval = %d\n", __func__, ret);
+        printf("%s: vgs_eval = %d\n", __func__, ret);
         return;
     }
 
-    dvgs_free(&program);
+    vgs_free(&program);
 }
 
 int main(void)

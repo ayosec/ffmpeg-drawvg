@@ -61,7 +61,7 @@ check_script:
 M 0 (1*(t+1)
 >>
 av_log[16]: unclosed '(' at position 4
-check_script: dvgs_parse = -22
+check_script: vgs_parse = -22
 
 ---
 check_script:
@@ -69,7 +69,7 @@ check_script:
 save invalid 1 2
 >>
 av_log[16]: Invalid token at position 5: 'invalid'
-check_script: dvgs_parse = -22
+check_script: vgs_parse = -22
 
 ---
 check_script:
@@ -77,7 +77,7 @@ check_script:
 setlinecap unknown m 10 20
 >>
 av_log[16]: invalid argument 'unknown' at position 11
-check_script: dvgs_parse = -22
+check_script: vgs_parse = -22
 
 ---
 check_script:
@@ -85,7 +85,7 @@ check_script:
 M 0 1 2
 >>
 av_log[16]: expected numeric argument at position 7
-check_script: dvgs_parse = -22
+check_script: vgs_parse = -22
 
 ---
 check_script:
