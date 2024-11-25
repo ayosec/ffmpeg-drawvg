@@ -42,7 +42,7 @@ struct DrawVGContext;
 
 enum {
     VAR_N,          ///< Frame number.
-    VAR_T,          ///< Frame start time.
+    VAR_T,          ///< Timestamp in seconds.
     VAR_W,          ///< Frame width.
     VAR_H,          ///< Frame height.
     VAR_DURATION,   ///< Frame duration.
@@ -445,6 +445,15 @@ static int vgs_parser_next_token(
     return 0;
 }
 
+static int vgs_parser_next_token_is_numeric(
+    struct DrawVGContext *ctx,
+    struct VGSParser *parser
+) {
+    struct VGSParserToken token;
+    return vgs_parser_next_token(ctx, parser, &token, 0) == 0
+        && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL);
+}
+
 // Release the memory allocated by the program.
 static void vgs_free(struct VGSProgram *program) {
     if (program->statements == NULL) {
@@ -614,8 +623,7 @@ static int vgs_parse_statement(
             // Repeat this instruction with another set if the next
             // token is numeric.
             spec->params.type == PARAMS_NUMBERS_SEQS
-                && vgs_parser_next_token(ctx, parser, &token, 0) == 0
-                && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
+                && vgs_parser_next_token_is_numeric(ctx, parser)
         );
 
         return 0;
@@ -633,7 +641,7 @@ static int vgs_parse_statement(
         ) {
             if (
                 strncmp(token.lexeme, c->name, token.length) == 0
-                && token.length == strlen(c->name)
+                    && token.length == strlen(c->name)
             ) {
                 struct VGSArgument arg = {
                     .type = SA_CONST,
@@ -707,9 +715,8 @@ static int vgs_parse_statement(
         } while(
             // Repeat the instruction if `num == 1`, and the next
             // token is numeric.
-            spec->params.num != 0
-                && vgs_parser_next_token(ctx, parser, &token, 0) == 0
-                && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
+            spec->params.num == 1
+                && vgs_parser_next_token_is_numeric(ctx, parser)
         );
 
         return 0;
