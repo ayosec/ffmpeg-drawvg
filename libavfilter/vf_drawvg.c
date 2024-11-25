@@ -41,13 +41,14 @@ struct DrawVGContext;
 // Variables to evaluate expressions.
 
 enum {
-    VAR_N,
-    VAR_T,
-    VAR_W,
-    VAR_H,
-    VAR_CX,
-    VAR_CY,
-    VAR_DURATION,
+    VAR_N,          ///< Frame number.
+    VAR_T,          ///< Frame start time.
+    VAR_W,          ///< Frame width.
+    VAR_H,          ///< Frame height.
+    VAR_DURATION,   ///< Frame duration.
+    VAR_CX,         ///< X coordinate for current point.
+    VAR_CY,         ///< Y coordinate for current point.
+    VAR_I,          ///< Loop counter.
 };
 
 static const char *const var_names[] = {
@@ -55,10 +56,11 @@ static const char *const var_names[] = {
     "t",
     "w",
     "h",
+    "duration",
     "cx",
     "cy",
-    "duration",
-    NULL
+    "i",
+    NULL,
 };
 
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
@@ -78,6 +80,7 @@ enum VGSInstruction {
     INS_FILL_EO,                /// eofill
     INS_HORZ,                   /// H (x)
     INS_HORZ_REL,               /// h (dx)
+    INS_IF,                     /// if (condition) { subprogram }
     INS_LINEAR_GRAD,            /// lineargrad (x0 y0 x1 y1)
     INS_LINE_TO,                /// L, lineto (x y)
     INS_LINE_TO_REL,            /// l, rlineto (dx dy)
@@ -88,6 +91,7 @@ enum VGSInstruction {
     INS_Q_CURVE_TO_REL,         /// q, rquadcurveto (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            /// radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
     INS_RECT,                   /// rect (x y width height)
+    INS_REPEAT,                 /// repeat (count) { subprogram }
     INS_RESET_CLIP,             /// resetclip
     INS_RESET_DASH,             /// resetdash
     INS_RESTORE,                /// restore
@@ -117,6 +121,7 @@ struct VGSArgument {
         SA_LITERAL,
         SA_AV_EXPR,
         SA_COLOR,
+        SA_SUBPROGRAM,
     } type;
 
     union {
@@ -124,6 +129,7 @@ struct VGSArgument {
         double literal;
         AVExpr *expr;
         uint8_t color[4];
+        struct VGSProgram *subprogram;
     };
 };
 
@@ -188,14 +194,17 @@ struct VGSParameters {
 
         // The argument is a color, or a list of colors.
         //
-        // `num` indicates the maximum number of arguments, or `0` if
-        // it accepts any number of colors.
+        // `num` indicates number of arguments.
         PARAMS_COLORS,
 
         // The instruction expects a number and a color.
         //
         // If `num` is `1`, the instruction expects a sequence of sets.
         PARAMS_NUMBER_COLOR,
+
+        // The instruction expects a subprogram. The field `num` indicates
+        // how many numeric arguments are before the subprogram.
+        PARAMS_SUBPROGRAM,
     } type;
 
     union {
@@ -236,6 +245,7 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_FILL_EO,        "eofill",             { PARAMS_NONE } },
     { INS_FILL,           "fill",               { PARAMS_NONE } },
     { INS_HORZ_REL,       "h",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_IF,             "if",                 { PARAMS_SUBPROGRAM, { .num = 1 } } },
     { INS_LINE_TO_REL,    "l",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_LINEAR_GRAD,    "lineargrad",         { PARAMS_NUMBERS, { .num = 4 } } },
     { INS_LINE_TO,        "lineto",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
@@ -247,6 +257,7 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_RADIAL_GRAD,    "radialgrad",         { PARAMS_NUMBERS, { .num = 6 } } },
     { INS_CURVE_TO_REL,   "rcurveto",           { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
     { INS_RECT,           "rect",               { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_REPEAT,         "repeat",             { PARAMS_SUBPROGRAM, { .num = 1 } } },
     { INS_RESET_CLIP,     "resetclip",          { PARAMS_NONE } },
     { INS_RESET_DASH,     "resetdash",          { PARAMS_NONE } },
     { INS_RESTORE,        "restore",            { PARAMS_NONE } },
@@ -315,7 +326,9 @@ struct VGSParserToken {
         TOKEN_COMMENT,
         TOKEN_EOF,
         TOKEN_EXPR,
+        TOKEN_LEFT_BRACKET,
         TOKEN_LITERAL,
+        TOKEN_RIGHT_BRACKET,
         TOKEN_WORD,
     } type;
 
@@ -323,11 +336,6 @@ struct VGSParserToken {
     size_t position;
     size_t length;
 };
-
-#define TOKEN_IS_KEYWORD(token, keyword)      \
-    ((token)->type == TOKEN_WORD              \
-        && strlen(keyword) == (token)->length \
-        && strncmp((token)->lexeme, keyword, (token)->length) == 0)
 
 // Return the next token in the source.
 //
@@ -386,6 +394,16 @@ static int vgs_parser_next_token(
         token->length = length;
         break;
 
+    case '{':
+        token->type = TOKEN_LEFT_BRACKET;
+        token->length = 1;
+        break;
+
+    case '}':
+        token->type = TOKEN_RIGHT_BRACKET;
+        token->length = 1;
+        break;
+
     case '+':
     case '-':
     case '.':
@@ -437,8 +455,15 @@ static void vgs_free(struct VGSProgram *program) {
         struct VGSStatement *s = &program->statements[i];
         if (s->args_count > 0) {
             for (int j = 0; j < s->args_count; j++) {
-                if (s->args[j].type == SA_AV_EXPR) {
+                switch (s->args[j].type) {
+                case SA_AV_EXPR:
                     av_expr_free(s->args[j].expr);
+                    break;
+
+                case SA_SUBPROGRAM:
+                    vgs_free(s->args[j].subprogram);
+                    av_freep(&s->args[j].subprogram);
+                    break;
                 }
             }
 
@@ -507,6 +532,13 @@ static int vgs_parse_numeric_argument(
 
     return ret;
 }
+
+static int vgs_parse(
+    struct DrawVGContext *ctx,
+    const char *source,
+    struct VGSProgram *program,
+    size_t *subprogram_end
+);
 
 // Extract the arguments for an instruction, and add a new statement
 // to the program.
@@ -681,6 +713,45 @@ static int vgs_parse_statement(
         );
 
         return 0;
+
+    case PARAMS_SUBPROGRAM:
+        // First, the numeric arguments.
+        while (statement.args_count < spec->params.num) {
+            struct VGSArgument arg;
+            ret = vgs_parse_numeric_argument(ctx, parser, &arg);
+
+            if (ret != 0) {
+                goto fail;
+            }
+
+            ADD_ARG(arg);
+        }
+
+        // Then, the subprogram.
+        ret = vgs_parser_next_token(ctx, parser, &token, 1);
+        if (ret != 0)
+            goto fail;
+
+        if (token.type == TOKEN_LEFT_BRACKET) {
+            struct VGSArgument arg = {
+                .type = SA_SUBPROGRAM,
+                .subprogram = av_mallocz(sizeof(struct VGSProgram)),
+            };
+
+            ret = vgs_parse(ctx, token.lexeme + 1, arg.subprogram, &parser->cursor);
+            if (ret != 0) {
+                av_freep(&arg.subprogram);
+                goto fail;
+            }
+
+            ADD_ARG(arg);
+            ADD_STATEMENT();
+            return 0;
+        }
+
+        av_log(ctx, AV_LOG_ERROR, "expected '{', found '%.*s' at position %zu\n",
+            (int)token.length, token.lexeme, token.position);
+        goto fail;
     }
 
 #undef ADD_ARG
@@ -700,8 +771,11 @@ fail:
 static int vgs_parse(
     struct DrawVGContext *ctx,
     const char *source,
-    struct VGSProgram *program
+    struct VGSProgram *program,
+    size_t *subprogram_end
 ) {
+    struct VGSParserToken token;
+
     struct VGSParser parser = {
         .source = source,
         .cursor = 0,
@@ -712,7 +786,6 @@ static int vgs_parse(
 
     for (;;) {
         int ret;
-        struct VGSParserToken token;
         struct VGSInstructionSpec *inst;
 
         ret = vgs_parser_next_token(ctx, &parser, &token, 1);
@@ -739,17 +812,27 @@ static int vgs_parse(
                 break;
             }
 
-            /* fallthrough */
+            goto invalid_token;
+
+        case TOKEN_RIGHT_BRACKET:
+            // A '}' is accepted only if we are parsing a subprogram.
+            if (subprogram_end == NULL) {
+                goto invalid_token;
+            }
+
+            *subprogram_end += token.position + 1;
+            return 0;
 
         default:
-            av_log(ctx, AV_LOG_ERROR, "Invalid token at position %zu: '%.*s'\n",
-                token.position, (int)token.length, token.lexeme);
-
-            goto fail;
+            goto invalid_token;
         }
     }
 
     return 0;
+
+invalid_token:
+    av_log(ctx, AV_LOG_ERROR, "Invalid token at position %zu: '%.*s'\n",
+        token.position, (int)token.length, token.lexeme);
 
 fail:
     vgs_free(program);
@@ -922,6 +1005,7 @@ static int vgs_eval(
         double d;
         int i;
         const uint8_t *c;
+        const struct VGSProgram *p;
     } args[8];
 
     for (int st_number = 0; st_number < program->statements_count; st_number++) {
@@ -959,6 +1043,10 @@ static int vgs_eval(
 
             case SA_COLOR:
                 args[arg].c = a->color;
+                break;
+
+            case SA_SUBPROGRAM:
+                args[arg].p = a->subprogram;
                 break;
             }
         }
@@ -1091,6 +1179,16 @@ static int vgs_eval(
             cairo_fill_preserve(state->cairo_ctx);
             break;
 
+        case INS_IF:
+            ASSERT_ARGS(2);
+            if (args[0].d != 0.0) {
+                int ret = vgs_eval(state, args[1].p);
+                if (ret != 0)
+                    return ret;
+            }
+
+            break;
+
         case INS_LINEAR_GRAD:
             ASSERT_ARGS(4);
 
@@ -1169,6 +1267,20 @@ static int vgs_eval(
         case INS_RECT:
             ASSERT_ARGS(4);
             cairo_rectangle(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d);
+            break;
+
+        case INS_REPEAT:
+            ASSERT_ARGS(2);
+            for (int i = 0, count = (int)args[0].d; i < count; i++) {
+                int ret;
+
+                state->vars[VAR_I] = i;
+                ret = vgs_eval(state, args[1].p);
+                if (ret != 0)
+                    return ret;
+            }
+
+            state->vars[VAR_I] = NAN;
             break;
 
         case INS_RESTORE:
@@ -1444,6 +1556,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     eval_state.vars[VAR_T] = frame->pts == AV_NOPTS_VALUE ? NAN : frame->pts * av_q2d(inlink->time_base);
     eval_state.vars[VAR_W] = inlink->w;
     eval_state.vars[VAR_H] = inlink->h;
+    eval_state.vars[VAR_I] = NAN;
     eval_state.vars[VAR_DURATION] = frame->duration * av_q2d(inlink->time_base);
 
     ret = vgs_eval(&eval_state, &drawvg_ctx->program);
@@ -1493,7 +1606,7 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
         }
     }
 
-    return vgs_parse(drawvg, drawvg->script_text, &drawvg->program);
+    return vgs_parse(drawvg, drawvg->script_text, &drawvg->program, NULL);
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {

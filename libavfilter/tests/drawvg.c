@@ -183,7 +183,7 @@ static void check_script(const char* source) {
     current_point_x = 0;
     current_point_y = 0;
 
-    ret = vgs_parse(NULL, source, &program);
+    ret = vgs_parse(NULL, source, &program, NULL);
     if (ret != 0) {
         printf("%s: vgs_parse = %d\n", __func__, ret);
         return;
