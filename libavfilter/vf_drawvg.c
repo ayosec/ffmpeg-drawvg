@@ -456,9 +456,8 @@ static int vgs_parser_next_token(
         break;
     }
 
-    if (advance) {
+    if (advance)
         parser->cursor += cursor + token->length;
-    }
 
     return 0;
 }
@@ -474,9 +473,8 @@ static int vgs_parser_next_token_is_numeric(
 
 // Release the memory allocated by the program.
 static void vgs_free(struct VGSProgram *program) {
-    if (program->statements == NULL) {
+    if (program->statements == NULL)
         return;
-    }
 
     for (int i = 0; i < program->statements_count; i++) {
         struct VGSStatement *s = &program->statements[i];
@@ -512,16 +510,14 @@ static int vgs_parse_numeric_argument(
     struct VGSParserToken token;
 
     ret = vgs_parser_next_token(ctx, parser, &token, 1);
-    if (ret != 0) {
+    if (ret != 0)
         return ret;
-    }
 
     // Convert the lexeme to a NUL-terminated string.
-    if (token.length < sizeof(buf)) {
+    if (token.length < sizeof(buf))
         lexeme = buf;
-    } else {
+    else
         lexeme = av_malloc(token.length + 1);
-    }
 
     memcpy(lexeme, token.lexeme, token.length);
     lexeme[token.length] = '\0';
@@ -534,6 +530,7 @@ static int vgs_parse_numeric_argument(
         if (*endp != '\0') {
             av_log(ctx, AV_LOG_ERROR, "invalid number '%.*s' at position %zu\n",
                 (int)token.length, token.lexeme, token.position);
+
             ret = AVERROR(EINVAL);
         }
         break;
@@ -559,13 +556,11 @@ static int vgs_parse_numeric_argument(
         ret = AVERROR(EINVAL);
     }
 
-    if (lexeme != buf) {
+    if (lexeme != buf)
         av_freep(&lexeme);
-    }
 
-    if (ret != 0) {
+    if (ret != 0)
         memset(arg, 0, sizeof(*arg));
-    }
 
     return ret;
 }
@@ -605,9 +600,8 @@ static int vgs_parse_statement(
             (void*)&arg             \
         );                          \
                                     \
-        if (r == NULL) {            \
+        if (r == NULL)              \
             goto fail;              \
-        }                           \
     } while(0)
 
 #define ADD_STATEMENT() \
@@ -619,9 +613,8 @@ static int vgs_parse_statement(
             (void*)&statement            \
         );                               \
                                          \
-        if (r == NULL) {                 \
+        if (r == NULL)                   \
             goto fail;                   \
-        }                                \
                                          \
         statement.args = NULL;           \
         statement.args_count = 0;        \
@@ -639,9 +632,8 @@ static int vgs_parse_statement(
                 struct VGSArgument arg;
                 ret = vgs_parse_numeric_argument(ctx, parser, &arg);
 
-                if (ret != 0) {
+                if (ret != 0)
                     goto fail;
-                }
 
                 ADD_ARG(arg);
             }
@@ -658,9 +650,8 @@ static int vgs_parse_statement(
 
     case PARAMS_CONSTANT:
         ret = vgs_parser_next_token(ctx, parser, &token, 1);
-        if (ret != 0) {
+        if (ret != 0)
             goto fail;
-        }
 
         for (
             const struct VGSConstant *c = spec->params.consts;
@@ -695,9 +686,8 @@ static int vgs_parse_statement(
             };
 
             ret = vgs_parser_next_token(ctx, parser, &token, 0);
-            if (ret != 0) {
+            if (ret != 0)
                 goto fail;
-            }
 
             ret = av_parse_color(arg.color, token.lexeme, token.length, ctx);
             if (ret != 0) {
@@ -723,7 +713,6 @@ static int vgs_parse_statement(
             ret = vgs_parse_numeric_argument(ctx, parser, &arg0);
             if (ret != 0)
                 goto fail;
-
 
             // Second argument must be a color.
             ret = vgs_parser_next_token(ctx, parser, &token, 1);
@@ -755,9 +744,8 @@ static int vgs_parse_statement(
             struct VGSArgument arg;
             ret = vgs_parse_numeric_argument(ctx, parser, &arg);
 
-            if (ret != 0) {
+            if (ret != 0)
                 goto fail;
-            }
 
             ADD_ARG(arg);
         }
@@ -793,9 +781,8 @@ static int vgs_parse_statement(
 #undef ADD_STATEMENT
 
 fail:
-    if (statement.args != NULL) {
+    if (statement.args != NULL)
         av_freep(&statement.args);
-    }
 
     return AVERROR(EINVAL);
 }
@@ -824,9 +811,8 @@ static int vgs_parse(
         struct VGSInstructionSpec *inst;
 
         ret = vgs_parser_next_token(ctx, &parser, &token, 1);
-        if (ret != 0) {
+        if (ret != 0)
             goto fail;
-        }
 
         switch (token.type) {
         case TOKEN_COMMENT:
@@ -840,9 +826,8 @@ static int vgs_parse(
             inst = vgs_get_instruction(token.lexeme, token.length);
             if (inst != NULL) {
                 ret = vgs_parse_statement(ctx, &parser, program, inst);
-                if (ret != 0) {
+                if (ret != 0)
                     goto fail;
-                }
 
                 break;
             }
@@ -851,9 +836,8 @@ static int vgs_parse(
 
         case TOKEN_RIGHT_BRACKET:
             // A '}' is accepted only if we are parsing a subprogram.
-            if (subprogram_end == NULL) {
+            if (subprogram_end == NULL)
                 goto invalid_token;
-            }
 
             *subprogram_end += token.position + 1;
             return 0;
@@ -915,9 +899,8 @@ static void vgs_stack_value_free(struct VGSEvalState *state) {
 static void vgs_stack_value_put(struct VGSEvalState *state, double key, double value) {
     struct VGSValueStackEntry *entry;
 
-    if (isnan(key) || isinf(key) || isnan(value)) {
+    if (isnan(key) || isinf(key) || isnan(value))
         return;
-    }
 
     entry = av_mallocz(sizeof(struct VGSValueStackEntry));
     entry->next = state->stack_values;
@@ -1288,9 +1271,8 @@ static int vgs_eval(
         case INS_LINEAR_GRAD:
             ASSERT_ARGS(4);
 
-            if (state->pattern_builder != NULL) {
+            if (state->pattern_builder != NULL)
                 cairo_pattern_destroy(state->pattern_builder);
-            }
 
             state->pattern_builder = cairo_pattern_create_linear(
                 args[0].d,
@@ -1343,9 +1325,8 @@ static int vgs_eval(
         case INS_RADIAL_GRAD:
             ASSERT_ARGS(6);
 
-            if (state->pattern_builder != NULL) {
+            if (state->pattern_builder != NULL)
                 cairo_pattern_destroy(state->pattern_builder);
-            }
 
             state->pattern_builder = cairo_pattern_create_radial(
                 args[0].d,
@@ -1412,9 +1393,8 @@ static int vgs_eval(
         case INS_SETCOLOR:
             ASSERT_ARGS(1);
 
-            if (state->pattern_builder != NULL) {
+            if (state->pattern_builder != NULL)
                 cairo_pattern_destroy(state->pattern_builder);
-            }
 
             state->pattern_builder = cairo_pattern_create_rgba(
                 args[0].c[0] / 255.0,
@@ -1448,19 +1428,17 @@ static int vgs_eval(
 
                 num = cairo_get_dash_count(state->cairo_ctx);
 
-                if (num + 1 < FF_ARRAY_ELEMS(dbuf)) {
+                if (num + 1 < FF_ARRAY_ELEMS(dbuf))
                     dashes = dbuf;
-                } else {
+                else
                     dashes = av_calloc(num + 1, sizeof(double));
-                }
 
                 cairo_get_dash(state->cairo_ctx, dashes, NULL);
                 dashes[num] = args[0].d;
                 cairo_set_dash(state->cairo_ctx, dashes, num + 1, 0);
 
-                if (dashes != dbuf) {
+                if (dashes != dbuf)
                     av_freep(&dashes);
-                }
             }
             break;
 
@@ -1536,11 +1514,10 @@ static int vgs_eval(
 
         // Discard reflected points if the last instruction did not
         // set new points.
-        if (state->rcp.status == RCP_UPDATED) {
+        if (state->rcp.status == RCP_UPDATED)
             state->rcp.status = RCP_VALID;
-        } else {
+        else
             state->rcp.status = RCP_NONE;
-        }
     }
 
     return 0;
@@ -1666,15 +1643,13 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     cairo_destroy(eval_state.cairo_ctx);
     cairo_surface_destroy(surface);
 
-    if (eval_state.pattern_builder != NULL) {
+    if (eval_state.pattern_builder != NULL)
         cairo_pattern_destroy(eval_state.pattern_builder);
-    }
 
     vgs_stack_value_free(&eval_state);
 
-    if (ret != 0) {
+    if (ret != 0)
         return ret;
-    }
 
     return ff_filter_frame(outlink, frame);
 }
@@ -1687,9 +1662,8 @@ static int drawvg_config_props(AVFilterLink *inlink) {
     // so cairo can draw directly on the frame data.
 
     drawvg_ctx->cairo_format = cairo_format_from_pix_fmt(drawvg_ctx, inlink->format);
-    if (drawvg_ctx->cairo_format == CAIRO_FORMAT_INVALID) {
+    if (drawvg_ctx->cairo_format == CAIRO_FORMAT_INVALID)
         return AVERROR(EINVAL);
-    }
 
     return 0;
 }
@@ -1705,9 +1679,8 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
             NULL
         );
 
-        if (ret != 0) {
+        if (ret != 0)
             return ret;
-        }
     }
 
     return vgs_parse(drawvg, drawvg->script_text, &drawvg->program, NULL);
