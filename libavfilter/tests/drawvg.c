@@ -175,6 +175,7 @@ static void check_script(const char* source) {
     struct VGSProgram program;
     struct VGSEvalState state = {
         .rcp = { .status = RCP_NONE },
+        .stack_values = NULL,
         .vars = { 1, 2, 4, 8 },
     };
 
@@ -190,6 +191,8 @@ static void check_script(const char* source) {
     }
 
     ret = vgs_eval(&state, &program);
+    vgs_stack_value_free(&state);
+
     if (ret != 0) {
         printf("%s: vgs_eval = %d\n", __func__, ret);
         return;
@@ -219,6 +222,12 @@ int main(void)
 
     // Comments.
     check_script("// a b\nsave\n// c d\nrestore //");
+
+    // Stack values.
+    check_script(
+        "push 0 10 1 20 0 30 99 99 1 40 1 50 0 60\n"
+        "M (pop(1)) (pop(1)) L (pop(0)) (pop(1)) (peek(0) * pop(0)) (pop(0))"
+    );
 
     // From a SVG <path>.
     check_script("M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0");

@@ -45,6 +45,16 @@ cairo_restore
 ---
 check_script:
 <<
+push 0 10 1 20 0 30 99 99 1 40 1 50 0 60
+M (pop(1)) (pop(1)) L (pop(0)) (pop(1)) (peek(0) * pop(0)) (pop(0))
+>>
+cairo_move_to 50.0 40.0
+cairo_line_to 60.0 20.0
+cairo_line_to 900.0 10.0
+
+---
+check_script:
+<<
 M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0
 >>
 cairo_move_to 10.0 50.0

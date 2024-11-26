@@ -65,53 +65,70 @@ static const char *const var_names[] = {
 
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
+static const char *const vgs_func1_names[] = {
+    "peek",
+    "pop",
+    NULL,
+};
+
+static double vgs_fn_peek(void*, double);
+static double vgs_fn_pop(void*, double);
+
+static double (*const vgs_func1_impls[])(void *, double) = {
+    vgs_fn_peek,
+    vgs_fn_pop,
+    NULL,
+};
+
+
 enum VGSInstruction {
-    INS_ARC = 1,                /// arc (cx cy radius angle1 angle2)
-    INS_ARC_NEG,                /// arcn (cx cy radius angle1 angle2)
-    INS_CIRCLE,                 /// circle (cx cy radius)
-    INS_CLIP,                   /// clip
-    INS_CLIP_EO,                /// eoclip
-    INS_CLOSE_PATH,             /// Z, z, closepath
-    INS_COLOR_STOP,             /// colorstop (offset color)
-    INS_CURVE_TO,               /// C, curveto (x1 y1 x2 y2 x y)
-    INS_CURVE_TO_REL,           /// c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
-    INS_ELLIPSE,                /// ellipse (cx cy rx ry)
-    INS_FILL,                   /// fill
-    INS_FILL_EO,                /// eofill
-    INS_HORZ,                   /// H (x)
-    INS_HORZ_REL,               /// h (dx)
-    INS_IF,                     /// if (condition) { subprogram }
-    INS_LINEAR_GRAD,            /// lineargrad (x0 y0 x1 y1)
-    INS_LINE_TO,                /// L, lineto (x y)
-    INS_LINE_TO_REL,            /// l, rlineto (dx dy)
-    INS_MOVE_TO,                /// M, moveto (x y)
-    INS_MOVE_TO_REL,            /// m, rmoveto (dx dy)
-    INS_NEW_PATH,               /// newpath
-    INS_Q_CURVE_TO,             /// Q, quadcurveto (x1 y1 x y)
-    INS_Q_CURVE_TO_REL,         /// q, rquadcurveto (dx1 dy1 dx dy)
-    INS_RADIAL_GRAD,            /// radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
-    INS_RECT,                   /// rect (x y width height)
-    INS_REPEAT,                 /// repeat (count) { subprogram }
-    INS_RESET_CLIP,             /// resetclip
-    INS_RESET_DASH,             /// resetdash
-    INS_RESTORE,                /// restore
-    INS_ROTATE,                 /// rotate (angle)
-    INS_SAVE,                   /// save
-    INS_SCALE,                  /// scale (s)
-    INS_SCALEXY,                /// scalexy (sx sy)
-    INS_SETCOLOR,               /// setcolor (color)
-    INS_SETLINECAP,             /// setlinecap (cap)
-    INS_SETLINEJOIN,            /// setlinejoin (join)
-    INS_SETLINEWIDTH,           /// setlinewidth (width)
-    INS_SET_DASH,               /// setdash (length)
-    INS_STROKE,                 /// stroke
-    INS_S_CURVE_TO,             /// S, smoothcurveto (x2 y2 x y)
-    INS_S_CURVE_TO_REL,         /// s, rsmoothcurveto (dx2 dy2 dx dy)
-    INS_TRANSLATE,              /// translate (tx ty)
-    INS_T_CURVE_TO,             /// T, smoothquadcurveto (x y)
-    INS_T_CURVE_TO_REL,         /// t, rsmoothquadcurveto (dx dy)
-    INS_VERT,                   /// V (y)
-    INS_VERT_REL,               /// v (dy)
+    INS_ARC = 1,                ///<  arc (cx cy radius angle1 angle2)
+    INS_ARC_NEG,                ///<  arcn (cx cy radius angle1 angle2)
+    INS_CIRCLE,                 ///<  circle (cx cy radius)
+    INS_CLIP,                   ///<  clip
+    INS_CLIP_EO,                ///<  eoclip
+    INS_CLOSE_PATH,             ///<  Z, z, closepath
+    INS_COLOR_STOP,             ///<  colorstop (offset color)
+    INS_CURVE_TO,               ///<  C, curveto (x1 y1 x2 y2 x y)
+    INS_CURVE_TO_REL,           ///<  c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
+    INS_ELLIPSE,                ///<  ellipse (cx cy rx ry)
+    INS_FILL,                   ///<  fill
+    INS_FILL_EO,                ///<  eofill
+    INS_HORZ,                   ///<  H (x)
+    INS_HORZ_REL,               ///<  h (dx)
+    INS_IF,                     ///<  if (condition) { subprogram }
+    INS_LINEAR_GRAD,            ///<  lineargrad (x0 y0 x1 y1)
+    INS_LINE_TO,                ///<  L, lineto (x y)
+    INS_LINE_TO_REL,            ///<  l, rlineto (dx dy)
+    INS_MOVE_TO,                ///<  M, moveto (x y)
+    INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
+    INS_NEW_PATH,               ///<  newpath
+    INS_PUSH,                   ///<  push (key value)
+    INS_Q_CURVE_TO,             ///<  Q, quadcurveto (x1 y1 x y)
+    INS_Q_CURVE_TO_REL,         ///<  q, rquadcurveto (dx1 dy1 dx dy)
+    INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
+    INS_RECT,                   ///<  rect (x y width height)
+    INS_REPEAT,                 ///<  repeat (count) { subprogram }
+    INS_RESET_CLIP,             ///<  resetclip
+    INS_RESET_DASH,             ///<  resetdash
+    INS_RESTORE,                ///<  restore
+    INS_ROTATE,                 ///<  rotate (angle)
+    INS_SAVE,                   ///<  save
+    INS_SCALE,                  ///<  scale (s)
+    INS_SCALEXY,                ///<  scalexy (sx sy)
+    INS_SETCOLOR,               ///<  setcolor (color)
+    INS_SETLINECAP,             ///<  setlinecap (cap)
+    INS_SETLINEJOIN,            ///<  setlinejoin (join)
+    INS_SETLINEWIDTH,           ///<  setlinewidth (width)
+    INS_SET_DASH,               ///<  setdash (length)
+    INS_STROKE,                 ///<  stroke
+    INS_S_CURVE_TO,             ///<  S, smoothcurveto (x2 y2 x y)
+    INS_S_CURVE_TO_REL,         ///<  s, rsmoothcurveto (dx2 dy2 dx dy)
+    INS_TRANSLATE,              ///<  translate (tx ty)
+    INS_T_CURVE_TO,             ///<  T, smoothquadcurveto (x y)
+    INS_T_CURVE_TO_REL,         ///<  t, rsmoothquadcurveto (dx dy)
+    INS_VERT,                   ///<  V (y)
+    INS_VERT_REL,               ///<  v (dy)
 };
 
 // Instruction arguments.
@@ -252,6 +269,7 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_MOVE_TO_REL,    "m",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_MOVE_TO,        "moveto",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_NEW_PATH,       "newpath",            { PARAMS_NONE } },
+    { INS_PUSH,           "push",               { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_Q_CURVE_TO_REL, "q",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_Q_CURVE_TO,     "quadcurveto",        { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_RADIAL_GRAD,    "radialgrad",         { PARAMS_NUMBERS, { .num = 6 } } },
@@ -522,7 +540,17 @@ static int vgs_parse_numeric_argument(
 
     case TOKEN_EXPR:
         arg->type = SA_AV_EXPR;
-        ret = av_expr_parse(&arg->expr, lexeme, var_names, NULL, NULL, NULL, NULL, 0, ctx);
+        ret = av_expr_parse(
+            &arg->expr,
+            lexeme,
+            var_names,
+            vgs_func1_names,
+            vgs_func1_impls,
+            NULL,
+            NULL,
+            0,
+            ctx
+        );
         break;
 
     default:
@@ -846,14 +874,20 @@ fail:
     return AVERROR(EINVAL);
 }
 
+struct VGSValueStackEntry {
+    struct VGSValueStackEntry *next;
+    double key;
+    double value;
+};
+
 struct VGSEvalState {
     void *log_ctx;
 
     cairo_t *cairo_ctx;
-
     cairo_pattern_t *pattern_builder;
 
     double vars[VAR_COUNT];
+    struct VGSValueStackEntry *stack_values;
 
     // Track reflected control points from previous curve operation,
     // for T and S instructions.
@@ -868,6 +902,61 @@ struct VGSEvalState {
         double quad_y;
     } rcp;
 };
+
+static void vgs_stack_value_free(struct VGSEvalState *state) {
+    struct VGSValueStackEntry *next, *entry = state->stack_values;
+    while (entry != NULL) {
+        next = entry->next;
+        av_freep(&entry);
+        entry = next;
+    }
+}
+
+static void vgs_stack_value_put(struct VGSEvalState *state, double key, double value) {
+    struct VGSValueStackEntry *entry;
+
+    if (isnan(key) || isinf(key) || isnan(value)) {
+        return;
+    }
+
+    entry = av_mallocz(sizeof(struct VGSValueStackEntry));
+    entry->next = state->stack_values;
+    entry->key = key;
+    entry->value = value;
+    state->stack_values = entry;
+}
+
+static double vgs_stack_value_get(struct VGSEvalState *state, double key, int pop) {
+    struct VGSValueStackEntry **entry = &state->stack_values;
+
+    while (*entry != NULL) {
+        if ((*entry)->key == key) {
+            double value = (*entry)->value;
+
+            if (pop) {
+                struct VGSValueStackEntry *old = *entry;
+                *entry = (*entry)->next;
+                av_freep(&old);
+            }
+
+            return value;
+        }
+
+        entry = &(*entry)->next;
+    }
+
+    return NAN;
+}
+
+static double vgs_fn_peek(void *data, double arg) {
+    struct VGSEvalState *state = (struct VGSEvalState *)data;
+    return vgs_stack_value_get(state, arg, 0);
+}
+
+static double vgs_fn_pop(void *data, double arg) {
+    struct VGSEvalState *state = (struct VGSEvalState *)data;
+    return vgs_stack_value_get(state, arg, 1);
+}
 
 static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
     cairo_save(c);
@@ -1045,7 +1134,7 @@ static int vgs_eval(
                 break;
 
             case SA_AV_EXPR:
-                args[arg].d = av_expr_eval(a->expr, state->vars, NULL);
+                args[arg].d = av_expr_eval(a->expr, state->vars, state);
                 break;
 
             case SA_COLOR:
@@ -1234,6 +1323,11 @@ static int vgs_eval(
         case INS_NEW_PATH:
             ASSERT_ARGS(0);
             cairo_new_path(state->cairo_ctx);
+            break;
+
+        case INS_PUSH:
+            ASSERT_ARGS(2);
+            vgs_stack_value_put(state, args[0].d, args[1].d);
             break;
 
         case INS_Q_CURVE_TO:
@@ -1540,6 +1634,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     struct VGSEvalState eval_state = {
         .log_ctx = drawvg_ctx,
         .pattern_builder = NULL,
+        .stack_values = NULL,
         .rcp = { .status = RCP_NONE },
     };
 
@@ -1574,6 +1669,8 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     if (eval_state.pattern_builder != NULL) {
         cairo_pattern_destroy(eval_state.pattern_builder);
     }
+
+    vgs_stack_value_free(&eval_state);
 
     if (ret != 0) {
         return ret;
