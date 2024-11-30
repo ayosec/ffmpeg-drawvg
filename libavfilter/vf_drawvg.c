@@ -113,6 +113,7 @@ enum VGSInstruction {
     INS_RESET_DASH,             ///<  resetdash
     INS_RESTORE,                ///<  restore
     INS_ROTATE,                 ///<  rotate (angle)
+    INS_ROUNDEDRECT,            ///<  roundedrect (x y width height radius)
     INS_SAVE,                   ///<  save
     INS_SCALE,                  ///<  scale (s)
     INS_SCALEXY,                ///<  scalexy (sx sy)
@@ -282,6 +283,7 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_LINE_TO_REL,    "rlineto",            { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_MOVE_TO_REL,    "rmoveto",            { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_ROTATE,         "rotate",             { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_ROUNDEDRECT,    "roundedrect",        { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
     { INS_Q_CURVE_TO_REL, "rquadcurveto",       { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_S_CURVE_TO_REL, "rsmoothcurveto",     { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_T_CURVE_TO_REL, "rsmoothquadcurveto", { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
@@ -1061,6 +1063,25 @@ static void cubic_curve_to(
     state->rcp.quad_y = y2;
 }
 
+static void rounded_rect(
+    cairo_t *c,
+    double x,
+    double y,
+    double width,
+    double height,
+    double radius
+) {
+    radius = av_clipd(radius, 0, FFMIN(height / 2, width / 2));
+
+    cairo_new_sub_path(c);
+    cairo_arc(c, x + radius, y + radius, radius, M_PI, 3 * M_PI / 2);
+    cairo_arc(c, x + width - radius, y + radius, radius, 3 * M_PI / 2, 2 * M_PI);
+    cairo_arc(c, x + width - radius, y + height - radius, radius, 0, M_PI / 2);
+    cairo_arc(c, x + radius, y + height - radius, radius, M_PI / 2, M_PI);
+    cairo_close_path(c);
+    cairo_new_sub_path(c);
+}
+
 // Execute the cairo functions for the given script.
 static int vgs_eval(
     struct VGSEvalState *state,
@@ -1373,6 +1394,11 @@ static int vgs_eval(
         case INS_ROTATE:
             ASSERT_ARGS(1);
             cairo_rotate(state->cairo_ctx, args[0].d);
+            break;
+
+        case INS_ROUNDEDRECT:
+            ASSERT_ARGS(5);
+            rounded_rect(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d, args[4].d);
             break;
 
         case INS_SAVE:
