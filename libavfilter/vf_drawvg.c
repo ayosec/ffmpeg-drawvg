@@ -171,14 +171,14 @@ struct VGSConstant {
     int value;
 };
 
-static struct VGSConstant consts_line_cap[] = {
+static struct VGSConstant vgs_consts_line_cap[] = {
     { "butt", CAIRO_LINE_CAP_BUTT },
     { "round", CAIRO_LINE_CAP_ROUND },
     { "square", CAIRO_LINE_CAP_SQUARE },
     { NULL, 0 },
 };
 
-static struct VGSConstant consts_line_join[] = {
+static struct VGSConstant vgs_consts_line_join[] = {
     { "bevel", CAIRO_LINE_JOIN_BEVEL },
     { "miter", CAIRO_LINE_JOIN_MITER },
     { "round", CAIRO_LINE_JOIN_ROUND },
@@ -293,8 +293,8 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_SCALEXY,        "scalexy",            { PARAMS_NUMBERS, { .num = 2 } } },
     { INS_SETCOLOR,       "setcolor",           { PARAMS_COLORS, { .num = 1 } } },
     { INS_SET_DASH,       "setdash",            { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_SETLINECAP,     "setlinecap",         { PARAMS_CONSTANT, { .consts = consts_line_cap } } },
-    { INS_SETLINEJOIN,    "setlinejoin",        { PARAMS_CONSTANT, { .consts = consts_line_join } } },
+    { INS_SETLINECAP,     "setlinecap",         { PARAMS_CONSTANT, { .consts = vgs_consts_line_cap } } },
+    { INS_SETLINEJOIN,    "setlinejoin",        { PARAMS_CONSTANT, { .consts = vgs_consts_line_join } } },
     { INS_SETLINEWIDTH,   "setlinewidth",       { PARAMS_NUMBERS, { .num = 1 } } },
     { INS_S_CURVE_TO,     "smoothcurveto",      { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_T_CURVE_TO,     "smoothquadcurveto",  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
@@ -687,7 +687,7 @@ static int vgs_parse_statement(
                 .color = { 0 },
             };
 
-            ret = vgs_parser_next_token(ctx, parser, &token, 0);
+            ret = vgs_parser_next_token(ctx, parser, &token, 1);
             if (ret != 0)
                 goto fail;
 
@@ -698,9 +698,6 @@ static int vgs_parse_statement(
             }
 
             ADD_ARG(arg);
-
-            // Advance the parser to the next token.
-            vgs_parser_next_token(ctx, parser, &token, 1);
         }
 
         ADD_STATEMENT();
@@ -763,7 +760,7 @@ static int vgs_parse_statement(
                 .subprogram = av_mallocz(sizeof(struct VGSProgram)),
             };
 
-            ret = vgs_parse(ctx, token.lexeme + 1, arg.subprogram, &parser->cursor);
+            ret = vgs_parse(ctx, token.lexeme + token.length, arg.subprogram, &parser->cursor);
             if (ret != 0) {
                 av_freep(&arg.subprogram);
                 goto fail;
@@ -783,8 +780,10 @@ static int vgs_parse_statement(
 #undef ADD_STATEMENT
 
 fail:
-    if (statement.args != NULL)
+    if (statement.args != NULL) {
+        statement.args_count = 0;
         av_freep(&statement.args);
+    }
 
     return AVERROR(EINVAL);
 }
@@ -824,17 +823,16 @@ static int vgs_parse(
             return 0;
 
         case TOKEN_WORD:
-            // Expect a valid instruction.
+            // The token must be a valid instruction.
             inst = vgs_get_instruction(token.lexeme, token.length);
-            if (inst != NULL) {
-                ret = vgs_parse_statement(ctx, &parser, program, inst);
-                if (ret != 0)
-                    goto fail;
+            if (inst == NULL)
+                goto invalid_token;
 
-                break;
-            }
+            ret = vgs_parse_statement(ctx, &parser, program, inst);
+            if (ret != 0)
+                goto fail;
 
-            goto invalid_token;
+            break;
 
         case TOKEN_RIGHT_BRACKET:
             // A '}' is accepted only if we are parsing a subprogram.
