@@ -191,7 +191,7 @@ static void check_script(const char* source) {
     }
 
     ret = vgs_eval(&state, &program);
-    vgs_stack_value_free(&state);
+    vgs_eval_state_free(&state);
 
     if (ret != 0) {
         printf("%s: vgs_eval = %d\n", __func__, ret);

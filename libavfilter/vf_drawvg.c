@@ -945,6 +945,16 @@ static double vgs_fn_pop(void *data, double arg) {
     return vgs_stack_value_get(state, arg, 1);
 }
 
+static void vgs_eval_state_free(struct VGSEvalState *state) {
+
+    if (state->pattern_builder != NULL)
+        cairo_pattern_destroy(state->pattern_builder);
+
+    vgs_stack_value_free(state);
+
+    memset(state, 0, sizeof(*state));
+}
+
 static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
     cairo_save(c);
     cairo_translate(c, x, y);
@@ -1103,6 +1113,8 @@ static int vgs_eval(
 
     double cx, cy; // Current point.
 
+    int relative;
+
     union {
         double d;
         int i;
@@ -1236,24 +1248,11 @@ static int vgs_eval(
             break;
 
         case INS_CURVE_TO:
-            ASSERT_ARGS(6);
-            cubic_curve_to(
-                state,
-                0,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d,
-                args[4].d,
-                args[5].d
-            );
-            break;
-
         case INS_CURVE_TO_REL:
             ASSERT_ARGS(6);
             cubic_curve_to(
                 state,
-                1,
+                statement->inst == INS_CURVE_TO_REL,
                 args[0].d,
                 args[1].d,
                 args[2].d,
@@ -1340,13 +1339,10 @@ static int vgs_eval(
             break;
 
         case INS_Q_CURVE_TO:
-            ASSERT_ARGS(4);
-            quad_curve_to(state, 0, args[0].d, args[1].d, args[2].d, args[3].d);
-            break;
-
         case INS_Q_CURVE_TO_REL:
             ASSERT_ARGS(4);
-            quad_curve_to(state, 1, args[0].d, args[1].d, args[2].d, args[3].d);
+            relative = statement->inst == INS_Q_CURVE_TO_REL;
+            quad_curve_to(state, relative, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
         case INS_RADIAL_GRAD:
@@ -1484,31 +1480,10 @@ static int vgs_eval(
             break;
 
         case INS_S_CURVE_TO:
-            ASSERT_ARGS(4);
-            cubic_curve_to(
-                state,
-                0,
-                NAN,
-                NAN,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d
-            );
-            break;
-
         case INS_S_CURVE_TO_REL:
             ASSERT_ARGS(4);
-            cubic_curve_to(
-                state,
-                1,
-                NAN,
-                NAN,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d
-            );
+            relative = statement->inst == INS_S_CURVE_TO_REL;
+            cubic_curve_to(state, relative, NAN, NAN, args[0].d, args[1].d, args[2].d, args[3].d);
             break;
 
         case INS_TRANSLATE:
@@ -1517,13 +1492,10 @@ static int vgs_eval(
             break;
 
         case INS_T_CURVE_TO:
-            ASSERT_ARGS(2);
-            quad_curve_to(state, 0, NAN, NAN, args[0].d, args[1].d);
-            break;
-
         case INS_T_CURVE_TO_REL:
             ASSERT_ARGS(2);
-            quad_curve_to(state, 1, NAN, NAN, args[0].d, args[1].d);
+            relative = statement->inst == INS_T_CURVE_TO_REL;
+            quad_curve_to(state, relative, NAN, NAN, args[0].d, args[1].d);
             break;
 
         case INS_HORZ:
@@ -1680,10 +1652,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     cairo_destroy(eval_state.cairo_ctx);
     cairo_surface_destroy(surface);
 
-    if (eval_state.pattern_builder != NULL)
-        cairo_pattern_destroy(eval_state.pattern_builder);
-
-    vgs_stack_value_free(&eval_state);
+    vgs_eval_state_free(&eval_state);
 
     if (ret != 0)
         return ret;
