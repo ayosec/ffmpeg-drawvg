@@ -945,8 +945,17 @@ static double vgs_fn_pop(void *data, double arg) {
     return vgs_stack_value_get(state, arg, 1);
 }
 
-static void vgs_eval_state_free(struct VGSEvalState *state) {
+static void vgs_eval_state_init(struct VGSEvalState *state, void *log_ctx) {
+    memset(state, 0, sizeof(*state));
 
+    state->log_ctx = log_ctx;
+    state->rcp.status = RCP_NONE;
+
+    for (int i = 0; i < VAR_COUNT; i++)
+        state->vars[i] = NAN;
+}
+
+static void vgs_eval_state_free(struct VGSEvalState *state) {
     if (state->pattern_builder != NULL)
         cairo_pattern_destroy(state->pattern_builder);
 
@@ -1616,13 +1625,8 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     AVFilterContext *filter_ctx = inlink->dst;
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
-    struct VGSEvalState eval_state = {
-        .log_ctx = drawvg_ctx,
-        .pattern_builder = NULL,
-        .stack_values = NULL,
-        .interrupted = 0,
-        .rcp = { .status = RCP_NONE },
-    };
+    struct VGSEvalState eval_state;
+    vgs_eval_state_init(&eval_state, drawvg_ctx);
 
     // Draw directly on the frame data.
     surface = cairo_image_surface_create_for_data(

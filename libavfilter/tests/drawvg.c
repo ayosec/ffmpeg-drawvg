@@ -173,11 +173,11 @@ static void check_sort_cmd_specs(void) {
 static void check_script(const char* source) {
     int ret;
     struct VGSProgram program;
-    struct VGSEvalState state = {
-        .rcp = { .status = RCP_NONE },
-        .stack_values = NULL,
-        .vars = { 1, 2, 4, 8 },
-    };
+    struct VGSEvalState state;
+    vgs_eval_state_init(&state, NULL);
+
+    for (int i = 0; i < VAR_COUNT; i++)
+        state.vars[i] = 1 << i;
 
     printf("\n---\n%s:\n<<\n%s\n>>\n", __func__, source);
 
