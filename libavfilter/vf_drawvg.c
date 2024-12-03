@@ -1116,25 +1116,20 @@ static int vgs_eval(
                 "Instruction '%s' expects %d arguments.\n", \
                 statement->inst_name, n                     \
             );                                              \
-            return 0;                                       \
+            return AVERROR_BUG;                             \
         }                                                   \
-    } while(0);
+    } while(0)
+
+    double numerics[8];
 
     double cx, cy; // Current point.
 
     int relative;
 
-    union {
-        double d;
-        int i;
-        const uint8_t *c;
-        const struct VGSProgram *p;
-    } args[8];
-
     for (int st_number = 0; st_number < program->statements_count; st_number++) {
         struct VGSStatement *statement = &program->statements[st_number];
 
-        if (statement->args_count >= FF_ARRAY_ELEMS(args)) {
+        if (statement->args_count >= FF_ARRAY_ELEMS(numerics)) {
             av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
             return AVERROR(E2BIG);
         }
@@ -1152,24 +1147,16 @@ static int vgs_eval(
         for (int arg = 0; arg < statement->args_count; arg++) {
             const struct VGSArgument *a = &statement->args[arg];
             switch (a->type) {
-            case SA_CONST:
-                args[arg].i = a->constant;
-                break;
-
             case SA_LITERAL:
-                args[arg].d = a->literal;
+                numerics[arg] = a->literal;
                 break;
 
             case SA_AV_EXPR:
-                args[arg].d = av_expr_eval(a->expr, state->vars, state);
+                numerics[arg] = av_expr_eval(a->expr, state->vars, state);
                 break;
 
-            case SA_COLOR:
-                args[arg].c = a->color;
-                break;
-
-            case SA_SUBPROGRAM:
-                args[arg].p = a->subprogram;
+            default:
+                numerics[arg] = NAN;
                 break;
             }
         }
@@ -1196,11 +1183,11 @@ static int vgs_eval(
             ASSERT_ARGS(5);
             cairo_arc(
                 state->cairo_ctx,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d,
-                args[4].d
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3],
+                numerics[4]
             );
             break;
 
@@ -1208,17 +1195,17 @@ static int vgs_eval(
             ASSERT_ARGS(5);
             cairo_arc_negative(
                 state->cairo_ctx,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d,
-                args[4].d
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3],
+                numerics[4]
             );
             break;
 
         case INS_CIRCLE:
             ASSERT_ARGS(3);
-            draw_ellipse(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[2].d);
+            draw_ellipse(state->cairo_ctx, numerics[0], numerics[1], numerics[2], numerics[2]);
             break;
 
         case INS_CLIP:
@@ -1248,11 +1235,11 @@ static int vgs_eval(
             ASSERT_ARGS(2);
             cairo_pattern_add_color_stop_rgba(
                 state->pattern_builder,
-                args[0].d,
-                args[1].c[0] / 255.0,
-                args[1].c[1] / 255.0,
-                args[1].c[2] / 255.0,
-                args[1].c[3] / 255.0
+                numerics[0],
+                statement->args[1].color[0] / 255.0,
+                statement->args[1].color[1] / 255.0,
+                statement->args[1].color[2] / 255.0,
+                statement->args[1].color[3] / 255.0
             );
             break;
 
@@ -1262,18 +1249,18 @@ static int vgs_eval(
             cubic_curve_to(
                 state,
                 statement->inst == INS_CURVE_TO_REL,
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d,
-                args[4].d,
-                args[5].d
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3],
+                numerics[4],
+                numerics[5]
             );
             break;
 
         case INS_ELLIPSE:
             ASSERT_ARGS(4);
-            draw_ellipse(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d);
+            draw_ellipse(state->cairo_ctx, numerics[0], numerics[1], numerics[2], numerics[3]);
             break;
 
         case INS_FILL:
@@ -1295,8 +1282,8 @@ static int vgs_eval(
 
         case INS_IF:
             ASSERT_ARGS(2);
-            if (args[0].d != 0.0) {
-                int ret = vgs_eval(state, args[1].p);
+            if (numerics[0] != 0.0) {
+                int ret = vgs_eval(state, statement->args[1].subprogram);
                 if (ret != 0 || state->interrupted != 0)
                     return ret;
             }
@@ -1310,31 +1297,31 @@ static int vgs_eval(
                 cairo_pattern_destroy(state->pattern_builder);
 
             state->pattern_builder = cairo_pattern_create_linear(
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3]
             );
             break;
 
         case INS_LINE_TO:
             ASSERT_ARGS(2);
-            cairo_line_to(state->cairo_ctx, args[0].d, args[1].d);
+            cairo_line_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
         case INS_LINE_TO_REL:
             ASSERT_ARGS(2);
-            cairo_rel_line_to(state->cairo_ctx, args[0].d, args[1].d);
+            cairo_rel_line_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
         case INS_MOVE_TO:
             ASSERT_ARGS(2);
-            cairo_move_to(state->cairo_ctx, args[0].d, args[1].d);
+            cairo_move_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
         case INS_MOVE_TO_REL:
             ASSERT_ARGS(2);
-            cairo_rel_move_to(state->cairo_ctx, args[0].d, args[1].d);
+            cairo_rel_move_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
         case INS_NEW_PATH:
@@ -1344,14 +1331,14 @@ static int vgs_eval(
 
         case INS_PUSH:
             ASSERT_ARGS(2);
-            vgs_stack_value_put(state, args[0].d, args[1].d);
+            vgs_stack_value_put(state, numerics[0], numerics[1]);
             break;
 
         case INS_Q_CURVE_TO:
         case INS_Q_CURVE_TO_REL:
             ASSERT_ARGS(4);
             relative = statement->inst == INS_Q_CURVE_TO_REL;
-            quad_curve_to(state, relative, args[0].d, args[1].d, args[2].d, args[3].d);
+            quad_curve_to(state, relative, numerics[0], numerics[1], numerics[2], numerics[3]);
             break;
 
         case INS_RADIAL_GRAD:
@@ -1361,12 +1348,12 @@ static int vgs_eval(
                 cairo_pattern_destroy(state->pattern_builder);
 
             state->pattern_builder = cairo_pattern_create_radial(
-                args[0].d,
-                args[1].d,
-                args[2].d,
-                args[3].d,
-                args[4].d,
-                args[5].d
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3],
+                numerics[4],
+                numerics[5]
             );
             break;
 
@@ -1380,16 +1367,16 @@ static int vgs_eval(
 
         case INS_RECT:
             ASSERT_ARGS(4);
-            cairo_rectangle(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d);
+            cairo_rectangle(state->cairo_ctx, numerics[0], numerics[1], numerics[2], numerics[3]);
             break;
 
         case INS_REPEAT:
             ASSERT_ARGS(2);
-            for (int i = 0, count = (int)args[0].d; i < count; i++) {
+            for (int i = 0, count = (int)numerics[0]; i < count; i++) {
                 int ret;
 
                 state->vars[VAR_I] = i;
-                ret = vgs_eval(state, args[1].p);
+                ret = vgs_eval(state, statement->args[1].subprogram);
                 if (ret != 0)
                     return ret;
 
@@ -1408,12 +1395,19 @@ static int vgs_eval(
 
         case INS_ROTATE:
             ASSERT_ARGS(1);
-            cairo_rotate(state->cairo_ctx, args[0].d);
+            cairo_rotate(state->cairo_ctx, numerics[0]);
             break;
 
         case INS_ROUNDEDRECT:
             ASSERT_ARGS(5);
-            rounded_rect(state->cairo_ctx, args[0].d, args[1].d, args[2].d, args[3].d, args[4].d);
+            rounded_rect(
+                state->cairo_ctx,
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3],
+                numerics[4]
+            );
             break;
 
         case INS_SAVE:
@@ -1423,12 +1417,12 @@ static int vgs_eval(
 
         case INS_SCALE:
             ASSERT_ARGS(1);
-            cairo_scale(state->cairo_ctx, args[0].d, args[0].d);
+            cairo_scale(state->cairo_ctx, numerics[0], numerics[0]);
             break;
 
         case INS_SCALEXY:
             ASSERT_ARGS(2);
-            cairo_scale(state->cairo_ctx, args[0].d, args[1].d);
+            cairo_scale(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
         case INS_SETCOLOR:
@@ -1438,26 +1432,26 @@ static int vgs_eval(
                 cairo_pattern_destroy(state->pattern_builder);
 
             state->pattern_builder = cairo_pattern_create_rgba(
-                args[0].c[0] / 255.0,
-                args[0].c[1] / 255.0,
-                args[0].c[2] / 255.0,
-                args[0].c[3] / 255.0
+                statement->args[0].color[0] / 255.0,
+                statement->args[0].color[1] / 255.0,
+                statement->args[0].color[2] / 255.0,
+                statement->args[0].color[3] / 255.0
             );
             break;
 
         case INS_SETLINECAP:
             ASSERT_ARGS(1);
-            cairo_set_line_cap(state->cairo_ctx, args[0].i);
+            cairo_set_line_cap(state->cairo_ctx, statement->args[0].constant);
             break;
 
         case INS_SETLINEJOIN:
             ASSERT_ARGS(1);
-            cairo_set_line_join(state->cairo_ctx, args[0].i);
+            cairo_set_line_join(state->cairo_ctx, statement->args[0].constant);
             break;
 
         case INS_SETLINEWIDTH:
             ASSERT_ARGS(1);
-            cairo_set_line_width(state->cairo_ctx, args[0].d);
+            cairo_set_line_width(state->cairo_ctx, numerics[0]);
             break;
 
         case INS_SET_DASH:
@@ -1475,7 +1469,7 @@ static int vgs_eval(
                     dashes = av_calloc(num + 1, sizeof(double));
 
                 cairo_get_dash(state->cairo_ctx, dashes, NULL);
-                dashes[num] = args[0].d;
+                dashes[num] = numerics[0];
                 cairo_set_dash(state->cairo_ctx, dashes, num + 1, 0);
 
                 if (dashes != dbuf)
@@ -1491,20 +1485,28 @@ static int vgs_eval(
         case INS_S_CURVE_TO:
         case INS_S_CURVE_TO_REL:
             ASSERT_ARGS(4);
-            relative = statement->inst == INS_S_CURVE_TO_REL;
-            cubic_curve_to(state, relative, NAN, NAN, args[0].d, args[1].d, args[2].d, args[3].d);
+            cubic_curve_to(
+                state,
+                statement->inst == INS_S_CURVE_TO_REL,
+                NAN,
+                NAN,
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3]
+            );
             break;
 
         case INS_TRANSLATE:
             ASSERT_ARGS(2);
-            cairo_translate(state->cairo_ctx, args[0].d, args[1].d);
+            cairo_translate(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
         case INS_T_CURVE_TO:
         case INS_T_CURVE_TO_REL:
             ASSERT_ARGS(2);
             relative = statement->inst == INS_T_CURVE_TO_REL;
-            quad_curve_to(state, relative, NAN, NAN, args[0].d, args[1].d);
+            quad_curve_to(state, relative, NAN, NAN, numerics[0], numerics[1]);
             break;
 
         case INS_HORZ:
@@ -1514,7 +1516,7 @@ static int vgs_eval(
             ASSERT_ARGS(1);
 
             if (cairo_has_current_point(state->cairo_ctx)) {
-                double d = args[0].d;
+                double d = numerics[0];
 
                 switch (statement->inst) {
                     case INS_HORZ:     cx  = d; break;
