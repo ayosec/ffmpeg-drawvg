@@ -1,7 +1,5 @@
 /*
- * FFV1 encoder
- *
- * Copyright (c) 2003-2013 Michael Niedermayer <michaelni@gmx.at>
+ * Copyright (c) 2024 Zhao Zhili
  *
  * This file is part of FFmpeg.
  *
@@ -20,22 +18,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVCODEC_FFV1ENC_H
-#define AVCODEC_FFV1ENC_H
+#include <stdint.h>
 
-#include "avcodec.h"
+#include "libavutil/cpu_internal.h"
 
-enum {
-    QTABLE_DEFAULT = -1,
-    QTABLE_8BIT,
-    QTABLE_GT8BIT,
-};
+int ff_get_cpu_flags_wasm(void)
+{
+    int flags = 0;
+#if HAVE_SIMD128
+    flags |= AV_CPU_FLAG_SIMD128;
+#endif
+    return flags;
+}
 
-av_cold int ff_ffv1_encode_init(AVCodecContext *avctx);
-av_cold int ff_ffv1_write_extradata(AVCodecContext *avctx);
-av_cold int ff_ffv1_encode_setup_plane_info(AVCodecContext *avctx,
-                                            enum AVPixelFormat pix_fmt);
+size_t ff_get_cpu_max_align_wasm(void)
+{
+#if HAVE_SIMD128
+    return 16;
+#else
+    return 8;
+#endif
+}
 
-size_t ff_ffv1_encode_buffer_size(AVCodecContext *avctx);
-
-#endif /* AVCODEC_FFV1ENC_H */

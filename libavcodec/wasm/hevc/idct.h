@@ -1,7 +1,5 @@
 /*
- * FFV1 encoder
- *
- * Copyright (c) 2003-2013 Michael Niedermayer <michaelni@gmx.at>
+ * Copyright (c) 2024 Zhao Zhili
  *
  * This file is part of FFmpeg.
  *
@@ -20,22 +18,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVCODEC_FFV1ENC_H
-#define AVCODEC_FFV1ENC_H
+#ifndef AVCODEC_WASM_HEVC_IDCT_H
+#define AVCODEC_WASM_HEVC_IDCT_H
 
-#include "avcodec.h"
+#include <stdint.h>
 
-enum {
-    QTABLE_DEFAULT = -1,
-    QTABLE_8BIT,
-    QTABLE_GT8BIT,
-};
+void ff_hevc_idct_4x4_8_simd128(int16_t *coeffs, int col_limit);
+void ff_hevc_idct_8x8_8_simd128(int16_t *coeffs, int col_limit);
+void ff_hevc_idct_16x16_8_simd128(int16_t *coeffs, int col_limit);
+void ff_hevc_idct_32x32_8_simd128(int16_t *coeffs, int col_limit);
 
-av_cold int ff_ffv1_encode_init(AVCodecContext *avctx);
-av_cold int ff_ffv1_write_extradata(AVCodecContext *avctx);
-av_cold int ff_ffv1_encode_setup_plane_info(AVCodecContext *avctx,
-                                            enum AVPixelFormat pix_fmt);
+void ff_hevc_idct_4x4_10_simd128(int16_t *coeffs, int col_limit);
+void ff_hevc_idct_8x8_10_simd128(int16_t *coeffs, int col_limit);
+void ff_hevc_idct_16x16_10_simd128(int16_t *coeffs, int col_limit);
+void ff_hevc_idct_32x32_10_simd128(int16_t *coeffs, int col_limit);
 
-size_t ff_ffv1_encode_buffer_size(AVCodecContext *avctx);
-
-#endif /* AVCODEC_FFV1ENC_H */
+#endif /* AVCODEC_WASM_HEVC_IDCT_H */
