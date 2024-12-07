@@ -101,8 +101,8 @@ enum VGSInstruction {
     INS_MOVE_TO,                ///<  M, moveto (x y)
     INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
     INS_NEW_PATH,               ///<  newpath
-    INS_Q_CURVE_TO,             ///<  Q, quadcurveto (x1 y1 x y)
-    INS_Q_CURVE_TO_REL,         ///<  q, rquadcurveto (dx1 dy1 dx dy)
+    INS_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
+    INS_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
     INS_RECT,                   ///<  rect (x y width height)
     INS_REPEAT,                 ///<  repeat (count) { subprogram }
@@ -121,11 +121,11 @@ enum VGSInstruction {
     INS_SET_DASH,               ///<  setdash (length)
     INS_SET_VAR,                ///<  setvar (idx value)
     INS_STROKE,                 ///<  stroke
-    INS_S_CURVE_TO,             ///<  S, smoothcurveto (x2 y2 x y)
-    INS_S_CURVE_TO_REL,         ///<  s, rsmoothcurveto (dx2 dy2 dx dy)
+    INS_S_CURVE_TO,             ///<  S (x2 y2 x y)
+    INS_S_CURVE_TO_REL,         ///<  s (dx2 dy2 dx dy)
     INS_TRANSLATE,              ///<  translate (tx ty)
-    INS_T_CURVE_TO,             ///<  T, smoothquadcurveto (x y)
-    INS_T_CURVE_TO_REL,         ///<  t, rsmoothquadcurveto (dx dy)
+    INS_T_CURVE_TO,             ///<  T (x y)
+    INS_T_CURVE_TO_REL,         ///<  t (dx dy)
     INS_VERT,                   ///<  V (y)
     INS_VERT_REL,               ///<  v (dy)
 };
@@ -239,69 +239,63 @@ struct VGSInstructionSpec {
 //
 // The array must be sorted in ascending order by `name`.
 struct VGSInstructionSpec vgs_instructions[] = {
-    { INS_CURVE_TO,       "C",                  { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_HORZ,           "H",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_LINE_TO,        "L",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO,        "M",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_Q_CURVE_TO,     "Q",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_S_CURVE_TO,     "S",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_T_CURVE_TO,     "T",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_VERT,           "V",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_CLOSE_PATH,     "Z",                  { PARAMS_NONE } },
-    { INS_ARC,            "arc",                { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
-    { INS_ARC_NEG,        "arcn",               { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
-    { INS_CURVE_TO_REL,   "c",                  { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_CIRCLE,         "circle",             { PARAMS_NUMBERS_SEQS, { .num = 3 } } },
-    { INS_CLIP,           "clip",               { PARAMS_NONE } },
-    { INS_CLOSE_PATH,     "closepath",          { PARAMS_NONE } },
-    { INS_COLOR_STOP,     "colorstop",          { PARAMS_NUMBER_COLOR, { .num = 1 } } },
-    { INS_CURVE_TO,       "curveto",            { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_ELLIPSE,        "ellipse",            { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_CLIP_EO,        "eoclip",             { PARAMS_NONE } },
-    { INS_FILL_EO,        "eofill",             { PARAMS_NONE } },
-    { INS_FILL,           "fill",               { PARAMS_NONE } },
-    { INS_FINISH,         "finish",             { PARAMS_NONE } },
-    { INS_HORZ_REL,       "h",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_IF,             "if",                 { PARAMS_SUBPROGRAM, { .num = 1 } } },
-    { INS_LINE_TO_REL,    "l",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_LINEAR_GRAD,    "lineargrad",         { PARAMS_NUMBERS, { .num = 4 } } },
-    { INS_LINE_TO,        "lineto",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO_REL,    "m",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO,        "moveto",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_NEW_PATH,       "newpath",            { PARAMS_NONE } },
-    { INS_Q_CURVE_TO_REL, "q",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_Q_CURVE_TO,     "quadcurveto",        { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_RADIAL_GRAD,    "radialgrad",         { PARAMS_NUMBERS, { .num = 6 } } },
-    { INS_CURVE_TO_REL,   "rcurveto",           { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_RECT,           "rect",               { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_REPEAT,         "repeat",             { PARAMS_SUBPROGRAM, { .num = 1 } } },
-    { INS_RESET_CLIP,     "resetclip",          { PARAMS_NONE } },
-    { INS_RESET_DASH,     "resetdash",          { PARAMS_NONE } },
-    { INS_RESTORE,        "restore",            { PARAMS_NONE } },
-    { INS_LINE_TO_REL,    "rlineto",            { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO_REL,    "rmoveto",            { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_ROTATE,         "rotate",             { PARAMS_NUMBERS, { .num = 1 } } },
-    { INS_ROUNDEDRECT,    "roundedrect",        { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
-    { INS_Q_CURVE_TO_REL, "rquadcurveto",       { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_S_CURVE_TO_REL, "rsmoothcurveto",     { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_T_CURVE_TO_REL, "rsmoothquadcurveto", { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_S_CURVE_TO_REL, "s",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_SAVE,           "save",               { PARAMS_NONE } },
-    { INS_SCALE,          "scale",              { PARAMS_NUMBERS, { .num = 1 } } },
-    { INS_SCALEXY,        "scalexy",            { PARAMS_NUMBERS, { .num = 2 } } },
-    { INS_SETCOLOR,       "setcolor",           { PARAMS_COLORS, { .num = 1 } } },
-    { INS_SET_DASH,       "setdash",            { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_SETLINECAP,     "setlinecap",         { PARAMS_CONSTANT, { .consts = vgs_consts_line_cap } } },
-    { INS_SETLINEJOIN,    "setlinejoin",        { PARAMS_CONSTANT, { .consts = vgs_consts_line_join } } },
-    { INS_SETLINEWIDTH,   "setlinewidth",       { PARAMS_NUMBERS, { .num = 1 } } },
-    { INS_SET_VAR,        "setvar",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_S_CURVE_TO,     "smoothcurveto",      { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_T_CURVE_TO,     "smoothquadcurveto",  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_STROKE,         "stroke",             { PARAMS_NONE } },
-    { INS_T_CURVE_TO_REL, "t",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_TRANSLATE,      "translate",          { PARAMS_NUMBERS, { .num = 2 } } },
-    { INS_VERT_REL,       "v",                  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_CLOSE_PATH,     "z",                  { PARAMS_NONE } },
+    { INS_CURVE_TO,       "C",              { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_HORZ,           "H",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_LINE_TO,        "L",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO,        "M",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_Q_CURVE_TO,     "Q",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_S_CURVE_TO,     "S",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_T_CURVE_TO,     "T",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_VERT,           "V",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_CLOSE_PATH,     "Z",              { PARAMS_NONE } },
+    { INS_ARC,            "arc",            { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
+    { INS_ARC_NEG,        "arcn",           { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
+    { INS_CURVE_TO_REL,   "c",              { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_CIRCLE,         "circle",         { PARAMS_NUMBERS_SEQS, { .num = 3 } } },
+    { INS_CLIP,           "clip",           { PARAMS_NONE } },
+    { INS_CLOSE_PATH,     "closepath",      { PARAMS_NONE } },
+    { INS_COLOR_STOP,     "colorstop",      { PARAMS_NUMBER_COLOR, { .num = 1 } } },
+    { INS_CURVE_TO,       "curveto",        { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_ELLIPSE,        "ellipse",        { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_CLIP_EO,        "eoclip",         { PARAMS_NONE } },
+    { INS_FILL_EO,        "eofill",         { PARAMS_NONE } },
+    { INS_FILL,           "fill",           { PARAMS_NONE } },
+    { INS_FINISH,         "finish",         { PARAMS_NONE } },
+    { INS_HORZ_REL,       "h",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_IF,             "if",             { PARAMS_SUBPROGRAM, { .num = 1 } } },
+    { INS_LINE_TO_REL,    "l",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_LINEAR_GRAD,    "lineargrad",     { PARAMS_NUMBERS, { .num = 4 } } },
+    { INS_LINE_TO,        "lineto",         { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO_REL,    "m",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO,        "moveto",         { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_NEW_PATH,       "newpath",        { PARAMS_NONE } },
+    { INS_Q_CURVE_TO_REL, "q",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_RADIAL_GRAD,    "radialgrad",     { PARAMS_NUMBERS, { .num = 6 } } },
+    { INS_CURVE_TO_REL,   "rcurveto",       { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
+    { INS_RECT,           "rect",           { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_REPEAT,         "repeat",         { PARAMS_SUBPROGRAM, { .num = 1 } } },
+    { INS_RESET_CLIP,     "resetclip",      { PARAMS_NONE } },
+    { INS_RESET_DASH,     "resetdash",      { PARAMS_NONE } },
+    { INS_RESTORE,        "restore",        { PARAMS_NONE } },
+    { INS_LINE_TO_REL,    "rlineto",        { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_MOVE_TO_REL,    "rmoveto",        { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_ROTATE,         "rotate",         { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_ROUNDEDRECT,    "roundedrect",    { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
+    { INS_S_CURVE_TO_REL, "s",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
+    { INS_SAVE,           "save",           { PARAMS_NONE } },
+    { INS_SCALE,          "scale",          { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_SCALEXY,        "scalexy",        { PARAMS_NUMBERS, { .num = 2 } } },
+    { INS_SETCOLOR,       "setcolor",       { PARAMS_COLORS, { .num = 1 } } },
+    { INS_SET_DASH,       "setdash",        { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_SETLINECAP,     "setlinecap",     { PARAMS_CONSTANT, { .consts = vgs_consts_line_cap } } },
+    { INS_SETLINEJOIN,    "setlinejoin",    { PARAMS_CONSTANT, { .consts = vgs_consts_line_join } } },
+    { INS_SETLINEWIDTH,   "setlinewidth",   { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_SET_VAR,        "setvar",         { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_STROKE,         "stroke",         { PARAMS_NONE } },
+    { INS_T_CURVE_TO_REL, "t",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_TRANSLATE,      "translate",      { PARAMS_NUMBERS, { .num = 2 } } },
+    { INS_VERT_REL,       "v",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
+    { INS_CLOSE_PATH,     "z",              { PARAMS_NONE } },
 };
 
 #define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(vgs_instructions)
