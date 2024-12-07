@@ -225,8 +225,8 @@ int main(void)
 
     // Stack values.
     check_script(
-        "push 0 10 1 20 0 30 99 99 1 40 1 50 0 60\n"
-        "M (pop(1)) (pop(1)) L (pop(0)) (pop(1)) (peek(0) * pop(0)) (pop(0))"
+        "setvar 0 10 1 20 0 30 99 99\n"
+        "M (getvar(0)) (getvar(0)) L (getvar(1)) (getvar(1))"
     );
 
     // From a SVG <path>.

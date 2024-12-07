@@ -66,17 +66,14 @@ static const char *const var_names[] = {
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
 static const char *const vgs_func1_names[] = {
-    "peek",
-    "pop",
+    "getvar",
     NULL,
 };
 
-static double vgs_fn_peek(void*, double);
-static double vgs_fn_pop(void*, double);
+static double vgs_fn_getvar(void*, double);
 
 static double (*const vgs_func1_impls[])(void *, double) = {
-    vgs_fn_peek,
-    vgs_fn_pop,
+    vgs_fn_getvar,
     NULL,
 };
 
@@ -104,7 +101,6 @@ enum VGSInstruction {
     INS_MOVE_TO,                ///<  M, moveto (x y)
     INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
     INS_NEW_PATH,               ///<  newpath
-    INS_PUSH,                   ///<  push (key value)
     INS_Q_CURVE_TO,             ///<  Q, quadcurveto (x1 y1 x y)
     INS_Q_CURVE_TO_REL,         ///<  q, rquadcurveto (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
@@ -123,6 +119,7 @@ enum VGSInstruction {
     INS_SETLINEJOIN,            ///<  setlinejoin (join)
     INS_SETLINEWIDTH,           ///<  setlinewidth (width)
     INS_SET_DASH,               ///<  setdash (length)
+    INS_SET_VAR,                ///<  setvar (idx value)
     INS_STROKE,                 ///<  stroke
     INS_S_CURVE_TO,             ///<  S, smoothcurveto (x2 y2 x y)
     INS_S_CURVE_TO_REL,         ///<  s, rsmoothcurveto (dx2 dy2 dx dy)
@@ -272,7 +269,6 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_MOVE_TO_REL,    "m",                  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_MOVE_TO,        "moveto",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_NEW_PATH,       "newpath",            { PARAMS_NONE } },
-    { INS_PUSH,           "push",               { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_Q_CURVE_TO_REL, "q",                  { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_Q_CURVE_TO,     "quadcurveto",        { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_RADIAL_GRAD,    "radialgrad",         { PARAMS_NUMBERS, { .num = 6 } } },
@@ -298,6 +294,7 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_SETLINECAP,     "setlinecap",         { PARAMS_CONSTANT, { .consts = vgs_consts_line_cap } } },
     { INS_SETLINEJOIN,    "setlinejoin",        { PARAMS_CONSTANT, { .consts = vgs_consts_line_join } } },
     { INS_SETLINEWIDTH,   "setlinewidth",       { PARAMS_NUMBERS, { .num = 1 } } },
+    { INS_SET_VAR,        "setvar",             { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_S_CURVE_TO,     "smoothcurveto",      { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
     { INS_T_CURVE_TO,     "smoothquadcurveto",  { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_STROKE,         "stroke",             { PARAMS_NONE } },
@@ -860,11 +857,7 @@ fail:
     return AVERROR(EINVAL);
 }
 
-struct VGSValueStackEntry {
-    struct VGSValueStackEntry *next;
-    double key;
-    double value;
-};
+#define USER_VAR_COUNT 10
 
 struct VGSEvalState {
     void *log_ctx;
@@ -875,7 +868,7 @@ struct VGSEvalState {
     int interrupted;
 
     double vars[VAR_COUNT];
-    struct VGSValueStackEntry *stack_values;
+    double user_vars[USER_VAR_COUNT];
 
     // Track reflected control points from previous curve operation,
     // for T and S instructions.
@@ -891,58 +884,37 @@ struct VGSEvalState {
     } rcp;
 };
 
-static void vgs_stack_value_free(struct VGSEvalState *state) {
-    struct VGSValueStackEntry *next, *entry = state->stack_values;
-    while (entry != NULL) {
-        next = entry->next;
-        av_freep(&entry);
-        entry = next;
-    }
-}
+static void vgs_user_var_set(struct VGSEvalState *state, double idx, double value) {
+    int i;
 
-static void vgs_stack_value_put(struct VGSEvalState *state, double key, double value) {
-    struct VGSValueStackEntry *entry;
-
-    if (isnan(key) || isinf(key) || isnan(value))
+    if (isnan(idx) || isinf(idx))
         return;
 
-    entry = av_mallocz(sizeof(struct VGSValueStackEntry));
-    entry->next = state->stack_values;
-    entry->key = key;
-    entry->value = value;
-    state->stack_values = entry;
+    i = (int)idx;
+
+    if (i < 0 || i >= USER_VAR_COUNT) {
+        av_log(state->log_ctx, AV_LOG_ERROR,
+            "Invalid index for setvar: %d. Must be between 0 and %d.\n",
+            i, USER_VAR_COUNT - 1
+        );
+
+        return;
+    }
+
+    state->user_vars[i] = value;
 }
 
-static double vgs_stack_value_get(struct VGSEvalState *state, double key, int pop) {
-    struct VGSValueStackEntry **entry = &state->stack_values;
-
-    while (*entry != NULL) {
-        if ((*entry)->key == key) {
-            double value = (*entry)->value;
-
-            if (pop) {
-                struct VGSValueStackEntry *old = *entry;
-                *entry = (*entry)->next;
-                av_freep(&old);
-            }
-
-            return value;
-        }
-
-        entry = &(*entry)->next;
-    }
+static double vgs_user_var_get(struct VGSEvalState *state, double idx) {
+    int i = (int)idx;
+    if (i >= 0 && i < USER_VAR_COUNT)
+        return state->user_vars[i];
 
     return NAN;
 }
 
-static double vgs_fn_peek(void *data, double arg) {
+static double vgs_fn_getvar(void *data, double arg) {
     struct VGSEvalState *state = (struct VGSEvalState *)data;
-    return vgs_stack_value_get(state, arg, 0);
-}
-
-static double vgs_fn_pop(void *data, double arg) {
-    struct VGSEvalState *state = (struct VGSEvalState *)data;
-    return vgs_stack_value_get(state, arg, 1);
+    return vgs_user_var_get(state, arg);
 }
 
 static void vgs_eval_state_init(struct VGSEvalState *state, void *log_ctx) {
@@ -953,13 +925,14 @@ static void vgs_eval_state_init(struct VGSEvalState *state, void *log_ctx) {
 
     for (int i = 0; i < VAR_COUNT; i++)
         state->vars[i] = NAN;
+
+    for (int i = 0; i < USER_VAR_COUNT; i++)
+        state->user_vars[i] = NAN;
 }
 
 static void vgs_eval_state_free(struct VGSEvalState *state) {
     if (state->pattern_builder != NULL)
         cairo_pattern_destroy(state->pattern_builder);
-
-    vgs_stack_value_free(state);
 
     memset(state, 0, sizeof(*state));
 }
@@ -1329,11 +1302,6 @@ static int vgs_eval(
             cairo_new_path(state->cairo_ctx);
             break;
 
-        case INS_PUSH:
-            ASSERT_ARGS(2);
-            vgs_stack_value_put(state, numerics[0], numerics[1]);
-            break;
-
         case INS_Q_CURVE_TO:
         case INS_Q_CURVE_TO_REL:
             ASSERT_ARGS(4);
@@ -1475,6 +1443,11 @@ static int vgs_eval(
                 if (dashes != dbuf)
                     av_freep(&dashes);
             }
+            break;
+
+        case INS_SET_VAR:
+            ASSERT_ARGS(2);
+            vgs_user_var_set(state, numerics[0], numerics[1]);
             break;
 
         case INS_STROKE:
