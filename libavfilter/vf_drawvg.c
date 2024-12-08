@@ -49,6 +49,10 @@ enum {
     VAR_CX,         ///< X coordinate for current point.
     VAR_CY,         ///< Y coordinate for current point.
     VAR_I,          ///< Loop counter.
+    VAR_U0,         ///< User variable 0.
+    VAR_U1,         ///< User variable 1.
+    VAR_U2,         ///< User variable 2.
+    VAR_U3,         ///< User variable 3.
 };
 
 static const char *const var_names[] = {
@@ -60,10 +64,16 @@ static const char *const var_names[] = {
     "cx",
     "cy",
     "i",
+    "u0",
+    "u1",
+    "u2",
+    "u3",
     NULL,
 };
 
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
+
+#define USER_VAR_COUNT 4
 
 static const char *const vgs_func1_names[] = {
     "getvar",
@@ -851,8 +861,6 @@ fail:
     return AVERROR(EINVAL);
 }
 
-#define USER_VAR_COUNT 10
-
 struct VGSEvalState {
     void *log_ctx;
 
@@ -862,7 +870,6 @@ struct VGSEvalState {
     int interrupted;
 
     double vars[VAR_COUNT];
-    double user_vars[USER_VAR_COUNT];
 
     // Track reflected control points from previous curve operation,
     // for T and S instructions.
@@ -895,13 +902,13 @@ static void vgs_user_var_set(struct VGSEvalState *state, double idx, double valu
         return;
     }
 
-    state->user_vars[i] = value;
+    state->vars[VAR_U0 + i] = value;
 }
 
 static double vgs_user_var_get(struct VGSEvalState *state, double idx) {
     int i = (int)idx;
     if (i >= 0 && i < USER_VAR_COUNT)
-        return state->user_vars[i];
+        return state->vars[VAR_U0 + i];
 
     return NAN;
 }
@@ -919,9 +926,6 @@ static void vgs_eval_state_init(struct VGSEvalState *state, void *log_ctx) {
 
     for (int i = 0; i < VAR_COUNT; i++)
         state->vars[i] = NAN;
-
-    for (int i = 0; i < USER_VAR_COUNT; i++)
-        state->user_vars[i] = NAN;
 }
 
 static void vgs_eval_state_free(struct VGSEvalState *state) {
