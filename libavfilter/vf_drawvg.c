@@ -77,13 +77,16 @@ static const char *const var_names[] = {
 
 static const char *const vgs_func1_names[] = {
     "getvar",
+    "pathlen",
     NULL,
 };
 
 static double vgs_fn_getvar(void*, double);
+static double vgs_fn_pathlen(void*, double);
 
 static double (*const vgs_func1_impls[])(void *, double) = {
     vgs_fn_getvar,
+    vgs_fn_pathlen,
     NULL,
 };
 
@@ -907,17 +910,76 @@ static void vgs_user_var_set(struct VGSEvalState *state, double idx, double valu
     state->vars[VAR_U0 + i] = value;
 }
 
-static double vgs_user_var_get(struct VGSEvalState *state, double idx) {
-    int i = (int)idx;
-    if (i >= 0 && i < USER_VAR_COUNT)
-        return state->vars[VAR_U0 + i];
+// Function `getvar(i)` for `av_expr_eval`.
+//
+// Return the value of the `VAR_U<i>` variable.
+static double vgs_fn_getvar(void *data, double arg) {
+    struct VGSEvalState *state = (struct VGSEvalState *)data;
+
+    int idx = (int)arg;
+    if (idx >= 0 && idx < USER_VAR_COUNT)
+        return state->vars[VAR_U0 + idx];
 
     return NAN;
 }
 
-static double vgs_fn_getvar(void *data, double arg) {
+// Function `pathlen(n)` for `av_expr_eval`.
+//
+// Compute the length of the current path. If `n > 0`, it is the
+// maximum number of segments to be added to the length.
+static double vgs_fn_pathlen(void *data, double arg) {
     struct VGSEvalState *state = (struct VGSEvalState *)data;
-    return vgs_user_var_get(state, arg);
+
+    int max_segments = (int)arg;
+
+    cairo_path_t *path;
+    double length = 0;
+
+    double lmx = NAN, lmy = NAN; // last move point
+    double cx = NAN, cy = NAN;   // current point.
+
+    path = cairo_copy_path_flat(state->cairo_ctx);
+
+    for (int i = 0; i < path->num_data; i += path->data[i].header.length) {
+        double x, y;
+        cairo_path_data_t *data = &path->data[i];
+
+        switch (data[0].header.type) {
+        case CAIRO_PATH_MOVE_TO:
+            cx = lmx = data[1].point.x;
+            cy = lmy = data[1].point.y;
+
+            // Don't update `length`.
+            continue;
+
+        case CAIRO_PATH_LINE_TO:
+            x = data[1].point.x;
+            y = data[1].point.y;
+            break;
+
+        case CAIRO_PATH_CLOSE_PATH:
+            x = lmx;
+            y = lmy;
+            break;
+
+        default:
+            continue;
+        }
+
+        length += hypot(cx - x, cy - y);
+
+        cx = x;
+        cy = y;
+
+        // If the function argument is `> 0`, use it as a limit for how
+        // many segments are added.
+        if (--max_segments == 0)
+            break;
+    }
+
+    cairo_path_destroy(path);
+
+    return length;
 }
 
 static void vgs_eval_state_init(struct VGSEvalState *state, void *log_ctx) {
