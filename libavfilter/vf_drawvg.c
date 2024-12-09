@@ -470,13 +470,31 @@ static int vgs_parser_next_token(
     return 0;
 }
 
-static int vgs_parser_next_token_is_numeric(
-    void *log_ctx,
-    struct VGSParser *parser
-) {
+// Return `1` if the next token is an expression or a number literal.
+static int vgs_parser_next_token_is_numeric(void *log_ctx, struct VGSParser *parser) {
+    int ret;
     struct VGSParserToken token;
-    return vgs_parser_next_token(log_ctx, parser, &token, 0) == 0
-        && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL);
+
+    for (;;) {
+        ret = vgs_parser_next_token(log_ctx, parser, &token, 0);
+
+        if (ret != 0)
+            return 0;
+
+        switch (token.type) {
+        case TOKEN_EXPR:
+        case TOKEN_LITERAL:
+            return 1;
+
+        case TOKEN_COMMENT:
+            // Skip comments.
+            vgs_parser_next_token(log_ctx, parser, &token, 1);
+            break;
+
+        default:
+            return 0;
+        }
+    }
 }
 
 // Release the memory allocated by the program.
