@@ -531,7 +531,7 @@ static int vgs_parse_numeric_argument(
     struct VGSArgument *arg
 ) {
     int ret;
-    char buf[128];
+    char stack_buf[64];
     char *lexeme, *endp;
     struct VGSParserToken token;
 
@@ -540,8 +540,8 @@ static int vgs_parse_numeric_argument(
         return ret;
 
     // Convert the lexeme to a NUL-terminated string.
-    if (token.length < sizeof(buf))
-        lexeme = buf;
+    if (token.length + 1 < sizeof(stack_buf))
+        lexeme = stack_buf;
     else
         lexeme = av_malloc(token.length + 1);
 
@@ -551,7 +551,7 @@ static int vgs_parse_numeric_argument(
     switch (token.type) {
     case TOKEN_LITERAL:
         arg->type = SA_LITERAL;
-        arg->literal = strtod(buf, &endp);
+        arg->literal = strtod(lexeme, &endp);
 
         if (*endp != '\0') {
             av_log(log_ctx, AV_LOG_ERROR, "invalid number '%.*s' at position %zu\n",
@@ -582,7 +582,7 @@ static int vgs_parse_numeric_argument(
         ret = AVERROR(EINVAL);
     }
 
-    if (lexeme != buf)
+    if (lexeme != stack_buf)
         av_freep(&lexeme);
 
     if (ret != 0)
@@ -1151,7 +1151,6 @@ static void rounded_rect(
     cairo_arc(c, x + width - radius, y + height - radius, radius, 0, M_PI / 2);
     cairo_arc(c, x + radius, y + height - radius, radius, M_PI / 2, M_PI);
     cairo_close_path(c);
-    cairo_new_sub_path(c);
 }
 
 // Execute the cairo functions for the given script.
@@ -1503,14 +1502,14 @@ static int vgs_eval(
         case INS_SET_DASH:
         case INS_SET_DASH_OFFSET: {
             int num;
-            double *dashes, offset, dbuf[16];
+            double *dashes, offset, stack_buf[16];
 
             ASSERT_ARGS(1);
 
             num = cairo_get_dash_count(state->cairo_ctx);
 
-            if (num + 1 < FF_ARRAY_ELEMS(dbuf))
-                dashes = dbuf;
+            if (num + 1 < FF_ARRAY_ELEMS(stack_buf))
+                dashes = stack_buf;
             else
                 dashes = av_calloc(num + 1, sizeof(double));
 
@@ -1525,7 +1524,7 @@ static int vgs_eval(
 
             cairo_set_dash(state->cairo_ctx, dashes, num, offset);
 
-            if (dashes != dbuf)
+            if (dashes != stack_buf)
                 av_freep(&dashes);
 
             break;
