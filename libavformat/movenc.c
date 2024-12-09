@@ -1550,20 +1550,20 @@ static int mov_write_vpcc_tag(AVFormatContext *s, AVIOContext *pb, MOVTrack *tra
     return update_size(pb, pos);
 }
 
-static int mov_write_hvcc_tag(AVIOContext *pb, MOVTrack *track)
+static int mov_write_hvcc_tag(AVFormatContext *s, AVIOContext *pb, MOVTrack *track)
 {
     int64_t pos = avio_tell(pb);
 
     avio_wb32(pb, 0);
     ffio_wfourcc(pb, "hvcC");
     if (track->tag == MKTAG('h','v','c','1'))
-        ff_isom_write_hvcc(pb, track->vos_data, track->vos_len, 1);
+        ff_isom_write_hvcc(pb, track->vos_data, track->vos_len, 1, s);
     else
-        ff_isom_write_hvcc(pb, track->vos_data, track->vos_len, 0);
+        ff_isom_write_hvcc(pb, track->vos_data, track->vos_len, 0, s);
     return update_size(pb, pos);
 }
 
-static int mov_write_lhvc_tag(AVIOContext *pb, MOVTrack *track)
+static int mov_write_lhvc_tag(AVFormatContext *s, AVIOContext *pb, MOVTrack *track)
 {
     int64_t pos = avio_tell(pb);
     int ret;
@@ -1571,9 +1571,9 @@ static int mov_write_lhvc_tag(AVIOContext *pb, MOVTrack *track)
     avio_wb32(pb, 0);
     ffio_wfourcc(pb, "lhvC");
     if (track->tag == MKTAG('h','v','c','1'))
-        ret = ff_isom_write_lhvc(pb, track->vos_data, track->vos_len, 1);
+        ret = ff_isom_write_lhvc(pb, track->vos_data, track->vos_len, 1, s);
     else
-        ret = ff_isom_write_lhvc(pb, track->vos_data, track->vos_len, 0);
+        ret = ff_isom_write_lhvc(pb, track->vos_data, track->vos_len, 0, s);
 
     if (ret < 0) {
         avio_seek(pb, pos, SEEK_SET);
@@ -2710,9 +2710,9 @@ static int mov_write_video_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContex
         mov_write_avid_tag(pb, track);
         avid = 1;
     } else if (track->par->codec_id == AV_CODEC_ID_HEVC) {
-        mov_write_hvcc_tag(pb, track);
+        mov_write_hvcc_tag(mov->fc, pb, track);
         if (track->st->disposition & AV_DISPOSITION_MULTILAYER) {
-            ret = mov_write_lhvc_tag(pb, track);
+            ret = mov_write_lhvc_tag(mov->fc, pb, track);
             if (ret < 0)
                 av_log(mov->fc, AV_LOG_WARNING, "Not writing 'lhvC' atom for multilayer stream.\n");
         }
@@ -3221,8 +3221,8 @@ static int mov_write_stbl_tag(AVFormatContext *s, AVIOContext *pb, MOVMuxContext
     mov_write_stsc_tag(pb, track);
     mov_write_stsz_tag(pb, track);
     mov_write_stco_tag(pb, track);
-    if (track->cenc.aes_ctr) {
-        ff_mov_cenc_write_stbl_atoms(&track->cenc, pb);
+    if (track->cenc.aes_ctr && !(mov->flags & FF_MOV_FLAG_FRAGMENT)) {
+        ff_mov_cenc_write_stbl_atoms(&track->cenc, pb, 0);
     }
     if (track->par->codec_id == AV_CODEC_ID_OPUS || track->par->codec_id == AV_CODEC_ID_AAC) {
         mov_preroll_write_stbl_atoms(pb, track);
@@ -4899,6 +4899,43 @@ static int mov_write_uuidusmt_tag(AVIOContext *pb, AVFormatContext *s)
     return 0;
 }
 
+static int mov_write_pssh_tag(AVIOContext *pb, AVStream *st)
+{
+    AVEncryptionInitInfo *info;
+    const AVPacketSideData *sd = av_packet_side_data_get(st->codecpar->coded_side_data,
+                                                         st->codecpar->nb_coded_side_data,
+                                                         AV_PKT_DATA_ENCRYPTION_INIT_INFO);
+    if (!sd)
+        return 0;
+
+    info = av_encryption_init_info_get_side_data(sd->data, sd->size);
+    for (AVEncryptionInitInfo *copy = info; copy; copy = copy->next) {
+        int64_t pos;
+
+        if (!copy->data_size && !copy->num_key_ids)
+            continue;
+
+        pos = avio_tell(pb);
+        avio_wb32(pb, 0); /* size placeholder */
+        ffio_wfourcc(pb, "pssh");
+        avio_w8(pb, 1); /* version */
+        avio_wb24(pb, 0);
+        for (int i = 0; i < copy->system_id_size; i++)
+            avio_w8(pb, copy->system_id[i]);
+        avio_wb32(pb, copy->num_key_ids);
+        for (int i = 0; i < copy->num_key_ids; i++)
+            for (int j = 0; j < copy->key_id_size; j++)
+                avio_w8(pb, copy->key_ids[i][j]);
+        avio_wb32(pb, copy->data_size);
+        avio_write(pb, copy->data, copy->data_size);
+        update_size(pb, pos);
+    }
+
+    av_encryption_init_info_free(info);
+
+    return 0;
+}
+
 static void build_chunks(MOVTrack *trk)
 {
     int i;
@@ -5046,6 +5083,8 @@ static int mov_write_moov_tag(AVIOContext *pb, MOVMuxContext *mov,
         mov_write_uuidusmt_tag(pb, s);
     else if (mov->mode != MODE_AVIF)
         mov_write_udta_tag(pb, mov, s);
+    for (i = 0; i < mov->nb_streams; i++)
+        mov_write_pssh_tag(pb, mov->tracks[i].st);
 
     return update_size(pb, pos);
 }
@@ -5499,6 +5538,9 @@ static int mov_write_traf_tag(AVIOContext *pb, MOVMuxContext *mov,
         }
     }
 
+    if (track->cenc.aes_ctr && (mov->flags & FF_MOV_FLAG_FRAGMENT))
+        ff_mov_cenc_write_stbl_atoms(&track->cenc, pb, moof_offset);
+
     return update_size(pb, pos);
 }
 
@@ -5519,6 +5561,8 @@ static int mov_write_moof_tag_internal(AVIOContext *pb, MOVMuxContext *mov,
             continue;
         if (!track->entry)
             continue;
+        if (track->cenc.aes_ctr && (mov->flags & FF_MOV_FLAG_FRAGMENT))
+            mov_write_pssh_tag(pb, track->st);
         mov_write_traf_tag(pb, mov, track, pos, moof_size);
     }
 
@@ -6500,15 +6544,15 @@ static int check_pkt(AVFormatContext *s, MOVTrack *trk, AVPacket *pkt)
 
     duration = pkt->dts - ref;
     if (pkt->dts < ref || duration >= INT_MAX) {
-        av_log(s, AV_LOG_WARNING, "Packet duration: %"PRId64" / dts: %"PRId64" is out of range\n",
-               duration, pkt->dts);
+        av_log(s, AV_LOG_WARNING, "Packet duration: %"PRId64" / dts: %"PRId64" in stream %d is out of range\n",
+               duration, pkt->dts, pkt->stream_index);
 
         pkt->dts = ref + 1;
         pkt->pts = AV_NOPTS_VALUE;
     }
 
     if (pkt->duration < 0 || pkt->duration > INT_MAX) {
-        av_log(s, AV_LOG_ERROR, "Application provided duration: %"PRId64" is invalid\n", pkt->duration);
+        av_log(s, AV_LOG_ERROR, "Application provided duration: %"PRId64" in stream %d is invalid\n", pkt->duration, pkt->stream_index);
         return AVERROR(EINVAL);
     }
     return 0;
