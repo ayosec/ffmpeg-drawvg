@@ -46,7 +46,7 @@ enum {
     VAR_DURATION,   ///< Frame duration.
     VAR_CX,         ///< X coordinate for current point.
     VAR_CY,         ///< Y coordinate for current point.
-    VAR_I,          ///< Loop counter.
+    VAR_I,          ///< Loop counter, to use with `repeat {}`.
     VAR_U0,         ///< User variable 0.
     VAR_U1,         ///< User variable 1.
     VAR_U2,         ///< User variable 2.
