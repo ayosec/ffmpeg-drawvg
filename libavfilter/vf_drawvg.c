@@ -195,6 +195,14 @@ static struct VGSConstant vgs_consts_line_join[] = {
     { NULL, 0 },
 };
 
+static struct VGSConstant vgs_consts_vars[] = {
+    { "u0", VAR_U0 },
+    { "u1", VAR_U1 },
+    { "u2", VAR_U2 },
+    { "u3", VAR_U3 },
+    { NULL, 0 },
+};
+
 // Syntax of the instruction arguments.
 struct VGSParameters {
     enum {
@@ -219,6 +227,10 @@ struct VGSParameters {
         // The instruction expects a single argument, which is a keyword
         // from the array in the field `const_names`.
         PARAMS_CONSTANT,
+
+        // The instruction expects a keyword and a number. `const_names`
+        // defines the valid values for the first argument.
+        PARAMS_CONSTANT_NUMBER,
 
         // The argument is a color, or a list of colors.
         //
@@ -303,7 +315,7 @@ struct VGSInstructionSpec vgs_instructions[] = {
     { INS_SET_LINE_CAP,     "setlinecap",     { PARAMS_CONSTANT, { .consts = vgs_consts_line_cap } } },
     { INS_SET_LINE_JOIN,    "setlinejoin",    { PARAMS_CONSTANT, { .consts = vgs_consts_line_join } } },
     { INS_SET_LINE_WIDTH,   "setlinewidth",   { PARAMS_NUMBERS, { .num = 1 } } },
-    { INS_SET_VAR,          "setvar",         { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
+    { INS_SET_VAR,          "setvar",         { PARAMS_CONSTANT_NUMBER, { .consts = vgs_consts_vars } } },
     { INS_STROKE,           "stroke",         { PARAMS_NONE } },
     { INS_T_CURVE_TO_REL,   "t",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
     { INS_TRANSLATE,        "translate",      { PARAMS_NUMBERS, { .num = 2 } } },
@@ -668,6 +680,7 @@ static int vgs_parse_statement(
         return 0;
 
     case PARAMS_CONSTANT:
+    case PARAMS_CONSTANT_NUMBER:
         ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
         if (ret != 0)
             goto fail;
@@ -687,6 +700,18 @@ static int vgs_parse_statement(
                 };
 
                 ADD_ARG(arg);
+
+                // CONSTANT_NUMBER needs a second argument.
+                if (spec->params.type == PARAMS_CONSTANT_NUMBER) {
+                    struct VGSArgument arg;
+                    ret = vgs_parse_numeric_argument(log_ctx, parser, &arg);
+
+                    if (ret != 0)
+                        goto fail;
+
+                    ADD_ARG(arg);
+                }
+
                 ADD_STATEMENT();
                 return 0;
             }
@@ -895,26 +920,6 @@ struct VGSEvalState {
         double quad_y;
     } rcp;
 };
-
-static void vgs_user_var_set(struct VGSEvalState *state, double idx, double value) {
-    int i;
-
-    if (!isfinite(idx))
-        return;
-
-    i = (int)idx;
-
-    if (i < 0 || i >= USER_VAR_COUNT) {
-        av_log(state->log_ctx, AV_LOG_ERROR,
-            "Invalid index for setvar: %d. Must be between 0 and %d.\n",
-            i, USER_VAR_COUNT - 1
-        );
-
-        return;
-    }
-
-    state->vars[VAR_U0 + i] = value;
-}
 
 // Function `getvar(i)` for `av_expr_eval`.
 //
@@ -1533,10 +1538,17 @@ static int vgs_eval(
             break;
         }
 
-        case INS_SET_VAR:
+        case INS_SET_VAR: {
+            int user_var;
+
             ASSERT_ARGS(2);
-            vgs_user_var_set(state, numerics[0], numerics[1]);
+
+            user_var = statement->args[0].constant;
+
+            av_assert0(user_var >= VAR_U0 && user_var <= VAR_U3);
+            state->vars[user_var] = numerics[1];
             break;
+        }
 
         case INS_STROKE:
             ASSERT_ARGS(0);

@@ -225,7 +225,7 @@ int main(void)
 
     // Stack values.
     check_script(
-        "setvar 0 10 1 20 0 30 99 99\n"
+        "setvar u0 10 setvar u1 20 setvar u0 30\n"
         "M (getvar(0)) (getvar(0)) L (getvar(1)) (getvar(1))"
     );
 
