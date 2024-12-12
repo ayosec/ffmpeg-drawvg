@@ -909,7 +909,7 @@ struct VGSEvalState {
 static void vgs_user_var_set(struct VGSEvalState *state, double idx, double value) {
     int i;
 
-    if (isnan(idx) || isinf(idx))
+    if (!isfinite(idx))
         return;
 
     i = (int)idx;
@@ -930,9 +930,13 @@ static void vgs_user_var_set(struct VGSEvalState *state, double idx, double valu
 //
 // Return the value of the `VAR_U<i>` variable.
 static double vgs_fn_getvar(void *data, double arg) {
+    int idx;
     struct VGSEvalState *state = (struct VGSEvalState *)data;
 
-    int idx = (int)arg;
+    if (!isfinite(arg))
+        return NAN;
+
+    idx = (int)arg;
     if (idx >= 0 && idx < USER_VAR_COUNT)
         return state->vars[VAR_U0 + idx];
 
@@ -1181,7 +1185,7 @@ static int vgs_eval(
 
         if (statement->args_count >= FF_ARRAY_ELEMS(numerics)) {
             av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
-            return AVERROR(E2BIG);
+            return AVERROR_BUG;
         }
 
         if (cairo_has_current_point(state->cairo_ctx)) {
@@ -1196,6 +1200,7 @@ static int vgs_eval(
 
         for (int arg = 0; arg < statement->args_count; arg++) {
             const struct VGSArgument *a = &statement->args[arg];
+
             switch (a->type) {
             case SA_LITERAL:
                 numerics[arg] = a->literal;
@@ -1316,6 +1321,7 @@ static int vgs_eval(
         case INS_FILL:
         case INS_FILL_EO:
             ASSERT_ARGS(0);
+
             cairo_set_fill_rule(
                 state->cairo_ctx,
                 statement->inst == INS_FILL ?
@@ -1332,7 +1338,8 @@ static int vgs_eval(
 
         case INS_IF:
             ASSERT_ARGS(2);
-            if (numerics[0] != 0.0) {
+
+            if (isfinite(numerics[0]) && numerics[0] != 0.0) {
                 int ret = vgs_eval(state, statement->args[1].subprogram);
                 if (ret != 0 || state->interrupted != 0)
                     return ret;
@@ -1417,6 +1424,10 @@ static int vgs_eval(
 
         case INS_REPEAT:
             ASSERT_ARGS(2);
+
+            if (!isfinite(numerics[0]))
+                break;
+
             for (int i = 0, count = (int)numerics[0]; i < count; i++) {
                 int ret;
 
