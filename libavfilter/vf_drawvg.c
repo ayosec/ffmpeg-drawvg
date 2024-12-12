@@ -380,6 +380,7 @@ static int vgs_parser_next_token(
 #define WORD_SEPARATOR " \n\t\r,"
 
     int level;
+    int is_comment;
     size_t cursor, length;
     const char *source;
 
@@ -468,11 +469,11 @@ next_token:
         break;
     }
 
-    if (advance) {
+    is_comment = token->type == TOKEN_COMMENT;
+    if (advance || is_comment) {
         parser->cursor += cursor + token->length;
 
-        // Skip comments if advance flag is set.
-        if (token->type == TOKEN_COMMENT)
+        if (is_comment)
             goto next_token;
     }
 
@@ -480,30 +481,13 @@ next_token:
 }
 
 // Return `1` if the next token is an expression or a number literal.
+// The token is not consumed, so it will be returned in the next call
+// to `vgs_parser_next_token`.
 static int vgs_parser_next_token_is_numeric(void *log_ctx, struct VGSParser *parser) {
-    int ret;
     struct VGSParserToken token;
 
-    for (;;) {
-        ret = vgs_parser_next_token(log_ctx, parser, &token, 0);
-
-        if (ret != 0)
-            return 0;
-
-        switch (token.type) {
-        case TOKEN_EXPR:
-        case TOKEN_LITERAL:
-            return 1;
-
-        case TOKEN_COMMENT:
-            // Skip comments.
-            vgs_parser_next_token(log_ctx, parser, &token, 1);
-            break;
-
-        default:
-            return 0;
-        }
-    }
+    return vgs_parser_next_token(log_ctx, parser, &token, 0) == 0
+        && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL);
 }
 
 // Release the memory allocated by the program.
@@ -1442,9 +1426,11 @@ static int vgs_eval(
                 if (ret != 0)
                     return ret;
 
-                // Ensure `interrupted` is reset after `repeat`, since
-                // it can be used to stop a loop.
-                state->interrupted = 0;
+                // `finish` interrupts the loop, but don't stop the program.
+                if (state->interrupted) {
+                    state->interrupted = 0;
+                    break;
+                }
             }
 
             state->vars[VAR_I] = NAN;
