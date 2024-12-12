@@ -381,7 +381,11 @@ static int vgs_parser_next_token(
 
     int level;
     size_t cursor, length;
-    const char *source = &parser->source[parser->cursor];
+    const char *source;
+
+next_token:
+
+    source = &parser->source[parser->cursor];
 
     cursor = strspn(source, WORD_SEPARATOR);
     token->position = parser->cursor + cursor;
@@ -464,8 +468,13 @@ static int vgs_parser_next_token(
         break;
     }
 
-    if (advance)
+    if (advance) {
         parser->cursor += cursor + token->length;
+
+        // Skip comments if advance flag is set.
+        if (token->type == TOKEN_COMMENT)
+            goto next_token;
+    }
 
     return 0;
 }
@@ -840,9 +849,6 @@ static int vgs_parse(
             goto fail;
 
         switch (token.type) {
-        case TOKEN_COMMENT:
-            break;
-
         case TOKEN_EOF:
             return 0;
 
