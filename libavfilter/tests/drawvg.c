@@ -23,7 +23,7 @@
 #include "libavutil/log.h"
 #include "libavutil/pixdesc.h"
 
-#define av_log mock_av_log
+#define av_log mock_av_log //TODO use av_log_set_callback
 
 static void mock_av_log(void* avcl, int level, const char *fmt, ...) {
     va_list vl;
@@ -172,8 +172,12 @@ static void check_sort_cmd_specs(void) {
 // Compile and run a script.
 static void check_script(const char* source) {
     int ret;
-    struct VGSProgram program;
+
     struct VGSEvalState state;
+    struct VGSParser parser;
+    struct VGSProgram program;
+
+    vgs_parser_init(&parser, source);
     vgs_eval_state_init(&state, NULL);
 
     for (int i = 0; i < VAR_COUNT; i++)
@@ -184,7 +188,7 @@ static void check_script(const char* source) {
     current_point_x = 0;
     current_point_y = 0;
 
-    ret = vgs_parse(NULL, source, &program, NULL);
+    ret = vgs_parse(NULL, &parser, &program, 0);
     if (ret != 0) {
         printf("%s: vgs_parse = %d\n", __func__, ret);
         return;

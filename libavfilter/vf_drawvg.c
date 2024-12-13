@@ -375,6 +375,42 @@ struct VGSParserToken {
     size_t length;
 };
 
+static av_printf_format(4, 5)
+void vgs_log_invalid_token(
+    void *log_ctx,
+    struct VGSParser *parser,
+    struct VGSParserToken *token,
+    const char *suffix_fmt,
+    ...
+) {
+    va_list ap;
+    char extra[256];
+    size_t line = 1, column = 0;
+    const char *source = parser->source;
+
+    // Determine line/column of the token.
+    for (;;) {
+        const char *sep = strchr(source, '\n');
+
+        if (sep == NULL || (sep - parser->source) > token->position) {
+            column = token->position - (source - parser->source) + 1;
+            break;
+        }
+
+        line++;
+        source = sep + 1;
+    }
+
+    // Format message suffix.
+    va_start(ap, suffix_fmt);
+    vsnprintf(extra, sizeof(extra), suffix_fmt, ap);
+    va_end(ap);
+
+    av_log(log_ctx, AV_LOG_ERROR,
+        "Invalid token '%.*s' at line %zu, column %zu: %s\n",
+        (int)token->length, token->lexeme, line, column, extra);
+}
+
 // Return the next token in the source.
 //
 // @param[out]  token     Next token.
@@ -418,8 +454,9 @@ next_token:
         while (level > 0) {
             switch (source[cursor + length]) {
             case '\0':
-                av_log(log_ctx, AV_LOG_ERROR, "unclosed '(' at position %zu\n", token->position);
-                return -1;
+                token->length = 1; // Show only the '(' in the error message.
+                vgs_log_invalid_token(log_ctx, parser, token, "Unmatched parenthesis.");
+                return AVERROR(EINVAL);
 
             case '(':
                 level++;
@@ -559,9 +596,7 @@ static int vgs_parse_numeric_argument(
         arg->literal = strtod(lexeme, &endp);
 
         if (*endp != '\0') {
-            av_log(log_ctx, AV_LOG_ERROR, "invalid number '%.*s' at position %zu\n",
-                (int)token.length, token.lexeme, token.position);
-
+            vgs_log_invalid_token(log_ctx, parser, &token, "Expected valid number.");
             ret = AVERROR(EINVAL);
         }
         break;
@@ -598,9 +633,9 @@ static int vgs_parse_numeric_argument(
 
 static int vgs_parse(
     void *log_ctx,
-    const char *source,
+    struct VGSParser *parser,
     struct VGSProgram *program,
-    size_t *subprogram_end
+    int subprogram
 );
 
 // Extract the arguments for an instruction, and add a new statement
@@ -680,28 +715,30 @@ static int vgs_parse_statement(
         return 0;
 
     case PARAMS_CONSTANT:
-    case PARAMS_CONSTANT_NUMBER:
+    case PARAMS_CONSTANT_NUMBER: {
+        char expected_names[64] = {0};
+
         ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
         if (ret != 0)
             goto fail;
 
         for (
-            const struct VGSConstant *c = spec->params.consts;
-            c->name != NULL;
-            c++
+            const struct VGSConstant *constant = spec->params.consts;
+            constant->name != NULL;
+            constant++
         ) {
             if (
-                strncmp(token.lexeme, c->name, token.length) == 0
-                    && token.length == strlen(c->name)
+                strncmp(token.lexeme, constant->name, token.length) == 0
+                    && token.length == strlen(constant->name)
             ) {
                 struct VGSArgument arg = {
                     .type = SA_CONST,
-                    .constant = c->value,
+                    .constant = constant->value,
                 };
 
                 ADD_ARG(arg);
 
-                // CONSTANT_NUMBER needs a second argument.
+                // PARAMS_CONSTANT_NUMBER needs a second argument.
                 if (spec->params.type == PARAMS_CONSTANT_NUMBER) {
                     struct VGSArgument arg;
                     ret = vgs_parse_numeric_argument(log_ctx, parser, &arg);
@@ -715,12 +752,15 @@ static int vgs_parse_statement(
                 ADD_STATEMENT();
                 return 0;
             }
+
+            // Collect valid names to include them in the error message, in case
+            // the name is not found.
+            av_strlcatf(expected_names, sizeof(expected_names), " '%s'", constant->name);
         }
 
-        av_log(log_ctx, AV_LOG_ERROR, "invalid argument '%.*s' at position %zu\n",
-            (int)token.length, token.lexeme, token.position);
-
+        vgs_log_invalid_token(log_ctx, parser, &token, "Expected one of%s.", expected_names);
         goto fail;
+    }
 
     case PARAMS_COLORS:
         while (statement.args_count < spec->params.num) {
@@ -735,7 +775,7 @@ static int vgs_parse_statement(
 
             ret = av_parse_color(arg.color, token.lexeme, token.length, log_ctx);
             if (ret != 0) {
-                av_log(log_ctx, AV_LOG_ERROR, "expected a color at position %zu\n", token.position);
+                vgs_log_invalid_token(log_ctx, parser, &token, "Expected color.");
                 goto fail;
             }
 
@@ -763,7 +803,7 @@ static int vgs_parse_statement(
             arg1.type = SA_COLOR,
             ret = av_parse_color(arg1.color, token.lexeme, token.length, log_ctx);
             if (ret != 0) {
-                av_log(log_ctx, AV_LOG_ERROR, "expected a color at position %zu\n", token.position);
+                vgs_log_invalid_token(log_ctx, parser, &token, "Expected color.");
                 goto fail;
             }
 
@@ -802,7 +842,7 @@ static int vgs_parse_statement(
                 .subprogram = av_mallocz(sizeof(struct VGSProgram)),
             };
 
-            ret = vgs_parse(log_ctx, token.lexeme + token.length, arg.subprogram, &parser->cursor);
+            ret = vgs_parse(log_ctx, parser, arg.subprogram, 1);
             if (ret != 0) {
                 av_freep(&arg.subprogram);
                 goto fail;
@@ -813,8 +853,7 @@ static int vgs_parse_statement(
             return 0;
         }
 
-        av_log(log_ctx, AV_LOG_ERROR, "expected '{', found '%.*s' at position %zu\n",
-            (int)token.length, token.lexeme, token.position);
+        vgs_log_invalid_token(log_ctx, parser, &token, "Expected '{'.");
         goto fail;
     }
 
@@ -830,21 +869,21 @@ fail:
     return AVERROR(EINVAL);
 }
 
+static void vgs_parser_init(struct VGSParser *parser, const char *source) {
+    parser->source = source;
+    parser->cursor = 0;
+}
+
 // Parse a script to generate the program statements.
 //
 // @return `0` on success, a negative `AVERROR` code on failure.
 static int vgs_parse(
     void *log_ctx,
-    const char *source,
+    struct VGSParser *parser,
     struct VGSProgram *program,
-    size_t *subprogram_end
+    int subprogram
 ) {
     struct VGSParserToken token;
-
-    struct VGSParser parser = {
-        .source = source,
-        .cursor = 0,
-    };
 
     program->statements = NULL;
     program->statements_count = 0;
@@ -853,7 +892,7 @@ static int vgs_parse(
         int ret;
         struct VGSInstructionSpec *inst;
 
-        ret = vgs_parser_next_token(log_ctx, &parser, &token, 1);
+        ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
         if (ret != 0)
             goto fail;
 
@@ -867,18 +906,16 @@ static int vgs_parse(
             if (inst == NULL)
                 goto invalid_token;
 
-            ret = vgs_parse_statement(log_ctx, &parser, program, inst);
+            ret = vgs_parse_statement(log_ctx, parser, program, inst);
             if (ret != 0)
                 goto fail;
 
             break;
 
         case TOKEN_RIGHT_BRACKET:
-            // A '}' is accepted only if we are parsing a subprogram.
-            if (subprogram_end == NULL)
+            if (!subprogram)
                 goto invalid_token;
 
-            *subprogram_end += token.position + 1;
             return 0;
 
         default:
@@ -889,8 +926,7 @@ static int vgs_parse(
     return 0;
 
 invalid_token:
-    av_log(log_ctx, AV_LOG_ERROR, "Invalid token at position %zu: '%.*s'\n",
-        token.position, (int)token.length, token.lexeme);
+    vgs_log_invalid_token(log_ctx, parser, &token, "Expected instruction.");
 
 fail:
     vgs_free(program);
@@ -1278,7 +1314,7 @@ static int vgs_eval(
 
         case INS_COLOR_STOP:
             if (state->pattern_builder == NULL) {
-                av_log(state->log_ctx, AV_LOG_ERROR, "colorstop with no gradient.\n");
+                av_log(state->log_ctx, AV_LOG_ERROR, "colorstop with no active gradient.\n");
                 break;
             }
 
@@ -1723,7 +1759,6 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     eval_state.vars[VAR_T] = frame->pts == AV_NOPTS_VALUE ? NAN : frame->pts * av_q2d(inlink->time_base);
     eval_state.vars[VAR_W] = inlink->w;
     eval_state.vars[VAR_H] = inlink->h;
-    eval_state.vars[VAR_I] = NAN;
     eval_state.vars[VAR_DURATION] = frame->duration * av_q2d(inlink->time_base);
 
     ret = vgs_eval(&eval_state, &drawvg_ctx->program);
@@ -1754,6 +1789,7 @@ static int drawvg_config_props(AVFilterLink *inlink) {
 }
 
 static av_cold int drawvg_init(AVFilterContext *ctx) {
+    struct VGSParser parser;
     DrawVGContext *drawvg = ctx->priv;
 
     if (drawvg->script_file != NULL) {
@@ -1768,7 +1804,8 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
             return ret;
     }
 
-    return vgs_parse(drawvg, drawvg->script_text, &drawvg->program, NULL);
+    vgs_parser_init(&parser, drawvg->script_text);
+    return vgs_parse(drawvg, &parser, &drawvg->program, 0);
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {
