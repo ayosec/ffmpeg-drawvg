@@ -443,8 +443,9 @@ next_token:
     switch (source[cursor]) {
     case '\0':
         token->type = TOKEN_EOF;
-        token->length = 0;
-        break;
+        token->lexeme = "<EOF>";
+        token->length = 5;
+        return 0;
 
     case '(':
         // Find matching parenthesis.
@@ -617,8 +618,7 @@ static int vgs_parse_numeric_argument(
         break;
 
     default:
-        av_log(log_ctx, AV_LOG_ERROR, "expected numeric argument at position %zu\n",
-            token.position);
+        vgs_log_invalid_token(log_ctx, parser, &token, "Expected numeric argument.");
         ret = AVERROR(EINVAL);
     }
 

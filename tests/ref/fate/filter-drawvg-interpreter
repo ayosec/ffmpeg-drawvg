@@ -93,7 +93,7 @@ check_script:
 <<
 M 0 1 2
 >>
-av_log[16]: expected numeric argument at position 7
+av_log[16]: Invalid token '<EOF>' at line 1, column 8: Expected numeric argument.
 check_script: vgs_parse = -22
 
 ---
