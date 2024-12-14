@@ -71,7 +71,9 @@ static const char *const var_names[] = {
 
 #define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
 
-#define USER_VAR_COUNT 4
+#define USER_VAR_LAST VAR_U3
+
+// Functions used in expressions.
 
 static const char *const vgs_func1_names[] = {
     "getvar",
@@ -88,6 +90,7 @@ static double (*const vgs_func1_impls[])(void *, double) = {
     NULL,
 };
 
+// Instructions.
 
 enum VGSInstruction {
     INS_ARC = 1,                ///<  arc (cx cy radius angle1 angle2)
@@ -131,7 +134,7 @@ enum VGSInstruction {
     INS_SET_LINE_CAP,           ///<  setlinecap (cap)
     INS_SET_LINE_JOIN,          ///<  setlinejoin (join)
     INS_SET_LINE_WIDTH,         ///<  setlinewidth (width)
-    INS_SET_VAR,                ///<  setvar (idx value)
+    INS_SET_VAR,                ///<  setvar (u# value)
     INS_STROKE,                 ///<  stroke
     INS_S_CURVE_TO,             ///<  S (x2 y2 x y)
     INS_S_CURVE_TO_REL,         ///<  s (dx2 dy2 dx dy)
@@ -140,37 +143,6 @@ enum VGSInstruction {
     INS_T_CURVE_TO_REL,         ///<  t (dx dy)
     INS_VERT,                   ///<  V (y)
     INS_VERT_REL,               ///<  v (dy)
-};
-
-// Instruction arguments.
-struct VGSArgument {
-    enum {
-        SA_CONST = 1,
-        SA_LITERAL,
-        SA_AV_EXPR,
-        SA_COLOR,
-        SA_SUBPROGRAM,
-    } type;
-
-    union {
-        int constant;
-        double literal;
-        AVExpr *expr;
-        uint8_t color[4];
-        struct VGSProgram *subprogram;
-    };
-};
-
-// Program statements.
-struct VGSStatement {
-    enum VGSInstruction inst;
-    struct VGSArgument *args;
-    int args_count;
-};
-
-struct VGSProgram {
-    struct VGSStatement *statements;
-    int statements_count;
 };
 
 // Constants used in some draw instructions, like `setlinejoin`.
@@ -201,7 +173,7 @@ static struct VGSConstant vgs_consts_vars[] = {
     { NULL, 0 },
 };
 
-// Syntax of the instruction arguments.
+// Instruction parameters.
 struct VGSParameter {
     enum {
         PARAM_COLOR = 1,
@@ -216,6 +188,8 @@ struct VGSParameter {
 };
 
 #define MAX_INSTRUCTION_PARAMS 8
+
+// Instruction declarations.
 
 struct VGSInstructionDecl {
     enum VGSInstruction inst;
@@ -327,6 +301,8 @@ static const struct VGSInstructionDecl* vgs_get_instruction(const char *name, si
         vgs_comp_instruction_spec
     );
 }
+
+// Parser.
 
 struct VGSParser {
     const char* source;
@@ -503,6 +479,37 @@ next_token:
 
     return 0;
 }
+
+// Instruction arguments.
+struct VGSArgument {
+    enum {
+        SA_CONST = 1,
+        SA_LITERAL,
+        SA_AV_EXPR,
+        SA_COLOR,
+        SA_SUBPROGRAM,
+    } type;
+
+    union {
+        int constant;
+        double literal;
+        AVExpr *expr;
+        uint8_t color[4];
+        struct VGSProgram *subprogram;
+    };
+};
+
+// Program statements.
+struct VGSStatement {
+    enum VGSInstruction inst;
+    struct VGSArgument *args;
+    int args_count;
+};
+
+struct VGSProgram {
+    struct VGSStatement *statements;
+    int statements_count;
+};
 
 // Release the memory allocated by the program.
 static void vgs_free(struct VGSProgram *program) {
@@ -830,20 +837,31 @@ fail:
     return AVERROR(EINVAL);
 }
 
+// Interpreter.
+
 struct VGSEvalState {
     void *log_ctx;
 
+    /// Cairo context for drawing operations.
     cairo_t *cairo_ctx;
+
+    /// Pattern being built by instructions like `colorstop`.
     cairo_pattern_t *pattern_builder;
 
+    /// Register is `finish` was called in a subprogram.
     int interrupted;
 
+    /// Values for the variables in expressions.
+    ///
+    /// Some variables (like `cx` or `cy`) are written before
+    /// executing each statement.
+    ///
+    /// User variables (like `u0`) are set by `setvar`.
     double vars[VAR_COUNT];
 
-    // Track reflected control points from previous curve operation,
-    // for T and S instructions.
+    // Reflected Control Points. Used in T and S instructions.
     //
-    // https://www.w3.org/TR/SVG/paths.html#ReflectedControlPoints
+    // See https://www.w3.org/TR/SVG/paths.html#ReflectedControlPoints
     struct {
         enum { RCP_NONE, RCP_VALID, RCP_UPDATED } status;
 
@@ -858,15 +876,15 @@ struct VGSEvalState {
 //
 // Return the value of the `VAR_U<i>` variable.
 static double vgs_fn_getvar(void *data, double arg) {
-    int idx;
+    int var;
     struct VGSEvalState *state = (struct VGSEvalState *)data;
 
     if (!isfinite(arg))
         return NAN;
 
-    idx = (int)arg;
-    if (idx >= 0 && idx < USER_VAR_COUNT)
-        return state->vars[VAR_U0 + idx];
+    var = VAR_U0 + (int)arg;
+    if (var >= VAR_U0 && var <= USER_VAR_LAST)
+        return state->vars[var];
 
     return NAN;
 }
@@ -1469,7 +1487,7 @@ static int vgs_eval(
 
             user_var = statement->args[0].constant;
 
-            av_assert0(user_var >= VAR_U0 && user_var <= VAR_U3);
+            av_assert0(user_var >= VAR_U0 && user_var <= USER_VAR_LAST);
             state->vars[user_var] = numerics[1];
             break;
         }
