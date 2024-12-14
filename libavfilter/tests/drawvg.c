@@ -106,6 +106,8 @@ MOCK_FN_0(cairo_fill_preserve);
 MOCK_FN_2(cairo_line_to);
 MOCK_FN_2(cairo_move_to);
 MOCK_FN_0(cairo_new_path);
+MOCK_FN_0(cairo_new_sub_path);
+MOCK_FN_4(cairo_rectangle);
 MOCK_FN_6(cairo_rel_curve_to);
 MOCK_FN_2(cairo_rel_line_to);
 MOCK_FN_2(cairo_rel_move_to);
@@ -133,24 +135,46 @@ void cairo_get_current_point(cairo_t *cr, double *x, double *y) {
 }
 
 void cairo_set_source (cairo_t *cr, cairo_pattern_t *source) {
+    int count;
     double r, g, b, a;
+    double x0, y0, x1, y1, r0, r1;
 
     printf("%s", __func__);
+
+#define PRINT_COLOR(prefix) \
+    printf(prefix "#%02x%02x%02x%02x", (int)(r*255), (int)(g*255), (int)(b*255), (int)(a*255))
 
     switch (cairo_pattern_get_type(source)) {
     case CAIRO_PATTERN_TYPE_SOLID:
         cairo_pattern_get_rgba(source, &r, &g, &b, &a);
-        printf(" rgba(%.1f %.1f %.1f %.1f)", r, g, b, a);
+        PRINT_COLOR(" ");
         break;
 
+    case CAIRO_PATTERN_TYPE_LINEAR:
+        cairo_pattern_get_linear_points(source, &x0, &y0, &x1, &y1);
+        printf(" lineargrad(%.1f %.1f %.1f %.1f)", x0, y0, x1, y1);
+        break;
+
+    case CAIRO_PATTERN_TYPE_RADIAL:
+        cairo_pattern_get_radial_circles(source, &x0, &y0, &r0, &x1, &y1, &r1);
+        printf(" radialgrad(%.1f %.1f %.1f %.1f %.1f %.1f)", x0, y0, r0, x1, y1, r1);
+        break;
+    }
+
+    if (cairo_pattern_get_color_stop_count(source, &count) == CAIRO_STATUS_SUCCESS) {
+        for (int i = 0; i < count; i++) {
+            cairo_pattern_get_color_stop_rgba(source, i, &x0, &r, &g, &b, &a);
+            printf(" %.1f/", x0);
+            PRINT_COLOR("");
+        }
     }
 
     printf("\n");
 }
 
-// Veify that the `command_specs` is sorted. This is required because
-// the search is done with `bsearch(3)`.
-static void check_sort_cmd_specs(void) {
+// Verify that the `vgs_instructions` array is sorted, so it can
+// be used with `bsearch(3)`.
+static void check_sorted_instructions(void) {
     int failures = 0;
 
     for (int i = 0; i < INSTRUCTION_SPECS_COUNT  - 1; i++) {
@@ -170,20 +194,35 @@ static void check_sort_cmd_specs(void) {
 }
 
 // Compile and run a script.
-static void check_script(const char* source) {
+static void check_script(int is_file, const char* source) {
     int ret;
 
     struct VGSEvalState state;
     struct VGSParser parser;
     struct VGSProgram program;
 
+    if (is_file) {
+        uint8_t *s = NULL;
+
+        printf("\n--- %s: %s\n", __func__, av_basename(source));
+
+        ret = ff_load_textfile(NULL, source, &s, NULL);
+        if (ret != 0) {
+            printf("Failed to read %s: %d\n", source, ret);
+            return;
+        }
+
+        source = s;
+    } else {
+        printf("\n--- %s: %s\n", __func__, source);
+    }
+
     vgs_parser_init(&parser, source);
+
     vgs_eval_state_init(&state, NULL);
 
     for (int i = 0; i < VAR_COUNT; i++)
         state.vars[i] = 1 << i;
-
-    printf("\n---\n%s:\n<<\n%s\n>>\n", __func__, source);
 
     current_point_x = 0;
     current_point_y = 0;
@@ -191,7 +230,7 @@ static void check_script(const char* source) {
     ret = vgs_parse(NULL, &parser, &program, 0);
     if (ret != 0) {
         printf("%s: vgs_parse = %d\n", __func__, ret);
-        return;
+        goto exit;
     }
 
     ret = vgs_eval(&state, &program);
@@ -199,63 +238,44 @@ static void check_script(const char* source) {
 
     if (ret != 0) {
         printf("%s: vgs_eval = %d\n", __func__, ret);
-        return;
     }
+
+exit:
+    if (is_file)
+        av_free((void*)source);
 
     vgs_free(&program);
 }
 
-int main(void)
+int main(int argc, const char **argv)
 {
     char buf[512];
 
-    check_sort_cmd_specs();
+    check_sorted_instructions();
 
-    check_script(
-        "save\n"
-        "scale 1 scalexy 2 3\n"
-        "setlinejoin miter\n"
-        "setlinecap round\n"
-        "M 0 (PI * (1 + 0.5))\n"
-        "l 10 10 L 20 20 v 1 V 2 h 3 H 4\n"
-        "lineto 10 20\n"
-        "setcolor red\n"
-        "restore\n"
-        "stroke"
-    );
-
-    // Comments.
-    check_script("// a b\nsave\n// c d\nrestore //");
-
-    // Stack values.
-    check_script(
-        "setvar u0 10 setvar u1 20 setvar u0 30\n"
-        "M (getvar(0)) (getvar(0)) L (getvar(1)) (getvar(1))"
-    );
-
-    // From a SVG <path>.
-    check_script("M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0");
+    for (int i = 1; i < argc; i++)
+        check_script(1, argv[i]);
 
     // Detect unclosed expressions.
-    check_script("M 0 (1*(t+1)");
+    check_script(0, "M 0 (1*(t+1)");
 
     // Invalid instruction.
-    check_script("save invalid 1 2");
+    check_script(0, "save invalid 1 2");
 
     // Invalid constant.
-    check_script("setlinecap unknown m 10 20");
+    check_script(0, "setlinecap unknown m 10 20");
 
     // Missing arguments.
-    check_script("M 0 1 2");
+    check_script(0, "M 0 1 2");
 
-    // Long expressions. The parser must use malloc.
+    // Long expressions.
     memset(buf, 0, sizeof(buf));
     strncat(buf, "M 0 (1", sizeof(buf) - 1);
     for (int i = 0; i < 100; i++) {
         strncat(buf, " + n", sizeof(buf) - 1);
     }
     strncat(buf, ")", sizeof(buf) - 1);
-    check_script(buf);
+    check_script(0, buf);
 
     return 0;
 }

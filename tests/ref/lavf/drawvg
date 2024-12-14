@@ -1,7 +1,0 @@
-M 10 10
-l 5 5
-v 10
-h 20
-z
-setcolor blue
-stroke

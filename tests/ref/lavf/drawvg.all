@@ -1,0 +1,50 @@
+// Script to test how drawvg instructions are translated to cairo functions,
+// for `make fate-filter-drawvg-interpreter`.
+
+// Comments.
+lineargrad 0 0 1 1
+colorstop 0 red // after a statement
+colorstop
+    1 // in the middle of a statement
+    blue
+
+
+// Constants.
+setlinejoin miter
+setlinecap round
+
+// if/repeat
+M 0 0
+repeat 10 {
+    if (eq(i,3)) { finish }
+    l (i) (i)
+}
+
+// State
+save
+restore
+
+scale 1
+scalexy 2 3
+translate 1 2
+rotate 1
+
+// Basic shapes
+rect 1 2 3 4
+circle 1 2 3
+roundedrect 100 100 400 400 50
+
+// Sources
+setcolor #abcdef
+stroke
+
+lineargrad 0 1 2 3
+colorstop 0 red 1 blue
+stroke
+
+radialgrad 1 2 3 4 5 6
+repeat 2 { colorstop (i/10) black ((i+1)/10) white }
+stroke
+
+// Curves. The next line should be equivalent to SVG's <path>.
+M 10,50 Q 25,25 40,50 t 30,0 30,0 c 20 50 40 -50 100 0

@@ -1,104 +1,60 @@
-check_sort_cmd_specs: 0 failures
+check_sorted_instructions: 0 failures
 
----
-check_script:
-<<
-save
-scale 1 scalexy 2 3
-setlinejoin miter
-setlinecap round
-M 0 (PI * (1 + 0.5))
-l 10 10 L 20 20 v 1 V 2 h 3 H 4
-lineto 10 20
-setcolor red
-restore
-stroke
->>
-cairo_save
-cairo_scale 1.0 1.0
-cairo_scale 2.0 3.0
+--- check_script: drawvg.all
 cairo_set_line_join 0
 cairo_set_line_cap 1
-cairo_move_to 0.0 4.7
-cairo_rel_line_to 10.0 10.0
-cairo_line_to 20.0 20.0
-cairo_line_to 20.0 21.0
-cairo_line_to 20.0 2.0
-cairo_line_to 23.0 2.0
-cairo_line_to 4.0 2.0
-cairo_line_to 10.0 20.0
-cairo_set_source rgba(1.0 0.0 0.0 1.0)
-cairo_restore
-cairo_stroke_preserve
-
----
-check_script:
-<<
-// a b
-save
-// c d
-restore //
->>
+cairo_move_to 0.0 0.0
+cairo_rel_line_to 0.0 0.0
+cairo_rel_line_to 1.0 1.0
+cairo_rel_line_to 2.0 2.0
+cairo_set_source lineargrad(0.0 0.0 1.0 1.0) 0.0/#ff0000ff 1.0/#0000ffff
 cairo_save
 cairo_restore
-
----
-check_script:
-<<
-setvar u0 10 setvar u1 20 setvar u0 30
-M (getvar(0)) (getvar(0)) L (getvar(1)) (getvar(1))
->>
-cairo_move_to 30.0 30.0
-cairo_line_to 20.0 20.0
-
----
-check_script:
-<<
-M 10,50 Q 25,25 40,50 t 30,0 30,0 30,0 30,0 30,0
->>
+cairo_scale 1.0 1.0
+cairo_scale 2.0 3.0
+cairo_translate 1.0 2.0
+cairo_rotate 1.0
+cairo_rectangle 1.0 2.0 3.0 4.0
+cairo_save
+cairo_translate 1.0 2.0
+cairo_new_sub_path
+cairo_arc 0.0 0.0 3.0 0.0 6.3
+cairo_close_path
+cairo_new_sub_path
+cairo_restore
+cairo_new_sub_path
+cairo_arc 150.0 150.0 50.0 3.1 4.7
+cairo_arc 450.0 150.0 50.0 4.7 6.3
+cairo_arc 450.0 450.0 50.0 0.0 1.6
+cairo_arc 150.0 450.0 50.0 1.6 3.1
+cairo_close_path
+cairo_set_source #abcdefff
+cairo_stroke_preserve
+cairo_set_source lineargrad(0.0 1.0 2.0 3.0) 0.0/#ff0000ff 1.0/#0000ffff
+cairo_stroke_preserve
+cairo_set_source radialgrad(1.0 2.0 3.0 4.0 5.0 6.0) 0.0/#000000ff 0.1/#ffffffff 0.1/#000000ff 0.2/#ffffffff
+cairo_stroke_preserve
 cairo_move_to 10.0 50.0
 cairo_curve_to 20.0 33.3 30.0 33.3 40.0 50.0
 cairo_curve_to 50.0 66.7 60.0 66.7 70.0 50.0
 cairo_curve_to 80.0 33.3 90.0 33.3 100.0 50.0
-cairo_curve_to 110.0 66.7 120.0 66.7 130.0 50.0
-cairo_curve_to 140.0 33.3 150.0 33.3 160.0 50.0
-cairo_curve_to 170.0 66.7 180.0 66.7 190.0 50.0
+cairo_curve_to 120.0 100.0 140.0 0.0 200.0 50.0
 
----
-check_script:
-<<
-M 0 (1*(t+1)
->>
+--- check_script: M 0 (1*(t+1)
 av_log[16]: Invalid token '(' at line 1, column 5: Unmatched parenthesis.
 check_script: vgs_parse = -22
 
----
-check_script:
-<<
-save invalid 1 2
->>
+--- check_script: save invalid 1 2
 av_log[16]: Invalid token 'invalid' at line 1, column 6: Expected instruction.
 check_script: vgs_parse = -22
 
----
-check_script:
-<<
-setlinecap unknown m 10 20
->>
+--- check_script: setlinecap unknown m 10 20
 av_log[16]: Invalid token 'unknown' at line 1, column 12: Expected one of 'butt' 'round' 'square'.
 check_script: vgs_parse = -22
 
----
-check_script:
-<<
-M 0 1 2
->>
+--- check_script: M 0 1 2
 av_log[16]: Invalid token '<EOF>' at line 1, column 8: Expected numeric argument.
 check_script: vgs_parse = -22
 
----
-check_script:
-<<
-M 0 (1 + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n)
->>
+--- check_script: M 0 (1 + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n)
 cairo_move_to 0.0 101.0
