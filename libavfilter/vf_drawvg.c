@@ -164,8 +164,6 @@ struct VGSArgument {
 // Program statements.
 struct VGSStatement {
     enum VGSInstruction inst;
-    const char* inst_name;
-
     struct VGSArgument *args;
     int args_count;
 };
@@ -204,139 +202,115 @@ static struct VGSConstant vgs_consts_vars[] = {
 };
 
 // Syntax of the instruction arguments.
-struct VGSParameters {
+struct VGSParameter {
     enum {
-        // The instruction does not expect any argument.
-        PARAMS_NONE = 1,
-
-        // The instruction expects a fixed number of numeric arguments.
-        //
-        // The field `num` must indicate the size of the set.
-        PARAMS_NUMBERS,
-
-        // The instruction expects a sequence of sets. The parser emits an
-        // instruction for each complete set.
-        //
-        // The field `num` must indicate the size of the set.
-        //
-        // For example, the instruction `L` expects 2 arguments in each set,
-        // so the script `L 10 10 20 20` emit two `lineto` instructions:
-        // `L 10 20` and `L 20 20`.
-        PARAMS_NUMBERS_SEQS,
-
-        // The instruction expects a single argument, which is a keyword
-        // from the array in the field `const_names`.
-        PARAMS_CONSTANT,
-
-        // The instruction expects a keyword and a number. `const_names`
-        // defines the valid values for the first argument.
-        PARAMS_CONSTANT_NUMBER,
-
-        // The argument is a color, or a list of colors.
-        //
-        // `num` indicates number of arguments.
-        PARAMS_COLORS,
-
-        // The instruction expects a number and a color.
-        //
-        // If `num` is `1`, the instruction expects a sequence of sets.
-        PARAMS_NUMBER_COLOR,
-
-        // The instruction expects a subprogram. The field `num` indicates
-        // how many numeric arguments are before the subprogram.
-        PARAMS_SUBPROGRAM,
+        PARAM_COLOR = 1,
+        PARAM_CONSTANT,
+        PARAM_END,
+        PARAM_MAY_REPEAT,
+        PARAM_NUMERIC,
+        PARAM_SUBPROGRAM,
     } type;
 
-    union {
-        int num;
-        const struct VGSConstant *consts;
-    };
+    const struct VGSConstant *constants;
 };
 
-struct VGSInstructionSpec {
+#define MAX_INSTRUCTION_PARAMS 8
+
+struct VGSInstructionDecl {
     enum VGSInstruction inst;
     const char* name;
-    struct VGSParameters params;
+    const struct VGSParameter params[MAX_INSTRUCTION_PARAMS];
 };
+
+#define L(...) { __VA_ARGS__, { PARAM_END } }            // Parameter list
+#define R(...) { __VA_ARGS__, { PARAM_MAY_REPEAT } }     // Repeatable PL
+#define NONE { { PARAM_END } }
+#define N { PARAM_NUMERIC }
+#define C(c) { PARAM_CONSTANT, .constants = c }
 
 // Instructions available to the scripts.
 //
 // The array must be sorted in ascending order by `name`.
-struct VGSInstructionSpec vgs_instructions[] = {
-    { INS_CURVE_TO,         "C",              { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_HORZ,             "H",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_LINE_TO,          "L",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO,          "M",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_Q_CURVE_TO,       "Q",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_S_CURVE_TO,       "S",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_T_CURVE_TO,       "T",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_VERT,             "V",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_CLOSE_PATH,       "Z",              { PARAMS_NONE } },
-    { INS_ARC,              "arc",            { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
-    { INS_ARC_NEG,          "arcn",           { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
-    { INS_CURVE_TO_REL,     "c",              { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_CIRCLE,           "circle",         { PARAMS_NUMBERS_SEQS, { .num = 3 } } },
-    { INS_CLIP,             "clip",           { PARAMS_NONE } },
-    { INS_CLOSE_PATH,       "closepath",      { PARAMS_NONE } },
-    { INS_COLOR_STOP,       "colorstop",      { PARAMS_NUMBER_COLOR, { .num = 1 } } },
-    { INS_CURVE_TO,         "curveto",        { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_ELLIPSE,          "ellipse",        { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_CLIP_EO,          "eoclip",         { PARAMS_NONE } },
-    { INS_FILL_EO,          "eofill",         { PARAMS_NONE } },
-    { INS_FILL,             "fill",           { PARAMS_NONE } },
-    { INS_FINISH,           "finish",         { PARAMS_NONE } },
-    { INS_HORZ_REL,         "h",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_IF,               "if",             { PARAMS_SUBPROGRAM, { .num = 1 } } },
-    { INS_LINE_TO_REL,      "l",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_LINEAR_GRAD,      "lineargrad",     { PARAMS_NUMBERS, { .num = 4 } } },
-    { INS_LINE_TO,          "lineto",         { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO_REL,      "m",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO,          "moveto",         { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_NEW_PATH,         "newpath",        { PARAMS_NONE } },
-    { INS_Q_CURVE_TO_REL,   "q",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_RADIAL_GRAD,      "radialgrad",     { PARAMS_NUMBERS, { .num = 6 } } },
-    { INS_CURVE_TO_REL,     "rcurveto",       { PARAMS_NUMBERS_SEQS, { .num = 6 } } },
-    { INS_RECT,             "rect",           { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_REPEAT,           "repeat",         { PARAMS_SUBPROGRAM, { .num = 1 } } },
-    { INS_RESET_CLIP,       "resetclip",      { PARAMS_NONE } },
-    { INS_RESET_DASH,       "resetdash",      { PARAMS_NONE } },
-    { INS_RESTORE,          "restore",        { PARAMS_NONE } },
-    { INS_LINE_TO_REL,      "rlineto",        { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_MOVE_TO_REL,      "rmoveto",        { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_ROTATE,           "rotate",         { PARAMS_NUMBERS, { .num = 1 } } },
-    { INS_ROUNDEDRECT,      "roundedrect",    { PARAMS_NUMBERS_SEQS, { .num = 5 } } },
-    { INS_S_CURVE_TO_REL,   "s",              { PARAMS_NUMBERS_SEQS, { .num = 4 } } },
-    { INS_SAVE,             "save",           { PARAMS_NONE } },
-    { INS_SCALE,            "scale",          { PARAMS_NUMBERS, { .num = 1 } } },
-    { INS_SCALEXY,          "scalexy",        { PARAMS_NUMBERS, { .num = 2 } } },
-    { INS_SET_COLOR,        "setcolor",       { PARAMS_COLORS, { .num = 1 } } },
-    { INS_SET_DASH,         "setdash",        { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_SET_DASH_OFFSET,  "setdashoffset",  { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_SET_LINE_CAP,     "setlinecap",     { PARAMS_CONSTANT, { .consts = vgs_consts_line_cap } } },
-    { INS_SET_LINE_JOIN,    "setlinejoin",    { PARAMS_CONSTANT, { .consts = vgs_consts_line_join } } },
-    { INS_SET_LINE_WIDTH,   "setlinewidth",   { PARAMS_NUMBERS, { .num = 1 } } },
-    { INS_SET_VAR,          "setvar",         { PARAMS_CONSTANT_NUMBER, { .consts = vgs_consts_vars } } },
-    { INS_STROKE,           "stroke",         { PARAMS_NONE } },
-    { INS_T_CURVE_TO_REL,   "t",              { PARAMS_NUMBERS_SEQS, { .num = 2 } } },
-    { INS_TRANSLATE,        "translate",      { PARAMS_NUMBERS, { .num = 2 } } },
-    { INS_VERT_REL,         "v",              { PARAMS_NUMBERS_SEQS, { .num = 1 } } },
-    { INS_CLOSE_PATH,       "z",              { PARAMS_NONE } },
+struct VGSInstructionDecl vgs_instructions[] = {
+    { INS_CURVE_TO,         "C",              R(N, N, N, N, N, N) },
+    { INS_HORZ,             "H",              R(N) },
+    { INS_LINE_TO,          "L",              R(N, N) },
+    { INS_MOVE_TO,          "M",              R(N, N) },
+    { INS_Q_CURVE_TO,       "Q",              R(N, N, N, N) },
+    { INS_S_CURVE_TO,       "S",              R(N, N, N, N) },
+    { INS_T_CURVE_TO,       "T",              R(N, N) },
+    { INS_VERT,             "V",              R(N) },
+    { INS_CLOSE_PATH,       "Z",              NONE },
+    { INS_ARC,              "arc",            R(N, N, N, N, N) },
+    { INS_ARC_NEG,          "arcn",           R(N, N, N, N, N) },
+    { INS_CURVE_TO_REL,     "c",              R(N, N, N, N, N, N) },
+    { INS_CIRCLE,           "circle",         R(N, N, N) },
+    { INS_CLIP,             "clip",           NONE },
+    { INS_CLOSE_PATH,       "closepath",      NONE },
+    { INS_COLOR_STOP,       "colorstop",      R(N, { PARAM_COLOR }) },
+    { INS_CURVE_TO,         "curveto",        R(N, N, N, N, N, N) },
+    { INS_ELLIPSE,          "ellipse",        R(N, N, N, N) },
+    { INS_CLIP_EO,          "eoclip",         NONE },
+    { INS_FILL_EO,          "eofill",         NONE },
+    { INS_FILL,             "fill",           NONE },
+    { INS_FINISH,           "finish",         NONE },
+    { INS_HORZ_REL,         "h",              R(N) },
+    { INS_IF,               "if",             L(N, { PARAM_SUBPROGRAM }) },
+    { INS_LINE_TO_REL,      "l",              R(N, N) },
+    { INS_LINEAR_GRAD,      "lineargrad",     L(N, N, N, N) },
+    { INS_LINE_TO,          "lineto",         R(N, N) },
+    { INS_MOVE_TO_REL,      "m",              R(N, N) },
+    { INS_MOVE_TO,          "moveto",         R(N, N) },
+    { INS_NEW_PATH,         "newpath",        NONE },
+    { INS_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
+    { INS_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
+    { INS_CURVE_TO_REL,     "rcurveto",       R(N, N, N, N, N, N) },
+    { INS_RECT,             "rect",           R(N, N, N, N) },
+    { INS_REPEAT,           "repeat",         L(N, { PARAM_SUBPROGRAM }) },
+    { INS_RESET_CLIP,       "resetclip",      NONE },
+    { INS_RESET_DASH,       "resetdash",      NONE },
+    { INS_RESTORE,          "restore",        NONE },
+    { INS_LINE_TO_REL,      "rlineto",        R(N, N) },
+    { INS_MOVE_TO_REL,      "rmoveto",        R(N, N) },
+    { INS_ROTATE,           "rotate",         L(N) },
+    { INS_ROUNDEDRECT,      "roundedrect",    R(N, N, N, N, N) },
+    { INS_S_CURVE_TO_REL,   "s",              R(N, N, N, N) },
+    { INS_SAVE,             "save",           NONE },
+    { INS_SCALE,            "scale",          L(N) },
+    { INS_SCALEXY,          "scalexy",        L(N, N) },
+    { INS_SET_COLOR,        "setcolor",       L({ PARAM_COLOR }) },
+    { INS_SET_DASH,         "setdash",        R(N) },
+    { INS_SET_DASH_OFFSET,  "setdashoffset",  R(N) },
+    { INS_SET_LINE_CAP,     "setlinecap",     L(C(vgs_consts_line_cap)) },
+    { INS_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
+    { INS_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
+    { INS_SET_VAR,          "setvar",         L(C(vgs_consts_vars), N) },
+    { INS_STROKE,           "stroke",         NONE },
+    { INS_T_CURVE_TO_REL,   "t",              R(N, N) },
+    { INS_TRANSLATE,        "translate",      L(N, N) },
+    { INS_VERT_REL,         "v",              R(N) },
+    { INS_CLOSE_PATH,       "z",              NONE },
 };
 
-#define INSTRUCTION_SPECS_COUNT FF_ARRAY_ELEMS(vgs_instructions)
+#undef L
+#undef R
+#undef NONE
+#undef N
+#undef C
 
 // Comparator for `ScriptInstructionSpec`, to be used with `bsearch(3)`.
 static int vgs_comp_instruction_spec(const void *cs1, const void *cs2) {
     return strcmp(
-        ((struct VGSInstructionSpec*)cs1)->name,
-        ((struct VGSInstructionSpec*)cs2)->name
+        ((struct VGSInstructionDecl*)cs1)->name,
+        ((struct VGSInstructionDecl*)cs2)->name
     );
 }
 
 // Return the specs for the given instruction, or `NULL` if the name is not valid.
-static struct VGSInstructionSpec* vgs_get_instruction(const char *name, size_t length) {
+static const struct VGSInstructionDecl* vgs_get_instruction(const char *name, size_t length) {
     char bufname[64];
-    struct VGSInstructionSpec key = { .name = bufname };
+    struct VGSInstructionDecl key = { .name = bufname };
 
     if (length >= sizeof(bufname)) {
         return NULL;
@@ -348,7 +322,7 @@ static struct VGSInstructionSpec* vgs_get_instruction(const char *name, size_t l
     return bsearch(
         &key,
         vgs_instructions,
-        INSTRUCTION_SPECS_COUNT,
+        FF_ARRAY_ELEMS(vgs_instructions),
         sizeof(vgs_instructions[0]),
         vgs_comp_instruction_spec
     );
@@ -530,16 +504,6 @@ next_token:
     return 0;
 }
 
-// Return `1` if the next token is an expression or a number literal.
-// The token is not consumed, so it will be returned in the next call
-// to `vgs_parser_next_token`.
-static int vgs_parser_next_token_is_numeric(void *log_ctx, struct VGSParser *parser) {
-    struct VGSParserToken token;
-
-    return vgs_parser_next_token(log_ctx, parser, &token, 0) == 0
-        && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL);
-}
-
 // Release the memory allocated by the program.
 static void vgs_free(struct VGSProgram *program) {
     if (program->statements == NULL)
@@ -640,233 +604,166 @@ static int vgs_parse(
 
 // Extract the arguments for an instruction, and add a new statement
 // to the program.
+//
+// On success, return `0`.
 static int vgs_parse_statement(
     void *log_ctx,
     struct VGSParser *parser,
     struct VGSProgram *program,
-    struct VGSInstructionSpec *spec
+    const struct VGSInstructionDecl *decl
 ) {
-    int ret;
 
-    struct VGSParserToken token;
+#define FAIL(err) \
+    do {                               \
+        if (statement.args != NULL) {  \
+            statement.args_count = 0;  \
+            av_freep(&statement.args); \
+        }                              \
+        return AVERROR(err);           \
+    } while(0)
+
 
     struct VGSStatement statement = {
-        .inst = spec->inst,
-        .inst_name = spec->name,
+        .inst = decl->inst,
         .args = NULL,
         .args_count = 0,
     };
 
-#define ADD_ARG(arg) \
-    do {                            \
-        void *r = av_dynarray2_add( \
-            (void*)&statement.args, \
-            &statement.args_count,  \
-            sizeof(arg),            \
-            (void*)&arg             \
-        );                          \
-                                    \
-        if (r == NULL)              \
-            goto fail;              \
-    } while(0)
+    const struct VGSParameter *param = &decl->params[0];
 
-#define ADD_STATEMENT() \
-    do {                                 \
-        void *r = av_dynarray2_add(      \
-            (void*)&program->statements, \
-            &program->statements_count,  \
-            sizeof(statement),           \
-            (void*)&statement            \
-        );                               \
-                                         \
-        if (r == NULL)                   \
-            goto fail;                   \
-                                         \
-        statement.args = NULL;           \
-        statement.args_count = 0;        \
-    } while(0)
+    for (;;) {
+        int ret;
+        void *r;
 
-    switch (spec->params.type) {
-    case PARAMS_NONE:
-        ADD_STATEMENT();
-        return 0;
+        struct VGSParserToken token;
 
-    case PARAMS_NUMBERS:
-    case PARAMS_NUMBERS_SEQS:
-        do {
-            while (statement.args_count < spec->params.num) {
-                struct VGSArgument arg;
-                ret = vgs_parse_numeric_argument(log_ctx, parser, &arg);
+        struct VGSArgument arg = {0};
 
-                if (ret != 0)
-                    goto fail;
+        switch (param->type) {
+        case PARAM_END:
+        case PARAM_MAY_REPEAT:
+            // Add the built statement to the program.
+            r = av_dynarray2_add(
+                (void*)&program->statements,
+                &program->statements_count,
+                sizeof(statement),
+                (void*)&statement
+            );
 
-                ADD_ARG(arg);
-            }
+            if (r == NULL)
+                FAIL(ENOMEM);
 
-            ADD_STATEMENT();
-        } while(
-            // Repeat this instruction with another set if the next
-            // token is numeric.
-            spec->params.type == PARAMS_NUMBERS_SEQS
-                && vgs_parser_next_token_is_numeric(log_ctx, parser)
-        );
-
-        return 0;
-
-    case PARAMS_CONSTANT:
-    case PARAMS_CONSTANT_NUMBER: {
-        char expected_names[64] = {0};
-
-        ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
-        if (ret != 0)
-            goto fail;
-
-        for (
-            const struct VGSConstant *constant = spec->params.consts;
-            constant->name != NULL;
-            constant++
-        ) {
-            if (
-                strncmp(token.lexeme, constant->name, token.length) == 0
-                    && token.length == strlen(constant->name)
+            // May repeat if the next token is numeric.
+            if (param->type == PARAM_MAY_REPEAT
+                && vgs_parser_next_token(log_ctx, parser, &token, 0) == 0
+                && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
             ) {
-                struct VGSArgument arg = {
-                    .type = SA_CONST,
-                    .constant = constant->value,
-                };
-
-                ADD_ARG(arg);
-
-                // PARAMS_CONSTANT_NUMBER needs a second argument.
-                if (spec->params.type == PARAMS_CONSTANT_NUMBER) {
-                    struct VGSArgument arg;
-                    ret = vgs_parse_numeric_argument(log_ctx, parser, &arg);
-
-                    if (ret != 0)
-                        goto fail;
-
-                    ADD_ARG(arg);
-                }
-
-                ADD_STATEMENT();
-                return 0;
+                param = &decl->params[0];
+                statement.args = NULL;
+                statement.args_count = 0;
+                continue;
             }
 
-            // Collect valid names to include them in the error message, in case
-            // the name is not found.
-            av_strlcatf(expected_names, sizeof(expected_names), " '%s'", constant->name);
-        }
+            return 0;
 
-        vgs_log_invalid_token(log_ctx, parser, &token, "Expected one of%s.", expected_names);
-        goto fail;
-    }
-
-    case PARAMS_COLORS:
-        while (statement.args_count < spec->params.num) {
-            struct VGSArgument arg = {
-                .type = SA_COLOR,
-                .color = { 0 },
-            };
-
+        case PARAM_COLOR:
             ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
             if (ret != 0)
-                goto fail;
+                FAIL(EINVAL);
+
+            arg.type = SA_COLOR;
 
             ret = av_parse_color(arg.color, token.lexeme, token.length, log_ctx);
             if (ret != 0) {
                 vgs_log_invalid_token(log_ctx, parser, &token, "Expected color.");
-                goto fail;
+                FAIL(EINVAL);
             }
 
-            ADD_ARG(arg);
-        }
+            break;
 
-        ADD_STATEMENT();
-        return 0;
+        case PARAM_CONSTANT: {
+            int found = 0;
+            char expected_names[64] = {0};
 
-    case PARAMS_NUMBER_COLOR:
-        do {
-            struct VGSArgument arg0;
-            struct VGSArgument arg1;
-
-            // First argument must be a numeric value.
-            ret = vgs_parse_numeric_argument(log_ctx, parser, &arg0);
-            if (ret != 0)
-                goto fail;
-
-            // Second argument must be a color.
             ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
             if (ret != 0)
-                goto fail;
+                FAIL(EINVAL);
 
-            arg1.type = SA_COLOR,
-            ret = av_parse_color(arg1.color, token.lexeme, token.length, log_ctx);
-            if (ret != 0) {
-                vgs_log_invalid_token(log_ctx, parser, &token, "Expected color.");
-                goto fail;
+            for (
+                const struct VGSConstant *constant = param->constants;
+                constant->name != NULL;
+                constant++
+            ) {
+                if (
+                    strncmp(token.lexeme, constant->name, token.length) == 0
+                        && token.length == strlen(constant->name)
+                ) {
+                    arg.type = SA_CONST;
+                    arg.constant = constant->value;
+
+                    found = 1;
+                    break;
+                }
+
+                // Collect valid names to include them in the error message, in case
+                // the name is not found.
+                av_strlcatf(expected_names, sizeof(expected_names), " '%s'", constant->name);
             }
 
-            ADD_ARG(arg0);
-            ADD_ARG(arg1);
-            ADD_STATEMENT();
-        } while(
-            // Repeat the instruction if `num == 1`, and the next
-            // token is numeric.
-            spec->params.num == 1
-                && vgs_parser_next_token_is_numeric(log_ctx, parser)
-        );
+            if (!found) {
+                vgs_log_invalid_token(log_ctx, parser, &token, "Expected one of%s.", expected_names);
+                FAIL(EINVAL);
+            }
 
-        return 0;
-
-    case PARAMS_SUBPROGRAM:
-        // First, the numeric arguments.
-        while (statement.args_count < spec->params.num) {
-            struct VGSArgument arg;
-            ret = vgs_parse_numeric_argument(log_ctx, parser, &arg);
-
-            if (ret != 0)
-                goto fail;
-
-            ADD_ARG(arg);
+            break;
         }
 
-        // Then, the subprogram.
-        ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
-        if (ret != 0)
-            goto fail;
+        case PARAM_NUMERIC:
+            ret = vgs_parse_numeric_argument(log_ctx, parser, &arg);
+            if (ret != 0)
+                FAIL(EINVAL);
 
-        if (token.type == TOKEN_LEFT_BRACKET) {
-            struct VGSArgument arg = {
-                .type = SA_SUBPROGRAM,
-                .subprogram = av_mallocz(sizeof(struct VGSProgram)),
-            };
+            break;
+
+        case PARAM_SUBPROGRAM:
+            ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
+            if (ret != 0)
+                FAIL(EINVAL);
+
+            if (token.type != TOKEN_LEFT_BRACKET) {
+                vgs_log_invalid_token(log_ctx, parser, &token, "Expected '{'.");
+                FAIL(EINVAL);
+            }
+
+            arg.type = SA_SUBPROGRAM;
+            arg.subprogram = av_mallocz(sizeof(struct VGSProgram));
 
             ret = vgs_parse(log_ctx, parser, arg.subprogram, 1);
             if (ret != 0) {
                 av_freep(&arg.subprogram);
-                goto fail;
+                FAIL(EINVAL);
             }
 
-            ADD_ARG(arg);
-            ADD_STATEMENT();
-            return 0;
+            break;
+
+        default:
+            av_assert0(0); /* unreachable */
         }
 
-        vgs_log_invalid_token(log_ctx, parser, &token, "Expected '{'.");
-        goto fail;
+        r = av_dynarray2_add(
+            (void*)&statement.args,
+            &statement.args_count,
+            sizeof(arg),
+            (void*)&arg
+        );
+
+        if (r == NULL)
+            FAIL(ENOMEM);
+
+        param++;
     }
 
-#undef ADD_ARG
-#undef ADD_STATEMENT
-
-fail:
-    if (statement.args != NULL) {
-        statement.args_count = 0;
-        av_freep(&statement.args);
-    }
-
-    return AVERROR(EINVAL);
+#undef FAIL
 }
 
 static void vgs_parser_init(struct VGSParser *parser, const char *source) {
@@ -890,7 +787,7 @@ static int vgs_parse(
 
     for (;;) {
         int ret;
-        struct VGSInstructionSpec *inst;
+        const struct VGSInstructionDecl *inst;
 
         ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
         if (ret != 0)
@@ -923,7 +820,7 @@ static int vgs_parse(
         }
     }
 
-    return 0;
+    return AVERROR_BUG; /* unreachable */
 
 invalid_token:
     vgs_log_invalid_token(log_ctx, parser, &token, "Expected instruction.");
@@ -1193,19 +1090,10 @@ static int vgs_eval(
     struct VGSEvalState *state,
     const struct VGSProgram *program
 ) {
-#define ASSERT_ARGS(n) \
-    do {                                                    \
-        if (statement->args_count != n) {                   \
-            /* This is a bug in the parser */               \
-            av_log(state->log_ctx, AV_LOG_ERROR,            \
-                "Instruction '%s' expects %d arguments.\n", \
-                statement->inst_name, n                     \
-            );                                              \
-            return AVERROR_BUG;                             \
-        }                                                   \
-    } while(0)
 
-    double numerics[8];
+#define ASSERT_ARGS(n) av_assert0(statement->args_count == n)
+
+    double numerics[MAX_INSTRUCTION_PARAMS];
 
     double cx, cy; // Current point.
 

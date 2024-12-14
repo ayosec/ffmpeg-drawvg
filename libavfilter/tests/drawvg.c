@@ -199,7 +199,7 @@ void cairo_set_source (cairo_t *cr, cairo_pattern_t *source) {
 static void check_sorted_instructions(void) {
     int failures = 0;
 
-    for (int i = 0; i < INSTRUCTION_SPECS_COUNT  - 1; i++) {
+    for (int i = 0; i < FF_ARRAY_ELEMS(vgs_instructions) - 1; i++) {
         if (vgs_comp_instruction_spec(&vgs_instructions[i], &vgs_instructions[i]) != 0) {
             printf("%s: comparator must return 0 for item %d\n", __func__, i);
             failures++;
