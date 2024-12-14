@@ -20,14 +20,20 @@ repeat 10 {
     l (i) (i)
 }
 
+// User variables.
+setvar u0 -1
+setvar u1 -2
+lineto (u0) (u1)
+
 // State
 save
 restore
 
+// Transformation matrix.
 scale 1
 scalexy 2 3
-translate 1 2
-rotate 1
+translate 4 5
+rotate 6
 
 // Basic shapes
 rect 1 2 3 4
@@ -48,3 +54,12 @@ stroke
 
 // Curves. The next line should be equivalent to SVG's <path>.
 M 10,50 Q 25,25 40,50 t 30,0 30,0 c 20 50 40 -50 100 0
+
+// Fill/clip
+fill eofill
+clip eoclip
+
+// Dashes
+setdash 1 2 3
+setdashoffset 4
+resetdash

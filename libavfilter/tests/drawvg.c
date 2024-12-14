@@ -99,6 +99,7 @@ static void update_current_point(const char *func, double x, double y) {
     }
 
 MOCK_FN_5(cairo_arc);
+MOCK_FN_0(cairo_clip);
 MOCK_FN_0(cairo_clip_preserve);
 MOCK_FN_0(cairo_close_path);
 MOCK_FN_6(cairo_curve_to);
@@ -116,6 +117,7 @@ MOCK_FN_0(cairo_restore);
 MOCK_FN_1(cairo_rotate);
 MOCK_FN_0(cairo_save);
 MOCK_FN_2(cairo_scale);
+MOCK_FN_I(cairo_set_fill_rule, cairo_fill_rule_t);
 MOCK_FN_1(cairo_set_font_size);
 MOCK_FN_I(cairo_set_line_cap, cairo_line_cap_t);
 MOCK_FN_I(cairo_set_line_join, cairo_line_join_t);
@@ -124,6 +126,26 @@ MOCK_FN_1(cairo_set_miter_limit);
 MOCK_FN_4(cairo_set_source_rgba);
 MOCK_FN_0(cairo_stroke_preserve);
 MOCK_FN_2(cairo_translate);
+
+cairo_bool_t cairo_get_dash_count(cairo_t *cr) {
+    return 1;
+}
+
+void cairo_get_dash(cairo_t *cr, double *dashes, double *offset) {
+    // Return a dummy value to verify that it is included in
+    // the next call to `cairo_set_dash`.
+    *dashes = -1;
+
+    if (offset)
+        *offset = -2;
+}
+
+void cairo_set_dash(cairo_t *cr, const double *dashes, int num_dashes, double offset) {
+    printf("%s [", __func__);
+    for (int i = 0; i < num_dashes; i++)
+        printf(" %.1f", dashes[i]);
+    printf(" ] %.1f\n", offset);
+}
 
 cairo_bool_t cairo_has_current_point(cairo_t *cr) {
     return 1;
