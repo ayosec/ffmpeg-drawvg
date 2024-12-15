@@ -311,8 +311,7 @@ struct VGSParser {
 
 struct VGSParserToken {
     enum {
-        TOKEN_COMMENT,
-        TOKEN_EOF,
+        TOKEN_EOF = 1,
         TOKEN_EXPR,
         TOKEN_LEFT_BRACKET,
         TOKEN_LITERAL,
@@ -378,7 +377,6 @@ static int vgs_parser_next_token(
 #define WORD_SEPARATOR " \n\t\r,"
 
     int level;
-    int is_comment;
     size_t cursor, length;
     const char *source;
 
@@ -453,12 +451,13 @@ next_token:
         break;
 
     case '/':
-        // Return a comment if the next character is also '/',
-        // and a word if not.
+        // If the next character is also '/', ignore the rest of
+        // the line.
+        //
+        // If it is something else, return a `TOKEN_WORD`.
         if (source[cursor + 1] == '/') {
-            token->type = TOKEN_COMMENT;
-            token->length = strcspn(token->lexeme, "\n");
-            break;
+            parser->cursor += cursor + strcspn(token->lexeme, "\n");
+            goto next_token;
         }
 
         /* fallthrough */
@@ -469,12 +468,8 @@ next_token:
         break;
     }
 
-    is_comment = token->type == TOKEN_COMMENT;
-    if (advance || is_comment) {
+    if (advance) {
         parser->cursor += cursor + token->length;
-
-        if (is_comment)
-            goto next_token;
     }
 
     return 0;
