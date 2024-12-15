@@ -327,8 +327,8 @@ struct VGSParserToken {
 static av_printf_format(4, 5)
 void vgs_log_invalid_token(
     void *log_ctx,
-    struct VGSParser *parser,
-    struct VGSParserToken *token,
+    const struct VGSParser *parser,
+    const struct VGSParserToken *token,
     const char *suffix_fmt,
     ...
 ) {
@@ -637,9 +637,8 @@ static int vgs_parse_statement(
         int ret;
         void *r;
 
-        struct VGSParserToken token;
-
-        struct VGSArgument arg = {0};
+        struct VGSParserToken token = { 0 };
+        struct VGSArgument arg = { 0 };
 
         switch (param->type) {
         case PARAM_END:
@@ -685,7 +684,7 @@ static int vgs_parse_statement(
 
         case PARAM_CONSTANT: {
             int found = 0;
-            char expected_names[64] = {0};
+            char expected_names[64] = { 0 };
 
             ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
             if (ret != 0)
@@ -797,6 +796,11 @@ static int vgs_parse(
 
         switch (token.type) {
         case TOKEN_EOF:
+            if (subprogram) {
+                vgs_log_invalid_token(log_ctx, parser, &token, "Expected '}'.");
+                goto fail;
+            }
+
             return 0;
 
         case TOKEN_WORD:
@@ -872,7 +876,7 @@ struct VGSEvalState {
 // Return the value of the `VAR_U<i>` variable.
 static double vgs_fn_getvar(void *data, double arg) {
     int var;
-    struct VGSEvalState *state = (struct VGSEvalState *)data;
+    const struct VGSEvalState *state = (struct VGSEvalState *)data;
 
     if (!isfinite(arg))
         return NAN;
@@ -889,7 +893,7 @@ static double vgs_fn_getvar(void *data, double arg) {
 // Compute the length of the current path. If `n > 0`, it is the
 // maximum number of segments to be added to the length.
 static double vgs_fn_pathlen(void *data, double arg) {
-    struct VGSEvalState *state = (struct VGSEvalState *)data;
+    const struct VGSEvalState *state = (struct VGSEvalState *)data;
 
     int max_segments = (int)arg;
 
@@ -1113,7 +1117,7 @@ static int vgs_eval(
     int relative;
 
     for (int st_number = 0; st_number < program->statements_count; st_number++) {
-        struct VGSStatement *statement = &program->statements[st_number];
+        const struct VGSStatement *statement = &program->statements[st_number];
 
         if (statement->args_count >= FF_ARRAY_ELEMS(numerics)) {
             av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
