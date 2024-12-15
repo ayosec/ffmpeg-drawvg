@@ -478,11 +478,11 @@ next_token:
 // Instruction arguments.
 struct VGSArgument {
     enum {
-        SA_CONST = 1,
-        SA_LITERAL,
-        SA_AV_EXPR,
-        SA_COLOR,
-        SA_SUBPROGRAM,
+        ARG_CONST = 1,
+        ARG_LITERAL,
+        ARG_EXPR,
+        ARG_COLOR,
+        ARG_SUBPROGRAM,
     } type;
 
     union {
@@ -516,11 +516,11 @@ static void vgs_free(struct VGSProgram *program) {
         if (s->args_count > 0) {
             for (int j = 0; j < s->args_count; j++) {
                 switch (s->args[j].type) {
-                case SA_AV_EXPR:
+                case ARG_EXPR:
                     av_expr_free(s->args[j].expr);
                     break;
 
-                case SA_SUBPROGRAM:
+                case ARG_SUBPROGRAM:
                     vgs_free(s->args[j].subprogram);
                     av_freep(&s->args[j].subprogram);
                     break;
@@ -559,7 +559,7 @@ static int vgs_parse_numeric_argument(
 
     switch (token.type) {
     case TOKEN_LITERAL:
-        arg->type = SA_LITERAL;
+        arg->type = ARG_LITERAL;
         arg->literal = strtod(lexeme, &endp);
 
         if (*endp != '\0') {
@@ -569,7 +569,7 @@ static int vgs_parse_numeric_argument(
         break;
 
     case TOKEN_EXPR:
-        arg->type = SA_AV_EXPR;
+        arg->type = ARG_EXPR;
         ret = av_expr_parse(
             &arg->expr,
             lexeme,
@@ -673,7 +673,7 @@ static int vgs_parse_statement(
             if (ret != 0)
                 FAIL(EINVAL);
 
-            arg.type = SA_COLOR;
+            arg.type = ARG_COLOR;
 
             ret = av_parse_color(arg.color, token.lexeme, token.length, log_ctx);
             if (ret != 0) {
@@ -700,7 +700,7 @@ static int vgs_parse_statement(
                     strncmp(token.lexeme, constant->name, token.length) == 0
                         && token.length == strlen(constant->name)
                 ) {
-                    arg.type = SA_CONST;
+                    arg.type = ARG_CONST;
                     arg.constant = constant->value;
 
                     found = 1;
@@ -737,7 +737,7 @@ static int vgs_parse_statement(
                 FAIL(EINVAL);
             }
 
-            arg.type = SA_SUBPROGRAM;
+            arg.type = ARG_SUBPROGRAM;
             arg.subprogram = av_mallocz(sizeof(struct VGSProgram));
 
             ret = vgs_parse(log_ctx, parser, arg.subprogram, 1);
@@ -1134,11 +1134,11 @@ static int vgs_eval(
             const struct VGSArgument *a = &statement->args[arg];
 
             switch (a->type) {
-            case SA_LITERAL:
+            case ARG_LITERAL:
                 numerics[arg] = a->literal;
                 break;
 
-            case SA_AV_EXPR:
+            case ARG_EXPR:
                 numerics[arg] = av_expr_eval(a->expr, state->vars, state);
                 break;
 
