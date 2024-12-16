@@ -21,9 +21,9 @@ repeat 10 {
 }
 
 // User variables.
-setvar u0 -1
-setvar u1 -2
-lineto (u0) (u1)
+setvar foo -1
+setvar bar -2
+lineto (foo) (bar)
 
 // State
 save

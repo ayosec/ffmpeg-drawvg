@@ -47,13 +47,20 @@ enum {
     VAR_CX,         ///< X coordinate for current point.
     VAR_CY,         ///< Y coordinate for current point.
     VAR_I,          ///< Loop counter, to use with `repeat {}`.
-    VAR_U0,         ///< User variable 0.
-    VAR_U1,         ///< User variable 1.
-    VAR_U2,         ///< User variable 2.
-    VAR_U3,         ///< User variable 3.
+    VAR_U0,         ///< User variables.
 };
 
-static const char *const var_names[] = {
+/// Number of user variables that can be created with `setvar`.
+///
+/// It is possible to allow any number of variables, but this
+/// approach simplifies the implementation, and 10 variables
+/// is more than enough for the expected use of this filter.
+#define USER_VAR_COUNT 10
+
+// Total number of variables (default- and user-variables).
+#define VAR_COUNT (VAR_U0 + USER_VAR_COUNT)
+
+static const char *const vgs_default_vars[] = {
     "n",
     "t",
     "w",
@@ -62,16 +69,8 @@ static const char *const var_names[] = {
     "cx",
     "cy",
     "i",
-    "u0",
-    "u1",
-    "u2",
-    "u3",
-    NULL,
+    NULL, // User variables. Name is assigned by `setvar`.
 };
-
-#define VAR_COUNT (FF_ARRAY_ELEMS(var_names) - 1)
-
-#define USER_VAR_LAST VAR_U3
 
 // Functions used in expressions.
 
@@ -165,14 +164,6 @@ static struct VGSConstant vgs_consts_line_join[] = {
     { NULL, 0 },
 };
 
-static struct VGSConstant vgs_consts_vars[] = {
-    { "u0", VAR_U0 },
-    { "u1", VAR_U1 },
-    { "u2", VAR_U2 },
-    { "u3", VAR_U3 },
-    { NULL, 0 },
-};
-
 // Instruction parameters.
 struct VGSParameter {
     enum {
@@ -182,6 +173,7 @@ struct VGSParameter {
         PARAM_MAY_REPEAT,
         PARAM_NUMERIC,
         PARAM_SUBPROGRAM,
+        PARAM_VAR_NAME,
     } type;
 
     const struct VGSConstant *constants;
@@ -259,7 +251,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_SET_LINE_CAP,     "setlinecap",     L(C(vgs_consts_line_cap)) },
     { INS_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
     { INS_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
-    { INS_SET_VAR,          "setvar",         L(C(vgs_consts_vars), N) },
+    { INS_SET_VAR,          "setvar",         L({ PARAM_VAR_NAME }, N) },
     { INS_STROKE,           "stroke",         NONE },
     { INS_T_CURVE_TO_REL,   "t",              R(N, N) },
     { INS_TRANSLATE,        "translate",      L(N, N) },
@@ -307,6 +299,14 @@ static const struct VGSInstructionDecl* vgs_get_instruction(const char *name, si
 struct VGSParser {
     const char* source;
     size_t cursor;
+
+    // Store the variable names for the default ones
+    // (from `vgs_default_vars`) and the variables
+    // created with `setvar`.
+    //
+    // The extra slot is needed to store the `NULL`
+    // terminator expected by `av_expr_parse`.
+    const char *var_names[VAR_COUNT + 1];
 };
 
 struct VGSParserToken {
@@ -323,6 +323,11 @@ struct VGSParserToken {
     size_t position;
     size_t length;
 };
+
+static int vgs_token_is_string(const struct VGSParserToken *token, const char *str) {
+    return strncmp(str, token->lexeme, token->length) == 0
+        && str[token->length] == '\0';
+}
 
 static av_printf_format(4, 5)
 void vgs_log_invalid_token(
@@ -573,7 +578,7 @@ static int vgs_parse_numeric_argument(
         ret = av_expr_parse(
             &arg->expr,
             lexeme,
-            var_names,
+            parser->var_names,
             vgs_func1_names,
             vgs_func1_impls,
             NULL,
@@ -695,10 +700,7 @@ static int vgs_parse_statement(
                 constant->name != NULL;
                 constant++
             ) {
-                if (
-                    strncmp(token.lexeme, constant->name, token.length) == 0
-                        && token.length == strlen(constant->name)
-                ) {
+                if (vgs_token_is_string(&token, constant->name)) {
                     arg.type = ARG_CONST;
                     arg.constant = constant->value;
 
@@ -747,6 +749,63 @@ static int vgs_parse_statement(
 
             break;
 
+        case PARAM_VAR_NAME: {
+            int var_idx = -1;
+
+            ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
+            if (ret != 0)
+                FAIL(EINVAL);
+
+            // Find the slot where the variable is allocated, or the next
+            // available slot if it is a new variable.
+            for (int i = 0; i < VAR_COUNT; i++) {
+                if (parser->var_names[i] == NULL
+                    || vgs_token_is_string(&token, parser->var_names[i])
+                ) {
+                    var_idx = i;
+                    break;
+                }
+            }
+
+            // No free slots to allocate new variables.
+            if (var_idx == -1) {
+                vgs_log_invalid_token(log_ctx, parser, &token,
+                    "Too many user variables. Can define up to %d variables.", USER_VAR_COUNT);
+                FAIL(E2BIG);
+            }
+
+            // If the index is before `VAR_U0`, the name is already taken by
+            // a default variable.
+            if (var_idx < VAR_U0) {
+                vgs_log_invalid_token(log_ctx, parser, &token, "Reserved variable name.");
+                FAIL(EINVAL);
+            }
+
+            // Need to allocate a new variable.
+            if (parser->var_names[var_idx] == NULL) {
+                for (int i = 0; i < token.length; i++) {
+                    // Validate the name:
+                    //  - Starts with alphabetic character or underscore.
+                    //  - Everything else, alphanumeric or underscore
+                    char c = token.lexeme[i];
+                    if (c != '_'
+                        && !(c >= 'a' && c <= 'z')
+                        && !(c >= 'A' && c <= 'Z')
+                        && !(i > 0 && c >= '0' && c <= '9')
+                    ) {
+                        vgs_log_invalid_token(log_ctx, parser, &token, "Invalid variable name.");
+                        FAIL(EINVAL);
+                    }
+                }
+
+                parser->var_names[var_idx] = av_strndup(token.lexeme, token.length);
+            }
+
+            arg.type = ARG_CONST;
+            arg.constant = var_idx;
+            break;
+        }
+
         default:
             av_assert0(0); /* unreachable */
         }
@@ -770,6 +829,16 @@ static int vgs_parse_statement(
 static void vgs_parser_init(struct VGSParser *parser, const char *source) {
     parser->source = source;
     parser->cursor = 0;
+
+    memset(parser->var_names, 0, sizeof(parser->var_names));
+    for (int i = 0; i < VAR_U0; i++)
+        parser->var_names[i] = vgs_default_vars[i];
+}
+
+static void vgs_parser_free(struct VGSParser *parser) {
+    for (int i = VAR_U0; i < VAR_COUNT; i++)
+        if (parser->var_names[i] != NULL)
+            av_freep(&parser->var_names[i]);
 }
 
 // Parse a script to generate the program statements.
@@ -854,8 +923,6 @@ struct VGSEvalState {
     ///
     /// Some variables (like `cx` or `cy`) are written before
     /// executing each statement.
-    ///
-    /// User variables (like `u0`) are set by `setvar`.
     double vars[VAR_COUNT];
 
     // Reflected Control Points. Used in T and S instructions.
@@ -881,9 +948,9 @@ static double vgs_fn_getvar(void *data, double arg) {
     if (!isfinite(arg))
         return NAN;
 
-    var = VAR_U0 + (int)arg;
-    if (var >= VAR_U0 && var <= USER_VAR_LAST)
-        return state->vars[var];
+    var = (int)arg;
+    if (var >= 0 && var < USER_VAR_COUNT)
+        return state->vars[VAR_U0 + var];
 
     return NAN;
 }
@@ -1486,7 +1553,7 @@ static int vgs_eval(
 
             user_var = statement->args[0].constant;
 
-            av_assert0(user_var >= VAR_U0 && user_var <= USER_VAR_LAST);
+            av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
             state->vars[user_var] = numerics[1];
             break;
         }
@@ -1694,11 +1761,12 @@ static int drawvg_config_props(AVFilterLink *inlink) {
 }
 
 static av_cold int drawvg_init(AVFilterContext *ctx) {
+    int ret;
     struct VGSParser parser;
     DrawVGContext *drawvg = ctx->priv;
 
     if (drawvg->script_file != NULL) {
-        int ret = ff_load_textfile(
+        ret = ff_load_textfile(
             ctx,
             (const char *)drawvg->script_file,
             &drawvg->script_text,
@@ -1710,7 +1778,12 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
     }
 
     vgs_parser_init(&parser, drawvg->script_text);
-    return vgs_parse(drawvg, &parser, &drawvg->program, 0);
+
+    ret = vgs_parse(drawvg, &parser, &drawvg->program, 0);
+
+    vgs_parser_free(&parser);
+
+    return ret;
 }
 
 static av_cold void drawvg_uninit(AVFilterContext *ctx) {

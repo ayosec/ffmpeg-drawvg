@@ -23,15 +23,9 @@
 #include "libavutil/log.h"
 #include "libavutil/pixdesc.h"
 
-#define av_log mock_av_log //TODO use av_log_set_callback
-
-static void mock_av_log(void* avcl, int level, const char *fmt, ...) {
-    va_list vl;
-
+static void mock_av_log(void *ptr, int level, const char *fmt, va_list vl) {
     printf("av_log[%d]: ", level);
-    va_start(vl, fmt);
     vprintf(fmt, vl);
-    va_end(vl);
 }
 
 #include "libavfilter/vf_drawvg.c"
@@ -250,6 +244,8 @@ static void check_script(int is_file, const char* source) {
     current_point_y = 0;
 
     ret = vgs_parse(NULL, &parser, &program, 0);
+    vgs_parser_free(&parser);
+
     if (ret != 0) {
         printf("%s: vgs_parse = %d\n", __func__, ret);
         goto exit;
@@ -273,6 +269,8 @@ int main(int argc, const char **argv)
 {
     char buf[512];
 
+    av_log_set_callback(mock_av_log);
+
     check_sorted_instructions();
 
     for (int i = 1; i < argc; i++)
@@ -289,6 +287,27 @@ int main(int argc, const char **argv)
 
     // Missing arguments.
     check_script(0, "M 0 1 2");
+
+    // Invalid variable names.
+    check_script(0, "setvar ba^d 0");
+
+    // Reserved names.
+    check_script(0, "setvar cx 0");
+
+    // Max number of user variables.
+    memset(buf, 0, sizeof(buf));
+    for (int i = 0; i < USER_VAR_COUNT; i++) {
+        av_strlcatf(buf, sizeof(buf), " setvar v%d %d", i, i);
+    }
+    av_strlcatf(buf, sizeof(buf), " M (v0) (v%d) 1 (unknown_var)", USER_VAR_COUNT - 1);
+    check_script(0, buf);
+
+    // Too many variables.
+    memset(buf, 0, sizeof(buf));
+    for (int i = 0; i < USER_VAR_COUNT + 1; i++) {
+        av_strlcatf(buf, sizeof(buf), " setvar v%d %d", i + 1, i);
+    }
+    check_script(0, buf);
 
     // Long expressions.
     memset(buf, 0, sizeof(buf));
