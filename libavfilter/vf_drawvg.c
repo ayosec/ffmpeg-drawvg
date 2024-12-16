@@ -334,7 +334,7 @@ void vgs_log_invalid_token(
     void *log_ctx,
     const struct VGSParser *parser,
     const struct VGSParserToken *token,
-    const char *suffix_fmt,
+    const char *extra_fmt,
     ...
 ) {
     va_list ap;
@@ -355,9 +355,9 @@ void vgs_log_invalid_token(
         source = sep + 1;
     }
 
-    // Format message suffix.
-    va_start(ap, suffix_fmt);
-    vsnprintf(extra, sizeof(extra), suffix_fmt, ap);
+    // Format extra message.
+    va_start(ap, extra_fmt);
+    vsnprintf(extra, sizeof(extra), extra_fmt, ap);
     va_end(ap);
 
     av_log(log_ctx, AV_LOG_ERROR,
