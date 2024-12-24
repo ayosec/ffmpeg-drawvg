@@ -1664,10 +1664,10 @@ static const AVOption drawvg_options[]= {
 AVFILTER_DEFINE_CLASS(drawvg);
 
 static const enum AVPixelFormat drawvg_pix_fmts[] = {
-    AV_PIX_FMT_BGRA,
-    AV_PIX_FMT_BGR0,
-    AV_PIX_FMT_RGB565LE,
-    AV_PIX_FMT_X2RGB10LE,
+    AV_PIX_FMT_RGB32,
+    AV_PIX_FMT_0RGB32,
+    AV_PIX_FMT_RGB565,
+    AV_PIX_FMT_X2RGB10,
     AV_PIX_FMT_NONE
 };
 
