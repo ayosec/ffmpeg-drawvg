@@ -31,7 +31,6 @@
           emscripten
           pixman
           cairo
-          pkgs.wget
           pkgs.meson
           pkgs.ninja
           pkgs.pkg-config
