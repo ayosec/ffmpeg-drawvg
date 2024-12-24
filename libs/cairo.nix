@@ -6,17 +6,13 @@ let
     sha256 = "0nnli5cghygbl9bvlbjls7nspnrrzx1y1pbd7p649s154js9nax6";
   };
 
-  crossfile = pkgs.writeTextFile {
-    name = "emscripten-crossfile.meson";
-    text = builtins.readFile ./emscripten-crossfile.meson;
+  mesonConf = import ./meson.nix {
+    inherit pkgs;
+    disable = "fontconfig freetype glib png tests xcb zlib";
+    extraFlags = [ "-Dc_args=-DCAIRO_NO_MUTEX" ];
   };
 
-  words = pkgs.lib.strings.splitString " ";
-
-  disabled = map (feature: "-D${feature}=disabled")
-    (words "fontconfig freetype glib png tests xcb zlib");
-
-in pkgs.stdenv.mkDerivation {
+in pkgs.stdenv.mkDerivation (mesonConf // {
 
   name = "emscripten-cairo";
 
@@ -24,19 +20,9 @@ in pkgs.stdenv.mkDerivation {
 
   buildInputs = with pkgs; [ emscripten meson ninja pixman pkg-config python3 ];
 
-  mesonAutoFeatures = "disabled";
-
-  mesonBuildType = "release";
-
-  mesonFlags = disabled ++ [
-    "--cross-file=${crossfile}"
-    "--default-library=static"
-    "-Dc_args=-DCAIRO_NO_MUTEX"
-  ];
-
   preConfigure = ''
     # Prevent pthread detection.
     sed -i 's/pthread.h/---no-pthread---/' meson-cc-tests/pthread.c
   '';
 
-}
+})
