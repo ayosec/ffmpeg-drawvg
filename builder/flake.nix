@@ -28,13 +28,14 @@
       devShells.${system}.default = pkgs.mkShell {
 
         packages = [
+          cairo
           emscripten
           pixman
-          cairo
+          pkgs.jq
           pkgs.meson
           pkgs.ninja
-          pkgs.pkg-config
           pkgs.nodejs_20
+          pkgs.pkg-config
           pkgs.python3
         ];
 
