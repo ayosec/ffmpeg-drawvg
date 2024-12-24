@@ -12,8 +12,6 @@ in pkgs.stdenv.mkDerivation {
 
   src = ./.;
 
-  PKG_BASH = pkgs.bash;
-
   EMSCRIPTEN = emscripten;
 
   EM_PATHS = pkgs.lib.strings.concatStringsSep ":" [
@@ -23,5 +21,5 @@ in pkgs.stdenv.mkDerivation {
     "${pkgs.python3}/bin"
   ];
 
-  installPhase = builtins.readFile ./install.sh;
+  installPhase = ./install.sh;
 }

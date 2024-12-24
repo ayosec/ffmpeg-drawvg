@@ -19,7 +19,7 @@ find "$EMSCRIPTEN"/{bin,emscripten} -maxdepth 1 -type f -executable -print0 | \
       wrapper="$out/bin/$targetname"
 
       {
-          printf '#! %s/bin/bash\n' "$PKG_BASH"
+          printf '#!/bin/bash\n'
           printf 'export EM_CONFIG=%q\n' "$EM_CONFIG"
           printf 'PATH="%s:$PATH"\n' "$EM_PATHS"
           printf 'exec %q "$@"\n' "$target"

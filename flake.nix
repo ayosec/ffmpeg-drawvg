@@ -9,16 +9,28 @@
 
       pkgs = nixpkgs.legacyPackages.${system};
 
-      emscripten-wrapper = import ./emscripten { inherit pkgs; };
-    in {
-      #formatter.${system} = pkgs.nixfmt;
+      emscripten = import ./emscripten { inherit pkgs; };
 
-      packages.${system}.default = emscripten-wrapper;
+      pixman = import ./libs/pixman.nix { inherit pkgs emscripten; };
+
+      cairo = import ./libs/cairo.nix { inherit pkgs emscripten pixman; };
+    in {
+      formatter.${system} = pkgs.nixfmt-classic;
+
+      packages.${system} = {
+        default = emscripten;
+
+        pixman = pixman;
+
+        cairo = cairo;
+      };
 
       devShells.${system}.default = pkgs.mkShell {
 
         packages = [
-          emscripten-wrapper
+          emscripten
+          pixman
+          cairo
           pkgs.wget
           pkgs.meson
           pkgs.ninja
