@@ -32,7 +32,7 @@ static void render(uint8_t *ptr, int w, int h)
     }
 
     EM_ASM({
-      const data = new Uint8ClampedArray(Module.HEAPU8.buffer, $0, $1 * $2 * 4);
+      const data = new Uint8ClampedArray(Module["HEAPU8"].buffer, $0, $1 * $2 * 4);
       const context = Module["canvas"].getContext("2d");
       const imageData = new ImageData(data, $1, $2);
       context.putImageData(imageData, 0, 0);
