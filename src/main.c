@@ -1,15 +1,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <cairo.h>
-#include <emscripten.h>
 #include <endian.h>
+
+#include <emscripten.h>
+#include <emscripten/html5.h>
+
+#include "libavfilter/vf_drawvg.c"
 
 #define W 320
 #define H 240
 
 typedef uint32_t u32;
 
-void render(uint8_t *ptr, int w, int h)
+static void render(uint8_t *ptr, int w, int h)
 {
     // `putImageData` expects pixels in groups of RGBA bytes
     //
@@ -36,10 +40,22 @@ void render(uint8_t *ptr, int w, int h)
 }
 
 int main() {
+    int ret;
     uint8_t *data;
     cairo_surface_t *surface;
-    cairo_t *cr;
+    //cairo_t *cr;
 
+    struct VGSProgram program;
+    struct VGSParser parser;
+    struct VGSEvalState eval_state;
+
+    // Compile
+    vgs_parser_init(&parser, "repeat 4 { circle (w/8 * i) (h/2) 50  setcolor red@0.2 fill }");
+    ret = vgs_parse(NULL, &parser, &program, 0);
+    printf("vgs_parse ret = %d\n", ret);
+    vgs_parser_free(&parser);
+
+    // Cairo surface
     data = calloc(H * W, 4);
 
     surface = cairo_image_surface_create_for_data(
@@ -50,20 +66,13 @@ int main() {
         W * 4
     );
 
-    cr = cairo_create(surface);
-
-    cairo_set_source_rgba(cr, 0, 1, 0.5, 1);
-    cairo_paint(cr);
-
-    cairo_set_source_rgba(cr, 1, 0.5, 0, 1);
-    cairo_move_to(cr, 10, 10);
-    cairo_line_to(cr, 100, 10);
-    cairo_line_to(cr, 10, 100);
-    cairo_close_path(cr);
-    cairo_fill(cr);
-    cairo_destroy(cr);
-
-    printf("cr = %p\n", cr);
+    // Runner
+    vgs_eval_state_init(&eval_state, NULL);
+    eval_state.cairo_ctx = cairo_create(surface);
+    eval_state.vars[VAR_W] = W;
+    eval_state.vars[VAR_H] = H;
+    ret = vgs_eval(&eval_state, &program);
+    printf("vgs_eval ret = %d\n", ret);
 
     render(data, W, H);
     free(data);
