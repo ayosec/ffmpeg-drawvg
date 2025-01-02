@@ -1,15 +1,22 @@
+BUILD_TYPE ?= debug
+RUN_CLOSURE ?= 0
 FFMPEG_ROOT ?= ../FFmpeg
 
 AVUTIL_SOURCES = avstring.c eval.c mathematics.c mem.c parseutils.c reverse.c time.c
 PLAY_SOURCES = em-ffmpeg.c main.c
 
-RUN_CLOSURE ?= 0
-
 CC = emcc
-CFLAGS += -O2 -Wall
-CFLAGS += -Wno-implicit-const-int-float-conversion -Wno-pointer-sign -Wno-switch
+CFLAGS += -Wall -Wno-implicit-const-int-float-conversion -Wno-pointer-sign -Wno-switch
 CFLAGS += -I$(FFMPEG_ROOT)
 CFLAGS += $(shell pkg-config --cflags cairo)
+
+ifeq ($(BUILD_TYPE),debug)
+  CFLAGS += -O1 -g
+endif
+
+ifeq ($(BUILD_TYPE),release)
+  CFLAGS += -O3
+endif
 
 LIBS += $(shell pkg-config --libs cairo)
 LIBS += --closure $(RUN_CLOSURE)
@@ -17,7 +24,7 @@ LIBS += --closure $(RUN_CLOSURE)
 
 TARGET ?= target
 
-OUTPUT = $(TARGET)/play.html
+OUTPUT = $(TARGET)/play.js
 OBJECTS = $(patsubst %.c,$(TARGET)/avutil/%.o,$(AVUTIL_SOURCES))
 OBJECTS += $(patsubst %.c,$(TARGET)/play/%.o,$(PLAY_SOURCES))
 
@@ -28,10 +35,11 @@ all: $(OUTPUT) $(COMPILEDB)
 
 
 .PHONY: clean
+clean: GARBAGE = $(OBJECTS) $(OUTPUT)
+clean: GARBAGE += $(patsubst %.js,%.wasm,$(OUTPUT))
+clean: GARBAGE += $(addsuffix .mj,$(OBJECTS))
 clean:
-	rm -f $(OBJECTS) $(OUTPUT) \
-		$(patsubst %.js,%.wasm,$(OUTPUT)) \
-		$(addsuffix .mj,$(OBJECTS))
+	rm -f $(GARBAGE)
 
 
 $(TARGET):
@@ -55,4 +63,5 @@ $(COMPILEDB): $(OBJECTS)
 	echo '[' > $(TMPFILE)
 	cat $(addsuffix .mj,$^) >> $(TMPFILE)
 	sed -i '$$s/,$$/]/' $(TMPFILE)
-	jq -f builder/patch-compile.jq $(TMPFILE) > $@
+	jq -cf builder/patch-compiledb.jq $(TMPFILE) > $@
+	rm $(TMPFILE)
