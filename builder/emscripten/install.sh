@@ -20,7 +20,7 @@ find "$EMSCRIPTEN"/{bin,emscripten} -maxdepth 1 -type f -executable -print0 | \
 
       {
           printf '#!/bin/bash\n'
-          printf 'export EM_CONFIG=%q\n' "$EM_CONFIG"
+          printf 'if [ -z "$EM_CONFIG" ]; then export EM_CONFIG=%q; fi\n' "$EM_CONFIG"
           printf 'PATH="%s:$PATH"\n' "$EM_PATHS"
           printf 'exec %q "$@"\n' "$target"
       } > "$wrapper"
