@@ -6,6 +6,8 @@ AVUTIL_SOURCES = avstring.c eval.c mathematics.c mem.c parseutils.c reverse.c ti
 PLAY_SOURCES = em-ffmpeg.c main.c
 
 CC = emcc
+
+
 CFLAGS += -Wall -Wno-implicit-const-int-float-conversion -Wno-pointer-sign -Wno-switch
 CFLAGS += -I$(FFMPEG_ROOT)
 CFLAGS += $(shell pkg-config --cflags cairo)
@@ -18,13 +20,17 @@ ifeq ($(BUILD_TYPE),release)
   CFLAGS += -O3
 endif
 
-LIBS += $(shell pkg-config --libs cairo)
-LIBS += --closure $(RUN_CLOSURE)
+
+LINK += $(shell pkg-config --libs cairo)
+
+ifneq ($(RUN_CLOSURE),0)
+  LINK += --closure $(RUN_CLOSURE)
+endif
 
 
 TARGET ?= target
 
-OUTPUT = $(TARGET)/play.js
+OUTPUT = $(TARGET)/play.mjs
 OBJECTS = $(patsubst %.c,$(TARGET)/avutil/%.o,$(AVUTIL_SOURCES))
 OBJECTS += $(patsubst %.c,$(TARGET)/play/%.o,$(PLAY_SOURCES))
 
@@ -47,7 +53,7 @@ $(TARGET):
 	touch $(TARGET)/CACHEDIR.TAG
 
 $(OUTPUT): $(OBJECTS)
-	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+	$(CC) $(CFLAGS) $(LINK) -o $@ $^
 
 $(TARGET)/avutil/%.o: $(FFMPEG_ROOT)/libavutil/%.c | $(TARGET)
 	@mkdir -p $(dir $@)
