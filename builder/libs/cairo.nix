@@ -1,8 +1,9 @@
 { pkgs, emscripten, pixman }:
 let
+  version = "1.18.2";
 
   cairo = pkgs.fetchurl {
-    url = "https://www.cairographics.org/releases/cairo-1.18.2.tar.xz";
+    url = "https://www.cairographics.org/releases/cairo-${version}.tar.xz";
     sha256 = "0nnli5cghygbl9bvlbjls7nspnrrzx1y1pbd7p649s154js9nax6";
   };
 
@@ -13,12 +14,20 @@ let
   };
 
 in pkgs.stdenv.mkDerivation (mesonConf // {
+  inherit version;
 
-  name = "emscripten-cairo";
+  pname = "emscripten-cairo";
 
   src = cairo;
 
-  buildInputs = with pkgs; [ emscripten meson ninja pixman pkg-config python3 ];
+  nativeBuildInputs = with pkgs; [
+    emscripten
+    meson
+    ninja
+    pixman
+    pkg-config
+    python3
+  ];
 
   preConfigure = ''
     # Prevent pthread detection.

@@ -14,15 +14,15 @@
       pixman = import ./libs/pixman.nix { inherit pkgs emscripten; };
 
       cairo = import ./libs/cairo.nix { inherit pkgs emscripten pixman; };
+
+      zlib = import ./libs/zlib.nix { inherit pkgs emscripten; };
     in {
       formatter.${system} = pkgs.nixfmt-classic;
 
       packages.${system} = {
+        inherit pixman cairo zlib;
+
         default = emscripten;
-
-        pixman = pixman;
-
-        cairo = cairo;
       };
 
       devShells.${system}.default = pkgs.mkShell {
@@ -37,6 +37,7 @@
           pkgs.nodejs_20
           pkgs.pkg-config
           pkgs.python3
+          zlib
         ];
 
       };
