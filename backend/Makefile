@@ -97,5 +97,5 @@ $(COMPILEDB): $(OBJECTS)
 	echo '[' > $(TMPFILE)
 	cat $(addsuffix .mj,$^) >> $(TMPFILE)
 	sed -i '$$s/,$$/]/' $(TMPFILE)
-	jq -cf builder/patch-compiledb.jq $(TMPFILE) > $@
+	jq -cf ../builder/patch-compiledb.jq $(TMPFILE) > $@
 	rm $(TMPFILE)
