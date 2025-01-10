@@ -13,6 +13,11 @@
 
 typedef uint32_t u32;
 
+EMSCRIPTEN_KEEPALIVE
+int call_test(int a) {
+    return a + 10;
+}
+
 static void render(uint8_t *ptr, int w, int h)
 {
     // `putImageData` expects pixels in groups of RGBA bytes
