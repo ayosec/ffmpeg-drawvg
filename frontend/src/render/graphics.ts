@@ -5,7 +5,6 @@ interface ProgramData {
     progId: WebGLProgram,
     attrPos: GLint,
     unifTextId: WebGLUniformLocation,
-    unifT: WebGLUniformLocation, //TODO(remove)
 }
 
 interface BufferData {
@@ -51,7 +50,6 @@ export function compileProgram(gl: WebGLRenderingContext): ProgramData | null {
         progId: program,
         attrPos: gl.getAttribLocation(program, "pos"),
         unifTextId: gl.getUniformLocation(program, "texId")!,
-        unifT: gl.getUniformLocation(program, "t")!,
     };
 
 }

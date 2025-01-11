@@ -11,15 +11,20 @@ CC = emcc
 
 
 CFLAGS += -Wall -Wno-implicit-const-int-float-conversion -Wno-pointer-sign -Wno-switch
+CFLAGS += -mbulk-memory
 CFLAGS += -I$(FFMPEG_ROOT)
 CFLAGS += $(shell pkg-config --cflags $(DEPENDENCIES))
 
 LINK += $(shell pkg-config --libs $(DEPENDENCIES))
 
+LINK += --closure $(RUN_CLOSURE)
+
 LINK += -s ALLOW_MEMORY_GROWTH=1
 LINK += -s DEFAULT_TO_CXX=0
-LINK += -s ENVIRONMENT=web,worker
+LINK += -s ENVIRONMENT=worker
 LINK += -s EXIT_RUNTIME=0
+LINK += -s EXPORTED_FUNCTIONS=_free
+LINK += -s EXPORTED_RUNTIME_METHODS=cwrap
 LINK += -s EXPORT_ES6=1
 LINK += -s EXPORT_NAME=createModule
 LINK += -s FILESYSTEM=0
@@ -27,6 +32,7 @@ LINK += -s MAXIMUM_MEMORY=209715200
 LINK += -s MODULARIZE=1
 LINK += -s POLYFILL=0
 LINK += -s TEXTDECODER=2
+LINK += -s WASM_BIGINT=1
 
 ifeq ($(BUILD_TYPE),debug)
   CFLAGS += -O1 -g
@@ -36,10 +42,6 @@ endif
 
 ifeq ($(BUILD_TYPE),release)
   CFLAGS += -O3 -flto
-endif
-
-ifneq ($(RUN_CLOSURE),0)
-  LINK += --closure $(RUN_CLOSURE)
 endif
 
 

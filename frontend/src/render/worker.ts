@@ -1,8 +1,5 @@
-import * as shaders from "./shaders";
-
-//import imageURL from "/src/assets/example.png"; // TODO(remove)
-
-const ROOT_URL = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+import createBackend from "./backend";
+import * as shaders from "./graphics";
 
 let CANVAS: HTMLCanvasElement | undefined;
 
@@ -38,43 +35,61 @@ function register(canvas: OffscreenCanvas) {
 
     shaders.prepareProgram(gl, program, vertices);
 
-    let start = performance.now();
-    const animate = () => {
-        const d = Math.min(1, (performance.now() - start) / 1500);
-        gl.clearColor(0, 0, 0, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-
-        gl.drawArrays(gl.TRIANGLE_STRIP, vertices.offset, vertices.count);
-
-        gl.uniform1f(program.unifT, d);
-
-        if (d < 1)
-            requestAnimationFrame(animate);
-    };
-
-
     const texture = gl.createTexture()!;
 
-    import(ROOT_URL + "wasm-backend/play.mjs")
-        .then(m => m.default())
-        .then(wa => {
-            const addr = wa._simple_example();
-            const data = new Uint8Array(wa["HEAPU8"].buffer, addr, 400 * 400 * 4);
+    createBackend()
+        .then(backend => {
+            const prg = backend.compile(
+                `
+                repeat 6 {
+                    circle (w/8 * i + t*w) (h/2) 50
+                    setcolor blue@0.2 fill
+                    if (eq(mod(i,3), 0)) { newpath }
+                }
+            `)!;
 
             gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texImage2D(
-                gl.TEXTURE_2D,
-                0,
-                gl.RGBA,
-                400, 400, 0,
-                gl.RGBA,
-                gl.UNSIGNED_BYTE,
-                data
-            );
-
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+
+            const START = performance.now();
+            let N = 0;
+
+            const animate = () => {
+                N++;
+                const T = (performance.now() - START) / 1000;
+                const W = canvas.width;
+                const H = canvas.height;
+
+                const data = prg.run(N % 25 == 0, W, H, T, N, 1 / 60);
+
+                if (data == null)
+                    return;
+
+                gl.texImage2D(
+                    gl.TEXTURE_2D,
+                    0,
+                    gl.RGBA,
+                    W, H, 0,
+                    gl.RGBA,
+                    gl.UNSIGNED_BYTE,
+                    data.get(),
+                );
+
+                data.free();
+
+                gl.clearColor(0, 0, 0, 1);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                gl.drawArrays(gl.TRIANGLE_STRIP, vertices.offset, vertices.count);
+
+                if (T < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    prg.free();
+                }
+            };
 
             animate();
         });

@@ -1,90 +1,113 @@
-#include <stdlib.h>
-#include <stdio.h>
 #include <cairo.h>
 #include <endian.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
 #include "libavfilter/vf_drawvg.c"
+#include "mallinfo.h"
 
-#define W 400
-#define H 400
-
-typedef uint32_t u32;
-
-EMSCRIPTEN_KEEPALIVE
-int call_test(int a) {
-    return a + 10;
-}
-
-#if 0
-static void render(uint8_t *ptr, int w, int h)
-{
-    // `putImageData` expects pixels in groups of RGBA bytes
-    //
-    // Cairo uses ARGB in native-endian (so 0xARGB). Since wasm32 is
-    // little-endian, pixels are stored as groups of BGRA bytes.
-    //
-    // To convert BGRA to RGBA, the value is converted to big-endian,
-    // and then the first byte is rotated.
-    for (
-        u32 *px = (u32 *)ptr, *end = &px[w * h];
-        px < end;
-        px++
-    ) {
-        const u32 argb = htobe32(*px);
-        *px = (argb << 24) | (argb >> 8);
-    }
+static void memstats() {
+    struct mallinfo mi = mallinfo();;
 
     EM_ASM({
-      const data = new Uint8ClampedArray(Module["HEAPU8"].buffer, $0, $1 * $2 * 4);
-      const context = Module["canvas"].getContext("2d");
-      const imageData = new ImageData(data, $1, $2);
-      context.putImageData(imageData, 0, 0);
-    }, ptr, w, h);
+        const memTracker = Module["memTracker"];
+        if (typeof memTracker === "function") {
+            memTracker({
+               maxTotalAllocatedSpace: $0,
+               totalAllocatedSpace: $1,
+               totalFreeSpace: $2,
+           });
+        }
+    }, mi.usmblks, mi.uordblks, mi.fordblks);
 }
-#endif
 
+// Parse a VGS script and return a program. The caller must free the
+// memory for `source`.
+//
+// Return `NULL` on error.
 EMSCRIPTEN_KEEPALIVE
-uint8_t* simple_example() {
+struct VGSProgram* backend_program_new(const char *source) {
+    int ret;
+    struct VGSProgram *program;
+    struct VGSParser parser;
+
+    program = calloc(1, sizeof(struct VGSProgram));
+
+    vgs_parser_init(&parser, source);
+    ret = vgs_parse(NULL, &parser, program, 0);
+    vgs_parser_free(&parser);
+
+    if (ret != 0) {
+        free(program);
+        return NULL;
+    }
+
+    return program;
+}
+
+// Release resources for the compiled program.
+EMSCRIPTEN_KEEPALIVE
+void backend_program_free(struct VGSProgram *program) {
+    vgs_free(program);
+    free(program);
+}
+
+// Render a new frame and return the memory address of the new image.
+EMSCRIPTEN_KEEPALIVE
+void* backend_program_run(
+    const struct VGSProgram *program,
+    int report_mem_stats,
+    int width,
+    int height,
+    double var_t,
+    double var_n,
+    double var_duration
+) {
     int ret;
     uint8_t *data;
     cairo_surface_t *surface;
-    //cairo_t *cr;
-
-    struct VGSProgram program;
-    struct VGSParser parser;
     struct VGSEvalState eval_state;
 
-    // Compile
-    vgs_parser_init(&parser, "repeat 4 { circle (w/8 * i) (h/2) 50  setcolor red@0.2 fill }");
-    ret = vgs_parse(NULL, &parser, &program, 0);
-    printf("vgs_parse ret = %d\n", ret);
-    vgs_parser_free(&parser);
-
     // Cairo surface
-    data = calloc(H * W, 4);
+    data = calloc(width * height, 4);
 
     surface = cairo_image_surface_create_for_data(
         data,
         CAIRO_FORMAT_ARGB32,
-        W,
-        H,
-        W * 4
+        width,
+        height,
+        width * 4
     );
 
     // Runner
     vgs_eval_state_init(&eval_state, NULL);
+
     eval_state.cairo_ctx = cairo_create(surface);
-    eval_state.vars[VAR_W] = W;
-    eval_state.vars[VAR_H] = H;
-    ret = vgs_eval(&eval_state, &program);
-    printf("vgs_eval ret = %d\n", ret);
+
+    eval_state.vars[VAR_N] = var_n;
+    eval_state.vars[VAR_T] = var_t;
+    eval_state.vars[VAR_W] = width;
+    eval_state.vars[VAR_H] = height;
+    eval_state.vars[VAR_DURATION] = var_duration;
+
+    ret = vgs_eval(&eval_state, program);
+
+    cairo_destroy(eval_state.cairo_ctx);
+    cairo_surface_destroy(surface);
+
+    vgs_eval_state_free(&eval_state);
+
+    if (report_mem_stats)
+        memstats();
+
+    if (ret != 0) {
+        free(data);
+        return NULL;
+    }
 
     return data;
-    /*render(data, W, H);*/
-    //free(data);
 
-    /*return 0;*/
 }
