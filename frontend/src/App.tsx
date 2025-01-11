@@ -1,34 +1,28 @@
-import { useEffect, useRef } from "react";
-
-import Render from "./render/worker?worker";
+import { useState } from "react";
 import styles from "./App.module.css";
+import RenderView from "./RenderView";
 
-const RENDER = new Render();
-
-function registerCanvas(canvas: HTMLCanvasElement|null) {
-    if (canvas === null || canvas.dataset.drawvgInWorker !== undefined)
-        return;
-
-    canvas.dataset.drawvgInWorker = ".";
-
-    const offscreen = canvas.transferControlToOffscreen();
-    RENDER.postMessage({ registry: offscreen }, [ offscreen ]);
+const EXAMPLE = `\
+repeat 6 {
+    circle (w/8 * i + t*w) (h/2) 50
+    setcolor blue@0.2 fill
+    if (eq(mod(i,3), 0)) { newpath }
 }
+`;
 
-function App() {
-
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => { registerCanvas(canvasRef.current); }, [ canvasRef ]);
+export default function App() {
+    const [ source, setSource ] = useState(EXAMPLE);
 
     return (
-        <div className={styles.example}>
-            <p>Playground</p>
+        <div className={styles.editor}>
+            <header>Playground</header>
 
-            <canvas width="400" height="400" ref={canvasRef} />
+            <textarea
+                value={source}
+                onChange={e => setSource(e.target.value)}
+            />
+            <RenderView source={source} />
         </div>
     )
 
 }
-
-export default App

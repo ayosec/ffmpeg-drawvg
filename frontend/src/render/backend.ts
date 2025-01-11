@@ -39,7 +39,7 @@ class OwnedBuffer {
 
 }
 
-class Program {
+export class Program {
 
     constructor(private backend: Backend, private id: number) {}
 
@@ -79,19 +79,16 @@ class Program {
 
 };
 
-class Backend {
+export class Backend {
 
     ffi: FFI;
 
     constructor(readonly wasmInstance: any) {
+        const N = "number";
         this.ffi = {
-            programNew: wasmInstance.cwrap("backend_program_new", "number", ["string"]),
-            programFree: wasmInstance.cwrap("backend_program_free", null, ["number"]),
-            programRun: wasmInstance.cwrap(
-                "backend_program_run",
-                "number",
-                [ "number", "number", "number", "number", "number", "number" ],
-            ),
+            programNew: wasmInstance.cwrap("backend_program_new", N, ["string"]),
+            programFree: wasmInstance.cwrap("backend_program_free", null, [N]),
+            programRun: wasmInstance.cwrap("backend_program_run", N, Array(6).fill(N)),
         }
     }
 

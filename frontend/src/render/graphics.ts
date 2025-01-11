@@ -9,7 +9,6 @@ interface ProgramData {
 
 interface BufferData {
     buffer: WebGLBuffer,
-    offset: GLint,
     count: GLsizei,
 }
 
@@ -73,7 +72,6 @@ export function verticesBuffer(gl: WebGLRenderingContext): BufferData {
 
     return {
         buffer,
-        offset: 0,
         count: vertices.length / 2,
     };
 }
