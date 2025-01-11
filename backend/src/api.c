@@ -8,8 +8,8 @@
 
 #include "libavfilter/vf_drawvg.c"
 
-#define W 320
-#define H 240
+#define W 400
+#define H 400
 
 typedef uint32_t u32;
 
@@ -18,6 +18,7 @@ int call_test(int a) {
     return a + 10;
 }
 
+#if 0
 static void render(uint8_t *ptr, int w, int h)
 {
     // `putImageData` expects pixels in groups of RGBA bytes
@@ -43,8 +44,10 @@ static void render(uint8_t *ptr, int w, int h)
       context.putImageData(imageData, 0, 0);
     }, ptr, w, h);
 }
+#endif
 
-int main() {
+EMSCRIPTEN_KEEPALIVE
+uint8_t* simple_example() {
     int ret;
     uint8_t *data;
     cairo_surface_t *surface;
@@ -79,8 +82,9 @@ int main() {
     ret = vgs_eval(&eval_state, &program);
     printf("vgs_eval ret = %d\n", ret);
 
-    render(data, W, H);
-    free(data);
+    return data;
+    /*render(data, W, H);*/
+    //free(data);
 
-    return 0;
+    /*return 0;*/
 }

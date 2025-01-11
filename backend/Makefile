@@ -3,7 +3,7 @@ RUN_CLOSURE ?= 0
 FFMPEG_ROOT ?= ../FFmpeg
 
 AVUTIL_SOURCES = avstring.c eval.c mathematics.c mem.c parseutils.c reverse.c time.c
-PLAY_SOURCES = em-ffmpeg.c main.c
+PLAY_SOURCES = api.c em-ffmpeg.c
 
 DEPENDENCIES = cairo zlib
 

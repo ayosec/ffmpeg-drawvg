@@ -1,6 +1,8 @@
 import * as shaders from "./shaders";
 
-import imageURL from "/src/assets/example.png"; // TODO(remove)
+//import imageURL from "/src/assets/example.png"; // TODO(remove)
+
+const ROOT_URL = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 
 let CANVAS: HTMLCanvasElement | undefined;
 
@@ -20,6 +22,7 @@ self.onmessage = event => {
 };
 
 function register(canvas: OffscreenCanvas) {
+
     const gl = canvas.getContext("webgl");
 
     if (gl === null) {
@@ -51,18 +54,22 @@ function register(canvas: OffscreenCanvas) {
 
 
     const texture = gl.createTexture()!;
-    fetch(imageURL)
-        .then(resp => resp.blob())
-        .then(createImageBitmap)
-        .then(image => {
+
+    import(ROOT_URL + "wasm-backend/play.mjs")
+        .then(m => m.default())
+        .then(wa => {
+            const addr = wa._simple_example();
+            const data = new Uint8Array(wa["HEAPU8"].buffer, addr, 400 * 400 * 4);
+
             gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texImage2D(
                 gl.TEXTURE_2D,
                 0,
                 gl.RGBA,
+                400, 400, 0,
                 gl.RGBA,
                 gl.UNSIGNED_BYTE,
-                image
+                data
             );
 
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
