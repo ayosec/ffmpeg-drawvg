@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import RenderWorkerImpl from "./render/worker?worker";
 
@@ -22,7 +22,7 @@ class Handler {
     handleResponse(event: MessageEvent<any>) {
         switch (event.data) {
 
-            case "init:ok":
+            case "init:ok": {
                 const canvas = this.#pendingCanvas;
                 if (canvas === undefined)
                     return;
@@ -38,6 +38,7 @@ class Handler {
                 }
 
                 break;
+            }
 
             case "register:ok":
                 this.sendPendingSource();
@@ -66,27 +67,33 @@ class Handler {
 
 export default function RenderView({ source }: Props) {
 
-    const [ handler, setHandler ] = useState<Handler|null>(null);
+    const handlerRef = useRef<Handler|null>(null);
 
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement|null>(null);
 
+
+    // Debounce updates.
     useEffect(() => {
-        const canvas = canvasRef.current;
-        if (canvas !== null)
-            setHandler(new Handler(canvas));
-    }, [ canvasRef.current ]);
+        const update = setTimeout(() => handlerRef.current?.setSource(source), 200);
+        return () => clearTimeout(update);
+    }, [ source ]);
 
-    useEffect(() => {
-        // TODO: update after a timeout (200ms)
-        if (handler !== null)
-            handler.setSource(source);
-    }, [ handler, source ]);
+    const setCanvas = (canvas: HTMLCanvasElement | null) => {
+        if (canvas === null || Object.is(canvas, canvasRef.current))
+            return;
+
+        const handler = new Handler(canvas);
+
+        handler.setSource(source);
+        handlerRef.current = handler;
+        canvasRef.current = canvas;
+    };
 
     return(
         <canvas
+            ref={setCanvas}
             width="400"
             height="400"
-            ref={canvasRef}
         />
     );
 

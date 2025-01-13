@@ -39,7 +39,7 @@ self.onmessage = event => {
     const newSource = event.data.compile;
     if (newSource) {
         compile(newSource);
-        return
+        return;
     }
 
     console.error("Invalid message", event.data);

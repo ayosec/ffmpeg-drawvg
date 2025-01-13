@@ -23,6 +23,6 @@ export default function App() {
             />
             <RenderView source={source} />
         </div>
-    )
+    );
 
 }

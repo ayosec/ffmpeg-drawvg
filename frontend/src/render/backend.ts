@@ -1,4 +1,4 @@
-const WASM_MODULE_URL = import.meta.env.BASE_URL + "wasm-backend/play.mjs"
+const WASM_MODULE_URL = import.meta.env.BASE_URL + "wasm-backend/play.mjs";
 
 interface FFI {
     programNew(source: string): number;
@@ -59,7 +59,7 @@ export class Program {
             varT,
             varN,
             varDuration,
-        )
+        );
 
         if (addr === 0)
             return null;
@@ -89,7 +89,7 @@ export class Backend {
             programNew: wasmInstance.cwrap("backend_program_new", N, ["string"]),
             programFree: wasmInstance.cwrap("backend_program_free", null, [N]),
             programRun: wasmInstance.cwrap("backend_program_run", N, Array(6).fill(N)),
-        }
+        };
     }
 
     free(offset: number) {
@@ -104,7 +104,7 @@ export class Backend {
         const id = this.ffi.programNew(source);
 
         if (id === 0)
-            return null
+            return null;
 
         return new Program(this, id);
     }
