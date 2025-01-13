@@ -11,6 +11,11 @@ const char *av_default_item_name(void *ptr)
 void av_log(void* avcl, int level, const char *fmt, ...)
 {
     va_list vl;
+
+    if (avcl != NULL) {
+        printf("[%s @ %p] ", av_default_item_name(avcl), avcl);
+    }
+
     va_start(vl, fmt);
     //av_vlog(avcl, level, fmt, vl);
     vprintf(fmt, vl);

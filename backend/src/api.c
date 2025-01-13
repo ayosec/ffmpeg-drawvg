@@ -9,6 +9,16 @@
 #include "libavfilter/vf_drawvg.c"
 #include "mallinfo.h"
 
+static void *log_ctx() {
+    static AVClass cls = {
+        .class_name = "drawvg",
+    };
+
+    static AVClass *inst = &cls;
+
+    return &inst;
+}
+
 static void memstats() {
     struct mallinfo mi = mallinfo();;
 
@@ -37,7 +47,7 @@ struct VGSProgram* backend_program_new(const char *source) {
     program = calloc(1, sizeof(struct VGSProgram));
 
     vgs_parser_init(&parser, source);
-    ret = vgs_parse(NULL, &parser, program, 0);
+    ret = vgs_parse(log_ctx(), &parser, program, 0);
     vgs_parser_free(&parser);
 
     if (ret != 0) {
@@ -83,7 +93,7 @@ void* backend_program_run(
     );
 
     // Runner
-    vgs_eval_state_init(&eval_state, NULL);
+    vgs_eval_state_init(&eval_state, log_ctx());
 
     eval_state.cairo_ctx = cairo_create(surface);
 
