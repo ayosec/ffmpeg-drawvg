@@ -13,7 +13,7 @@ def comps:
         | map(
             .inner[]
             .value
-            | fromjson
+                | fromjson
         )
     ;
 
