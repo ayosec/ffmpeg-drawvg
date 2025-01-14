@@ -23,7 +23,7 @@
     pre {
         /* TODO: dark/light themes */
         [data-kind="comment"] { color: #444; font-style: italic; }
-        [data-kind="word"] { color: darkred; }
+        [data-kind="keyword"] { color: darkred; }
         [data-kind="number"] { color: seagreen; }
         [data-kind="expr"] { color: darkblue; }
 

@@ -1,8 +1,11 @@
+import { Instructions } from "@backend/syntax";
+
 type Kind
     = "whitespace"
     | "color"
     | "comment"
     | "expr"
+    | "keyword"
     | "number"
     | "string"
     | "unknown"
@@ -25,7 +28,7 @@ export default function* tokenize(code: string) {
         { pattern: /(,|\s)+/g, kind: "whitespace" },
         { pattern: /-?[0-9]+(\.[0-9]*)?(e[0-9]*)?/g, kind: "number" },
         { pattern: /\w+@[0-9]*(\.[0-9]*)?/g, kind: "color" },
-        { pattern: /#[a-fA-F0-9]+/g, kind: "color" },
+        { pattern: /#[a-fA-F0-9]+(@\d*\.?\d*)?/g, kind: "color" },
         { pattern: /\w+/g, kind: "word" },
         { pattern: /\/\/.*/g, kind: "comment" }
     ];
@@ -76,6 +79,10 @@ export default function* tokenize(code: string) {
         if (!token.lexeme) {
             token.kind = "unknown";
             token.lexeme = code[cursor];
+        }
+
+        if (token.kind == "word" && Instructions.has(token.lexeme)) {
+            token.kind = "keyword";
         }
 
         cursor += token.lexeme.length;

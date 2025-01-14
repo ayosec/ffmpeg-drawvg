@@ -1,4 +1,4 @@
-import { Instructions, Colors } from "@backend/syntax";
+import { Colors } from "@backend/syntax";
 import tokenize from "./tokenizer";
 
 interface Props {
@@ -13,7 +13,6 @@ interface KnownColor {
 
 function luminance(color: readonly [number, number, number]): number {
     // https://github.com/sharkdp/pastel/blob/v0.10.0/src/lib.rs#L654-L669
-    // TODO compute luminance when COLORS is generated
 
     const f = (s: number) => {
         if (s <= 0.03928) {
@@ -31,8 +30,6 @@ function luminance(color: readonly [number, number, number]): number {
 }
 
 function getColor(colorExpr: string): KnownColor | undefined {
-    // TODO detect `#`
-
     const alphaPart = colorExpr.indexOf("@");
     if (alphaPart > 0)
         colorExpr = colorExpr.substring(0, alphaPart);

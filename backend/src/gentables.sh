@@ -34,7 +34,7 @@ dump_ast vgs_instructions libavfilter/vf_drawvg.c |
     echo ');'
 
 
-echo -n 'export Colors: { [color: string]: [number, number, number] } = '
+echo -n 'export const Colors: { [color: string]: [number, number, number] } = '
 dump_ast color_table libavutil/parseutils.c |
     jq --from-file src/extract_colors.jq
 echo ';'
