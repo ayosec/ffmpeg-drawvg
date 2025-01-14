@@ -99,6 +99,7 @@ enum VGSInstruction {
     INS_CLIP_EO,                ///<  eoclip
     INS_CLOSE_PATH,             ///<  Z, z, closepath
     INS_COLOR_STOP,             ///<  colorstop (offset color)
+    INS_COLOR_STOP_RGBA,        ///<  colorstoprgba (offset r g b a)
     INS_CURVE_TO,               ///<  C, curveto (x1 y1 x2 y2 x y)
     INS_CURVE_TO_REL,           ///<  c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
     INS_ELLIPSE,                ///<  ellipse (cx cy rx ry)
@@ -133,6 +134,7 @@ enum VGSInstruction {
     INS_SET_LINE_CAP,           ///<  setlinecap (cap)
     INS_SET_LINE_JOIN,          ///<  setlinejoin (join)
     INS_SET_LINE_WIDTH,         ///<  setlinewidth (width)
+    INS_SET_RGBA,               ///<  setrgba (r g b a)
     INS_SET_VAR,                ///<  setvar (u# value)
     INS_STROKE,                 ///<  stroke
     INS_S_CURVE_TO,             ///<  S (x2 y2 x y)
@@ -215,6 +217,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_CLIP,             "clip",           NONE },
     { INS_CLOSE_PATH,       "closepath",      NONE },
     { INS_COLOR_STOP,       "colorstop",      R(N, { PARAM_COLOR }) },
+    { INS_COLOR_STOP_RGBA,  "colorstoprgba",  R(N, N, N, N, N) },
     { INS_CURVE_TO,         "curveto",        R(N, N, N, N, N, N) },
     { INS_ELLIPSE,          "ellipse",        R(N, N, N, N) },
     { INS_CLIP_EO,          "eoclip",         NONE },
@@ -251,6 +254,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_SET_LINE_CAP,     "setlinecap",     L(C(vgs_consts_line_cap)) },
     { INS_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
     { INS_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
+    { INS_SET_RGBA,         "setrgba",        L(N, N, N, N) },
     { INS_SET_VAR,          "setvar",         L({ PARAM_VAR_NAME }, N) },
     { INS_STROKE,           "stroke",         NONE },
     { INS_T_CURVE_TO_REL,   "t",              R(N, N) },
@@ -1301,6 +1305,23 @@ static int vgs_eval(
             );
             break;
 
+        case INS_COLOR_STOP_RGBA:
+            if (state->pattern_builder == NULL) {
+                av_log(state->log_ctx, AV_LOG_ERROR, "colorstop with no active gradient.\n");
+                break;
+            }
+
+            ASSERT_ARGS(5);
+            cairo_pattern_add_color_stop_rgba(
+                state->pattern_builder,
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3],
+                numerics[4]
+            );
+            break;
+
         case INS_CURVE_TO:
         case INS_CURVE_TO_REL:
             ASSERT_ARGS(6);
@@ -1545,6 +1566,20 @@ static int vgs_eval(
 
             break;
         }
+
+        case INS_SET_RGBA:
+            ASSERT_ARGS(4);
+
+            if (state->pattern_builder != NULL)
+                cairo_pattern_destroy(state->pattern_builder);
+
+            state->pattern_builder = cairo_pattern_create_rgba(
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3]
+            );
+            break;
 
         case INS_SET_VAR: {
             int user_var;
