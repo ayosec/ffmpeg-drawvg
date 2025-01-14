@@ -1,0 +1,39 @@
+.editor {
+    display: grid;
+    padding: 0.5ch;
+    overflow: auto;
+
+    textarea, pre {
+        grid-area: 1 / 1;
+
+        margin: 0;
+        padding: 0;
+
+        border: 0;
+        outline: 0;
+
+        tab-size: 4;
+        white-space: pre-wrap;
+        word-break: break-all;
+
+        font-family: monospace;
+        font-size: 1rem;
+    }
+
+    pre {
+        /* TODO: dark/light themes */
+        [data-kind="comment"] { color: #444; font-style: italic; }
+        [data-kind="word"] { color: darkred; }
+        [data-kind="number"] { color: seagreen; }
+        [data-kind="expr"] { color: darkblue; }
+
+    }
+
+    textarea {
+        resize: none;
+        caret-color: black;
+        color: transparent;
+        background: transparent;
+    }
+
+}

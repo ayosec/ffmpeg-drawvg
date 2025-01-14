@@ -16,9 +16,9 @@ export function compileProgram(gl: WebGLRenderingContext): ProgramData | null {
 
     const program = gl.createProgram()!;
 
-    for (const { source, type } of [
-        { source: vertex, type: gl.VERTEX_SHADER },
-        { source: fragment, type: gl.FRAGMENT_SHADER }
+    for (const [ source, type ] of <const>[
+        [ vertex, gl.VERTEX_SHADER ],
+        [ fragment, gl.FRAGMENT_SHADER ]
     ]) {
         const shader = gl.createShader(type);
 

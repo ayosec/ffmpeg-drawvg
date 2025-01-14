@@ -1,5 +1,5 @@
 BEGIN {
-    print("export default <const>{")
+    print("export default <{[color: string]: [number, number, number]}>{")
 }
 
 END {

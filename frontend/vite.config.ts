@@ -1,3 +1,5 @@
+import path from "path";
+
 import { defineConfig } from "vite";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
@@ -7,6 +9,12 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
     build: {
         sourcemap: true,
+    },
+
+    resolve: {
+        alias: {
+            "@backend": path.resolve(__dirname, "../backend/target/build"),
+        },
     },
 
     plugins: [
