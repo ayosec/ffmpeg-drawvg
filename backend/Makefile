@@ -56,19 +56,19 @@ OUTPUT = $(TARGET)/build/play.mjs
 OBJECTS = $(patsubst %.c,$(TARGET)/avutil/%.o,$(AVUTIL_SOURCES))
 OBJECTS += $(patsubst %.c,$(TARGET)/play/%.o,$(PLAY_SOURCES))
 
-COLORS_TABLE = $(TARGET)/build/colors.ts
+SYNTAX_TABLE = $(TARGET)/build/syntax.ts
 
 COMPILEDB = compile_commands.json
 
 .PHONY: all
-all: $(OUTPUT) $(COLORS_TABLE) $(COMPILEDB)
+all: $(OUTPUT) $(SYNTAX_TABLE) $(COMPILEDB)
 
 
 .PHONY: clean
 clean: GARBAGE = $(OBJECTS) $(OUTPUT)
 clean: GARBAGE += $(patsubst %.js,%.wasm,$(OUTPUT))
 clean: GARBAGE += $(addsuffix .mj,$(OBJECTS))
-clean: GARBAGE += $(COLORS_TABLE)
+clean: GARBAGE += $(SYNTAX_TABLE)
 clean:
 	rm -f $(GARBAGE)
 
@@ -97,9 +97,8 @@ $(TARGET)/play/%.o: src/%.c | $(EM_CONFIG)
 	$(CC) $(CFLAGS) -MJ $@.mj -c -o $@ $^
 
 
-$(COLORS_TABLE): COLORS = $(FFMPEG_ROOT)/libavutil/parseutils.c
-$(COLORS_TABLE): src/gencolors.awk
-	awk -f $^ < $(COLORS) > $@
+$(SYNTAX_TABLE): src/gentables.sh src/extract_colors.jq
+	$< $(FFMPEG_ROOT) $@
 
 $(COMPILEDB): TMPFILE=$(TARGET)/compiledb.tmp
 $(COMPILEDB): $(OBJECTS)

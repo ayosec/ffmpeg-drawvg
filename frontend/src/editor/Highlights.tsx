@@ -1,4 +1,4 @@
-import COLORS from "@backend/colors";
+import { Instructions, Colors } from "@backend/syntax";
 import tokenize from "./tokenizer";
 
 interface Props {
@@ -45,7 +45,7 @@ function getColor(colorExpr: string): KnownColor | undefined {
             parseInt(colorExpr.substring(5, 7), 16),
         ] as const;
     } else {
-        color = COLORS[colorExpr.toLowerCase()];
+        color = Colors[colorExpr.toLowerCase()];
     }
 
     if (color === undefined)
