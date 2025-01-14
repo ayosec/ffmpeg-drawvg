@@ -1,4 +1,4 @@
-.editor {
+.main {
     height: 100vh;
     width: 100vw;
 
@@ -13,10 +13,41 @@
         padding: 1em;
         text-align: center;
         font-size: 1.2rem;
+
+        border-bottom: 2px solid #aaa;
     }
 
     canvas {
         grid-column: 2 / 3;
         grid-row: 2 / 3;
     }
+}
+
+.output {
+    display: grid;
+    grid-template-rows: auto 1fr;
+
+}
+
+.settings {
+    background: #EEE;
+}
+
+.renderView {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: auto;
+
+    &[data-fit-render="1"] canvas {
+        max-height: 100%;
+        max-width: 100%;
+    }
+}
+
+.resizeHandle {
+    min-width: 2px;
+    min-height: 2px;
+    background: #aaa;
 }

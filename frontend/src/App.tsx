@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import styles from "./App.module.css";
 
@@ -16,11 +17,47 @@ repeat 6 {
 export default function App() {
     const [ source, setSource ] = useState(EXAMPLE);
 
+    const [ fitRender, setFitRender ] = useState(true);
+
+    const resizeHandle = () => <PanelResizeHandle className={styles.resizeHandle} />;
+
     return (
-        <div className={styles.editor}>
+        <div className={styles.main} >
             <header>Playground</header>
-            <Editor autoFocus={true} source={source} setSource={setSource} />
-            <RenderView source={source} />
+            <PanelGroup direction="horizontal">
+                <Panel>
+                    <Editor autoFocus={true} source={source} setSource={setSource} />
+                </Panel>
+
+                { resizeHandle() }
+
+                <Panel>
+                    <PanelGroup direction="vertical">
+                        <Panel className={styles.output}>
+                            <div className={styles.settings}>
+                                <label> <input
+                                    type="checkbox"
+                                    checked={fitRender}
+                                    onChange={e => setFitRender(e.target.checked)}
+                                /> Fit</label>
+                            </div>
+
+                            <div
+                                className={styles.renderView}
+                                data-fit-render={fitRender ? "1" : "0"}
+                            >
+                                <RenderView source={source} />
+                            </div>
+                        </Panel>
+
+                        { resizeHandle() }
+
+                        <Panel defaultSize={25}>
+                            <div>Log / Metrics</div>
+                        </Panel>
+                    </PanelGroup>
+                </Panel>
+            </PanelGroup>
         </div>
     );
 

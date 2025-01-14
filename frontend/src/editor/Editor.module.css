@@ -1,6 +1,7 @@
 .editor {
     display: grid;
     padding: 0.5ch;
+    height: 100%;
     overflow: auto;
 
     textarea, pre {
@@ -25,7 +26,6 @@
         [data-kind="keyword"] { color: light-dark(#900, #F77); }
         [data-kind="number"] { color: light-dark(#074, #7FA); }
         [data-kind="expr"] { color: light-dark(#04A, #ACF); }
-
     }
 
     textarea {
@@ -33,6 +33,7 @@
         caret-color: light-dark(black, white);
         color: transparent;
         background: transparent;
+        overflow-y: hidden;
     }
 
 }

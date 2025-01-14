@@ -3,7 +3,6 @@ import tokenize from "./tokenizer";
 
 interface Props {
     source: string;
-    ref: React.MutableRefObject<HTMLPreElement | null>;
 }
 
 interface KnownColor {
@@ -56,7 +55,7 @@ function getColor(colorExpr: string): KnownColor | undefined {
     };
 }
 
-export default function Highlights({ ref, source }: Props) {
+export default function Highlights({ source }: Props) {
     const spans = [];
     let index = 0;
     for (const token of tokenize(source)) {
@@ -83,5 +82,5 @@ export default function Highlights({ ref, source }: Props) {
         );
     }
 
-    return <pre ref={ref} aria-hidden={true}>{spans}{"\n"}</pre>;
+    return <pre aria-hidden={true}>{spans}{"\n"}</pre>;
 }
