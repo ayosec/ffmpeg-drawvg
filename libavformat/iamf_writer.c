@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "libavutil/bprint.h"
 #include "libavutil/channel_layout.h"
 #include "libavutil/intreadwrite.h"
 #include "libavutil/iamf.h"
@@ -217,6 +218,10 @@ int ff_iamf_add_audio_element(IAMFContext *iamf, const AVStreamGroup *stg, void 
 
     if (stg->type != AV_STREAM_GROUP_PARAMS_IAMF_AUDIO_ELEMENT)
         return AVERROR(EINVAL);
+    if (!stg->nb_streams) {
+        av_log(log_ctx, AV_LOG_ERROR, "Audio Element id %"PRId64" has no streams\n", stg->id);
+        return AVERROR(EINVAL);
+    }
 
     iamf_audio_element = stg->params.iamf_audio_element;
     if (iamf_audio_element->audio_element_type == AV_IAMF_AUDIO_ELEMENT_TYPE_SCENE) {
@@ -252,7 +257,13 @@ int ff_iamf_add_audio_element(IAMFContext *iamf, const AVStreamGroup *stg, void 
                     if (!av_channel_layout_compare(&layer->ch_layout, &ff_iamf_expanded_scalable_ch_layouts[j]))
                         break;
                 if (j >= FF_ARRAY_ELEMS(ff_iamf_expanded_scalable_ch_layouts)) {
-                    av_log(log_ctx, AV_LOG_ERROR, "Unsupported channel layout in stream group #%d\n", i);
+                    AVBPrint bp;
+                    av_bprint_init(&bp, 0, AV_BPRINT_SIZE_AUTOMATIC);
+                    av_channel_layout_describe_bprint(&layer->ch_layout, &bp);
+                    av_log(log_ctx, AV_LOG_ERROR, "Unsupported channel layout in Audio Element id %"PRId64
+                           ", Layer %d: %s\n",
+                           stg->id, i, bp.str);
+                    av_bprint_finalize(&bp, NULL);
                     return AVERROR(EINVAL);
                 }
             }
@@ -386,6 +397,10 @@ int ff_iamf_add_mix_presentation(IAMFContext *iamf, const AVStreamGroup *stg, vo
 
     if (stg->type != AV_STREAM_GROUP_PARAMS_IAMF_MIX_PRESENTATION)
         return AVERROR(EINVAL);
+    if (!stg->nb_streams) {
+        av_log(log_ctx, AV_LOG_ERROR, "Mix Presentation id %"PRId64" has no streams\n", stg->id);
+        return AVERROR(EINVAL);
+    }
 
     for (int i = 0; i < iamf->nb_mix_presentations; i++) {
         if (stg->id == iamf->mix_presentations[i]->mix_presentation_id) {

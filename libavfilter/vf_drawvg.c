@@ -1836,14 +1836,14 @@ static const AVFilterPad drawvg_inputs[] = {
     },
 };
 
-const AVFilter ff_vf_drawvg = {
-    .name        = "drawvg",
-    .description = NULL_IF_CONFIG_SMALL("Draw vector graphics on top of video frames."),
-    .flags       = AVFILTER_FLAG_SUPPORT_TIMELINE_GENERIC,
-    .priv_size   = sizeof(DrawVGContext),
-    .priv_class  = &drawvg_class,
-    .init        = drawvg_init,
-    .uninit      = drawvg_uninit,
+const FFFilter ff_vf_drawvg = {
+    .p.name        = "drawvg",
+    .p.description = NULL_IF_CONFIG_SMALL("Draw vector graphics on top of video frames."),
+    .p.priv_class  = &drawvg_class,
+    .p.flags       = AVFILTER_FLAG_SUPPORT_TIMELINE_GENERIC,
+    .priv_size     = sizeof(DrawVGContext),
+    .init          = drawvg_init,
+    .uninit        = drawvg_uninit,
     FILTER_INPUTS(drawvg_inputs),
     FILTER_OUTPUTS(ff_video_default_filterpad),
     FILTER_PIXFMTS_ARRAY(drawvg_pix_fmts),
