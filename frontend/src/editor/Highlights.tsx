@@ -30,6 +30,8 @@ function luminance(color: readonly [number, number, number]): number {
 }
 
 function getColor(colorExpr: string): KnownColor | undefined {
+    const LUMINANCE_THRESHOLD = 0.179;
+
     const alphaPart = colorExpr.indexOf("@");
     if (alphaPart > 0)
         colorExpr = colorExpr.substring(0, alphaPart);
@@ -48,11 +50,8 @@ function getColor(colorExpr: string): KnownColor | undefined {
     if (color === undefined)
         return undefined;
 
-    const THRESHOLD = 0.179;
-    const fg = luminance(color) > THRESHOLD ? "#000" : "#FFF";
-
     return {
-        fg,
+        fg: luminance(color) > LUMINANCE_THRESHOLD ? "#000" : "#FFF",
         bg: `rgb(${color.join(",")})`,
     };
 }
@@ -73,8 +72,6 @@ export default function Highlights({ ref, source }: Props) {
             }
         }
 
-        // TODO detect keywords. Must be generated like COLORS.
-
         spans.push(
             <span
                 key={key}
@@ -86,5 +83,5 @@ export default function Highlights({ ref, source }: Props) {
         );
     }
 
-    return <pre ref={ref}>{spans}{"\n"}</pre>;
+    return <pre ref={ref} aria-hidden={true}>{spans}{"\n"}</pre>;
 }

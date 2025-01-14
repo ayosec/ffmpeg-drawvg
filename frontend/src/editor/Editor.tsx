@@ -4,11 +4,12 @@ import styles from "./Editor.module.css";
 import Highlights from "./Highlights";
 
 interface Props {
+    autoFocus?: boolean,
     source: string,
     setSource(source: string): void;
 }
 
-export default function Editor({ source, setSource }: Props) {
+export default function Editor({ autoFocus, source, setSource }: Props) {
 
     const highlightsRef = useRef<HTMLPreElement|null>(null);
 
@@ -30,8 +31,11 @@ export default function Editor({ source, setSource }: Props) {
 
             <textarea
                 value={source}
-                spellCheck="false"
-                autoFocus={true}
+                autoFocus={autoFocus}
+                spellCheck={false}
+                autoCapitalize="off"
+                autoComplete="off"
+                autoCorrect="off"
                 onScroll={onScroll}
                 onChange={e => setSource(e.target.value)}
             />

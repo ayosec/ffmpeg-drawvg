@@ -19,7 +19,7 @@ export default function App() {
     return (
         <div className={styles.editor}>
             <header>Playground</header>
-            <Editor source={source} setSource={setSource} />
+            <Editor autoFocus={true} source={source} setSource={setSource} />
             <RenderView source={source} />
         </div>
     );

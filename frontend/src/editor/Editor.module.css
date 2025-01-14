@@ -21,17 +21,16 @@
     }
 
     pre {
-        /* TODO: dark/light themes */
-        [data-kind="comment"] { color: #444; font-style: italic; }
-        [data-kind="keyword"] { color: darkred; }
-        [data-kind="number"] { color: seagreen; }
-        [data-kind="expr"] { color: darkblue; }
+        [data-kind="comment"] { color: light-dark(#444, #CCC); font-style: italic; }
+        [data-kind="keyword"] { color: light-dark(#900, #F77); }
+        [data-kind="number"] { color: light-dark(#074, #7FA); }
+        [data-kind="expr"] { color: light-dark(#04A, #ACF); }
 
     }
 
     textarea {
         resize: none;
-        caret-color: black;
+        caret-color: light-dark(black, white);
         color: transparent;
         background: transparent;
     }
