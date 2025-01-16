@@ -6,14 +6,23 @@ interface DrawContext {
     gl: WebGLRenderingContext;
     verticesCount: number;
 
+    playing: boolean;
     frameCount: number;
     startTime: number;
+}
+
+interface StateChange {
+    source?: string;
+    size?: [number, number];
+    playing?: boolean;
 }
 
 interface State {
     drawContext?: DrawContext;
     backend?: Backend;
     program?: Program;
+    stateChanges?: StateChange[],
+    resizeRequest?: [number, number];
     pendingDrawId?: number;
 }
 
@@ -32,13 +41,17 @@ self.onmessage = event => {
     const newCanvas = event.data.register;
     if (newCanvas) {
         register(newCanvas);
-        self.postMessage("register:ok");
         return;
     }
 
-    const newSource = event.data.compile;
-    if (newSource) {
-        compile(newSource);
+    const stateChange = event.data.state;
+    if (stateChange) {
+        STATE.stateChanges ??= [];
+        STATE.stateChanges.push(stateChange);
+
+        if (STATE.backend)
+            requestRedraw();
+
         return;
     }
 
@@ -47,7 +60,13 @@ self.onmessage = event => {
 
 function register(canvas: OffscreenCanvas) {
 
-    const gl = canvas.getContext("webgl");
+    const gl = canvas.getContext("webgl", {
+        alpha: false,
+        depth: false,
+        stencil: false,
+        desynchronized: true,
+        preserveDrawingBuffer: true,
+    });
 
     if (gl === null) {
         console.error("Can't get OffscreenCanvas context.");
@@ -72,52 +91,47 @@ function register(canvas: OffscreenCanvas) {
         canvas,
         gl,
         verticesCount: vertices.count,
+        playing: false,
         frameCount: 0,
         startTime: performance.now(),
     };
 
+    if (STATE.pendingDrawId === undefined)
+        draw();
 }
 
-function compile(source: string) {
-
-    const backend = STATE.backend;
-
-    if (backend === undefined || STATE.drawContext === undefined)
+function requestRedraw() {
+    if (STATE.pendingDrawId !== undefined)
         return;
 
-    const vgsProgram = backend.compile(source);
-    if (vgsProgram === null)
-        return;
-
-    STATE.program?.free();
-    STATE.program = vgsProgram;
-
-    STATE.drawContext.startTime = performance.now();
-    STATE.drawContext.frameCount = 0;
-
-    draw();
-
+    STATE.pendingDrawId = requestAnimationFrame(() => {
+        STATE.pendingDrawId = undefined;
+        draw();
+    });
 }
 
 function draw() {
 
-    STATE.pendingDrawId = undefined;
+    applyStateChanges();
 
-    const { backend, drawContext, program } = STATE;
+    const { backend, drawContext, program, resizeRequest } = STATE;
 
     if (backend === undefined || drawContext === undefined || program === undefined)
         return;
 
-    const { canvas, gl, verticesCount} = drawContext;
+    const { canvas, gl, verticesCount } = drawContext;
 
     drawContext.frameCount++;
 
+    // TODO: the time (`T`) should be frozen when `playing==false`.
+    //       Thus, toggle "playing" button can be used as a pause.
+
     const N = drawContext.frameCount;
     const T = (performance.now() - drawContext.startTime) / 1000;
-    const W = canvas.width;
-    const H = canvas.height;
+    const W = resizeRequest ? resizeRequest[0] : canvas.width;
+    const H = resizeRequest ? resizeRequest[1] : canvas.height;
 
-    const data = program.run(N % 25 == 0, W, H, T, N, 1 / 60);
+    const data = program.run(false /*N % 25 == 0*/, W, H, T, N, 1 / 60);
 
     if (data == null)
         return;
@@ -134,16 +148,48 @@ function draw() {
 
     data.free();
 
-    gl.clearColor(0, 0, 0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (resizeRequest) {
+        drawContext.canvas.width = resizeRequest[0];
+        drawContext.canvas.height = resizeRequest[1];
+        drawContext.gl.viewport(0, 0, resizeRequest[0], resizeRequest[1]);
+        STATE.resizeRequest = undefined;
+    }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, verticesCount);
 
-    if (T < 1) {
-        if (STATE.pendingDrawId !== undefined) {
-            cancelAnimationFrame(STATE.pendingDrawId);
+    if (drawContext.playing) {
+        requestRedraw();
+    }
+}
+
+function applyStateChanges() {
+    const { backend, drawContext, stateChanges } = STATE;
+
+    if (backend === undefined || stateChanges === undefined || drawContext === undefined)
+        return;
+
+    for (const change of stateChanges) {
+
+        if (change.source) {
+            const vgsProgram = backend.compile(change.source);
+            if (vgsProgram !== null) {
+                STATE.program?.free();
+                STATE.program = vgsProgram;
+
+                drawContext.startTime = performance.now();
+                drawContext.frameCount = 0;
+            }
         }
 
-        STATE.pendingDrawId = requestAnimationFrame(draw);
+        if (change.size) {
+            STATE.resizeRequest = change.size;
+        }
+
+        if (change.playing !== undefined) {
+            drawContext.playing = change.playing;
+        }
+
     }
+
+    STATE.stateChanges = undefined;
 }

@@ -3,12 +3,17 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import styles from "./App.module.css";
 
-import RenderView from "./RenderView";
 import Editor from "./editor/Editor";
+import OutputPanel from "./output/OutputPanel";
 
 const EXAMPLE = `\
-repeat 6 {
-    circle (w/8 * i + t*w/4) (h/2) 50
+setcolor #eeeeee
+rect 0 0 (w) (h)
+fill
+newpath
+
+repeat 4 {
+    circle (w/8 * i + (1+sin(t))*w/4) (h/2) 50
     setcolor blue@0.2 fill
     if (eq(mod(i,3), 0)) { newpath }
 }
@@ -16,8 +21,6 @@ repeat 6 {
 
 export default function App() {
     const [ source, setSource ] = useState(EXAMPLE);
-
-    const [ fitRender, setFitRender ] = useState(true);
 
     const resizeHandle = () => <PanelResizeHandle className={styles.resizeHandle} />;
 
@@ -33,21 +36,8 @@ export default function App() {
 
                 <Panel>
                     <PanelGroup direction="vertical">
-                        <Panel className={styles.output}>
-                            <div className={styles.settings}>
-                                <label> <input
-                                    type="checkbox"
-                                    checked={fitRender}
-                                    onChange={e => setFitRender(e.target.checked)}
-                                /> Fit</label>
-                            </div>
-
-                            <div
-                                className={styles.renderView}
-                                data-fit-render={fitRender ? "1" : "0"}
-                            >
-                                <RenderView source={source} />
-                            </div>
+                        <Panel>
+                            <OutputPanel source={source} />
                         </Panel>
 
                         { resizeHandle() }

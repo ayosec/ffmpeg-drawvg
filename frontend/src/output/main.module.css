@@ -1,0 +1,27 @@
+.output {
+    display: grid;
+    grid-template-rows: auto 1fr;
+
+    height: 100%;
+    width: 100%;
+}
+
+.settings {
+    background: #EEE;
+}
+
+.renderView {
+
+    &[data-fit-render="1"] {
+        overflow: hidden;
+    }
+
+    &[data-fit-render="0"] {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        overflow: auto;
+    }
+
+}

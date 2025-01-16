@@ -23,29 +23,6 @@
     }
 }
 
-.output {
-    display: grid;
-    grid-template-rows: auto 1fr;
-
-}
-
-.settings {
-    background: #EEE;
-}
-
-.renderView {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    overflow: auto;
-
-    &[data-fit-render="1"] canvas {
-        max-height: 100%;
-        max-width: 100%;
-    }
-}
-
 .resizeHandle {
     min-width: 2px;
     min-height: 2px;
