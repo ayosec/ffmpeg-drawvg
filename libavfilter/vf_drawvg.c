@@ -131,6 +131,7 @@ enum VGSInstruction {
     INS_SET_COLOR,              ///<  setcolor (color)
     INS_SET_DASH,               ///<  setdash (length)
     INS_SET_DASH_OFFSET,        ///<  setdashoffset (offset)
+    INS_SET_HSLA,               ///<  sethsla (h s l a)
     INS_SET_LINE_CAP,           ///<  setlinecap (cap)
     INS_SET_LINE_JOIN,          ///<  setlinejoin (join)
     INS_SET_LINE_WIDTH,         ///<  setlinewidth (width)
@@ -251,6 +252,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_SET_COLOR,        "setcolor",       L({ PARAM_COLOR }) },
     { INS_SET_DASH,         "setdash",        R(N) },
     { INS_SET_DASH_OFFSET,  "setdashoffset",  R(N) },
+    { INS_SET_HSLA,         "sethsla",        L(N, N, N, N) },
     { INS_SET_LINE_CAP,     "setlinecap",     L(C(vgs_consts_line_cap)) },
     { INS_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
     { INS_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
@@ -515,30 +517,42 @@ struct VGSProgram {
     int statements_count;
 };
 
+static void vgs_free(struct VGSProgram *program);
+
+static int vgs_parse(
+    void *log_ctx,
+    struct VGSParser *parser,
+    struct VGSProgram *program,
+    int subprogram
+);
+
+static void vgs_statement_free(struct VGSStatement *stm) {
+    if (stm->args == NULL)
+        return;
+
+    for (int j = 0; j < stm->args_count; j++) {
+        switch (stm->args[j].type) {
+        case ARG_EXPR:
+            av_expr_free(stm->args[j].expr);
+            break;
+
+        case ARG_SUBPROGRAM:
+            vgs_free(stm->args[j].subprogram);
+            av_freep(&stm->args[j].subprogram);
+            break;
+        }
+    }
+
+    av_freep(&stm->args);
+}
+
 // Release the memory allocated by the program.
 static void vgs_free(struct VGSProgram *program) {
     if (program->statements == NULL)
         return;
 
-    for (int i = 0; i < program->statements_count; i++) {
-        struct VGSStatement *s = &program->statements[i];
-        if (s->args_count > 0) {
-            for (int j = 0; j < s->args_count; j++) {
-                switch (s->args[j].type) {
-                case ARG_EXPR:
-                    av_expr_free(s->args[j].expr);
-                    break;
-
-                case ARG_SUBPROGRAM:
-                    vgs_free(s->args[j].subprogram);
-                    av_freep(&s->args[j].subprogram);
-                    break;
-                }
-            }
-
-            av_freep(&s->args);
-        }
-    }
+    for (int i = 0; i < program->statements_count; i++)
+        vgs_statement_free(&program->statements[i]);
 
     av_freep(&program->statements);
 }
@@ -606,13 +620,6 @@ static int vgs_parse_numeric_argument(
     return ret;
 }
 
-static int vgs_parse(
-    void *log_ctx,
-    struct VGSParser *parser,
-    struct VGSProgram *program,
-    int subprogram
-);
-
 // Extract the arguments for an instruction, and add a new statement
 // to the program.
 //
@@ -625,12 +632,9 @@ static int vgs_parse_statement(
 ) {
 
 #define FAIL(err) \
-    do {                               \
-        if (statement.args != NULL) {  \
-            statement.args_count = 0;  \
-            av_freep(&statement.args); \
-        }                              \
-        return AVERROR(err);           \
+    do {                                \
+        vgs_statement_free(&statement); \
+        return AVERROR(err);            \
     } while(0)
 
 
@@ -1173,6 +1177,65 @@ static void rounded_rect(
     cairo_close_path(c);
 }
 
+static cairo_pattern_t *pattern_create_hsla(double h, double s, double l, double a) {
+    // https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
+
+    double r, g, b, chroma, x, h1;
+
+    if (h < 0 || h >= 360)
+        h = fmod(FFMAX(h, 0), 360);
+
+    s = av_clipd(s, 0, 1);
+    l = av_clipd(l, 0, 1);
+
+    chroma = (1 - fabs(2 * l - 1)) * s;
+    h1 = h / 60;
+    x = chroma * (1 - fabs(fmod(h1, 2) - 1));
+
+    switch ((int)floor(h1)) {
+    case 0:
+        r = chroma;
+        g = x;
+        b = 0;
+        break;
+
+    case 1:
+        r = x;
+        g = chroma;
+        b = 0;
+        break;
+
+    case 2:
+        r = 0;
+        g = chroma;
+        b = x;
+        break;
+
+    case 3:
+        r = 0;
+        g = x;
+        b = chroma;
+        break;
+
+    case 4:
+        r = x;
+        g = 0;
+        b = chroma;
+        break;
+
+    default:
+        r = chroma;
+        g = 0;
+        b = x;
+        break;
+
+    }
+
+    x = l - chroma / 2;
+
+    return cairo_pattern_create_rgba(r + x, g + x, b + x, a);
+}
+
 // Execute the cairo functions for the given script.
 static int vgs_eval(
     struct VGSEvalState *state,
@@ -1566,6 +1629,20 @@ static int vgs_eval(
 
             break;
         }
+
+        case INS_SET_HSLA:
+            ASSERT_ARGS(4);
+
+            if (state->pattern_builder != NULL)
+                cairo_pattern_destroy(state->pattern_builder);
+
+            state->pattern_builder = pattern_create_hsla(
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3]
+            );
+            break;
 
         case INS_SET_RGBA:
             ASSERT_ARGS(4);
