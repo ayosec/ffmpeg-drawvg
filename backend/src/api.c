@@ -78,11 +78,14 @@ void* backend_program_run(
 ) {
     int ret;
     uint8_t *data;
+    size_t data_len;
     cairo_surface_t *surface;
     struct VGSEvalState eval_state;
 
-    // Cairo surface
-    data = calloc(width * height, 4);
+    // Initialize the image with a white background.
+    data_len = width * height * 4;
+    data = malloc(data_len);
+    memset(data, 255, data_len);
 
     surface = cairo_image_surface_create_for_data(
         data,
@@ -92,7 +95,7 @@ void* backend_program_run(
         width * 4
     );
 
-    // Runner
+    // VGS interpreter.
     vgs_eval_state_init(&eval_state, log_ctx());
 
     eval_state.cairo_ctx = cairo_create(surface);
