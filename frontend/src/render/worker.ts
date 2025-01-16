@@ -1,14 +1,73 @@
 import createBackend, { Backend, Program } from "./backend";
 import * as shaders from "./graphics";
 
-interface DrawContext {
-    canvas: OffscreenCanvas;
-    gl: WebGLRenderingContext;
-    verticesCount: number;
+class DrawContext {
+    #playing = false;
+    #frameCount: number = 0;
+    #playFixedTime: number = 0;
 
-    playing: boolean;
-    frameCount: number;
-    startTime: number;
+    #playStart: number;
+    #lastRenderTime: number;
+
+    #lastDuration: number = 1 / 60;
+
+    constructor(
+        readonly canvas: OffscreenCanvas,
+        readonly gl: WebGLRenderingContext,
+        readonly verticesCount: number
+    ) {
+        this.#playStart = performance.now();
+        this.#lastRenderTime = performance.now();
+    }
+
+    isPlaying(): boolean {
+        return this.#playing;
+    }
+
+    setPlaying(playing: boolean, timestamp?: number) {
+        const now = timestamp ?? performance.now();
+
+        if (playing && !this.#playing) {
+            // Play.
+            //
+            // Initialize the value of `playStart` so it will
+            // continue with the time before pausing.
+            this.#lastRenderTime = now - this.#lastDuration;
+            this.#playStart = now - this.#playFixedTime;
+            this.#playing = true;
+        } else if (!playing && this.#playing) {
+            // Pause.
+            //
+            // Store the play time to reuse it in next renders.
+            this.#playFixedTime = now - this.#playStart;
+            this.#playing = false;
+        }
+    }
+
+    nextFrameVars(timestamp?: number): { D: number; N: number; T: number } {
+        if (this.#playing) {
+            const now = timestamp ?? performance.now();
+
+            // Round `duration` to a multiply of 30fps.
+            const elapsed = (now - this.#lastRenderTime) / 1000;
+            const duration = 1 / (30 * Math.round(1 / (elapsed * 30)));
+
+            this.#lastRenderTime = now;
+            this.#lastDuration = duration;
+
+            return {
+                D: duration,
+                N: this.#frameCount++,
+                T: (now - this.#playStart) / 1000,
+            };
+        } else {
+            return {
+                D: this.#lastDuration,
+                N: this.#frameCount,
+                T: this.#playFixedTime / 1000,
+            };
+        }
+    }
 }
 
 interface StateChange {
@@ -87,32 +146,26 @@ function register(canvas: OffscreenCanvas) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
-    STATE.drawContext = {
-        canvas,
-        gl,
-        verticesCount: vertices.count,
-        playing: false,
-        frameCount: 0,
-        startTime: performance.now(),
-    };
+    STATE.drawContext = new DrawContext(canvas, gl, vertices.count);
 
     if (STATE.pendingDrawId === undefined)
         draw();
+
 }
 
 function requestRedraw() {
     if (STATE.pendingDrawId !== undefined)
         return;
 
-    STATE.pendingDrawId = requestAnimationFrame(() => {
+    STATE.pendingDrawId = requestAnimationFrame(timestamp => {
         STATE.pendingDrawId = undefined;
-        draw();
+        draw(timestamp);
     });
 }
 
-function draw() {
+function draw(timestamp?: number) {
 
-    applyStateChanges();
+    applyStateChanges(timestamp);
 
     const { backend, drawContext, program, resizeRequest } = STATE;
 
@@ -121,17 +174,16 @@ function draw() {
 
     const { canvas, gl, verticesCount } = drawContext;
 
-    drawContext.frameCount++;
+    const frameVars = drawContext.nextFrameVars(timestamp);
 
-    // TODO: the time (`T`) should be frozen when `playing==false`.
-    //       Thus, toggle "playing" button can be used as a pause.
+    const D = frameVars.D;
+    const N = frameVars.N;
+    const T = frameVars.T;
 
-    const N = drawContext.frameCount;
-    const T = (performance.now() - drawContext.startTime) / 1000;
     const W = resizeRequest ? resizeRequest[0] : canvas.width;
     const H = resizeRequest ? resizeRequest[1] : canvas.height;
 
-    const data = program.run(false /*N % 25 == 0*/, W, H, T, N, 1 / 60);
+    const data = program.run(false /*N % 25 == 0*/, W, H, T, N, D);
 
     if (data == null)
         return;
@@ -149,20 +201,23 @@ function draw() {
     data.free();
 
     if (resizeRequest) {
-        drawContext.canvas.width = resizeRequest[0];
-        drawContext.canvas.height = resizeRequest[1];
-        drawContext.gl.viewport(0, 0, resizeRequest[0], resizeRequest[1]);
+        // Resize canvas right before `drawArrays` to avoid flickering.
+
+        drawContext.canvas.width = W;
+        drawContext.canvas.height = H;
+        drawContext.gl.viewport(0, 0, W, H);
+
         STATE.resizeRequest = undefined;
     }
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, verticesCount);
 
-    if (drawContext.playing) {
+    if (drawContext.isPlaying()) {
         requestRedraw();
     }
 }
 
-function applyStateChanges() {
+function applyStateChanges(timestamp?: number) {
     const { backend, drawContext, stateChanges } = STATE;
 
     if (backend === undefined || stateChanges === undefined || drawContext === undefined)
@@ -175,9 +230,6 @@ function applyStateChanges() {
             if (vgsProgram !== null) {
                 STATE.program?.free();
                 STATE.program = vgsProgram;
-
-                drawContext.startTime = performance.now();
-                drawContext.frameCount = 0;
             }
         }
 
@@ -186,10 +238,17 @@ function applyStateChanges() {
         }
 
         if (change.playing !== undefined) {
-            drawContext.playing = change.playing;
+            drawContext.setPlaying(change.playing, timestamp);
         }
 
     }
 
     STATE.stateChanges = undefined;
 }
+
+/*
+ ACTIONS:
+    // jump to begining
+    drawContext.startTime = performance.now();
+    drawContext.frameCount = 0;
+*/
