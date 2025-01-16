@@ -5,7 +5,11 @@
 
 const char *av_default_item_name(void *ptr)
 {
-    return (*(AVClass **) ptr)->class_name;
+    if (ptr == NULL)
+        return NULL;
+
+    AVClass *obj = *(AVClass**)ptr;
+    return obj ? obj->class_name : "?";
 }
 
 void av_log(void* avcl, int level, const char *fmt, ...)
