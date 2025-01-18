@@ -56,6 +56,16 @@ export default function OutputPanel({ source }: Props) {
                     checked={playing}
                     onChange={e => setPlaying(e.target.checked)}
                 /> Playing</label>
+
+                <button
+                    onClick={() => Backend.sendAction("ResetPlayback") }
+                >Reset Playback</button>
+
+                { !playing &&
+                    <button
+                        onClick={() => Backend.sendAction("NextFrame") }
+                    >Next frame</button>
+                }
             </div>
 
             <div

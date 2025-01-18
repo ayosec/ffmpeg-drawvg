@@ -45,13 +45,31 @@ class DrawContext {
         }
     }
 
+    playbackReset() {
+        const now = performance.now();
+
+        this.#frameCount = 0;
+        this.#lastDuration = 1 / 60;
+        this.#playFixedTime = 0;
+        this.#playStart = now;
+        this.#lastRenderTime = now - this.#lastDuration;
+    }
+
+    playbackNextFrame() {
+        if (this.#playing)
+            return;
+
+        this.#frameCount++;
+        this.#playFixedTime += this.#lastDuration * 1000;
+    }
+
     nextFrameVars(timestamp?: number): { D: number; N: number; T: number } {
         if (this.#playing) {
             const now = timestamp ?? performance.now();
 
-            // Round `duration` to a multiply of 30fps.
+            // Round `duration` to a multiply of 10fps.
             const elapsed = (now - this.#lastRenderTime) / 1000;
-            const duration = 1 / (30 * Math.round(1 / (elapsed * 30)));
+            const duration = 1 / (10 * Math.round(1 / (elapsed * 10)));
 
             this.#lastRenderTime = now;
             this.#lastDuration = duration;
@@ -245,21 +263,34 @@ function applyStateChanges(timestamp?: number) {
     STATE.stateChanges = undefined;
 }
 
-function handleAction(requestId: number, request: protocol.Action) {
-    switch (request) {
+function handleAction(requestId: number, action: protocol.Action) {
+    const { machine, drawContext } = STATE;
+
+    if (machine === undefined || drawContext == undefined) {
+        responseSender({ requestId, failure: "Uninitialized" });
+        return;
+    }
+
+    switch (action) {
         case "GetLogs":
-            STATE.machine?.ffi.logsSend(requestId);
+            machine.ffi.logsSend(requestId);
             break;
+
+        case "NextFrame":
+            drawContext.playbackNextFrame();
+            requestRedraw();
+            break;
+
+        case "ResetPlayback":
+            drawContext.playbackReset();
+            requestRedraw();
+            break;
+
+        default:
+            responseSender({ requestId, failure: `Invalid action: ${JSON.stringify(action)}` });
     }
 }
 
 function responseSender(response: protocol.Response) {
     self.postMessage(response);
 }
-
-/*
- ACTIONS:
-    // jump to begining
-    drawContext.startTime = performance.now();
-    drawContext.frameCount = 0;
-*/

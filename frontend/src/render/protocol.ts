@@ -6,6 +6,8 @@ export interface StateChange {
 
 export type Action
     = "GetLogs"
+    | "NextFrame"
+    | "ResetPlayback"
     ;
 
 export type Request
@@ -29,6 +31,7 @@ export interface LogsData {
 }
 
 export type Response
-    = { init: "ok" }
-    | { requestId: number; logs: LogsData }
+    = { init: "ok"; }
+    | { requestId: number; failure: string; }
+    | { requestId: number; logs: LogsData; }
     ;
