@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import RenderView from "./RenderView";
 
 import styles from "./main.module.css";
-import Backend from "./backend";
+import Backend from "../backend";
 
 interface Props {
     source: string;

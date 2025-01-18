@@ -4,6 +4,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import styles from "./App.module.css";
 
 import Editor from "./editor/Editor";
+import LogsPanel from "./LogsPanel";
 import OutputPanel from "./output/OutputPanel";
 
 const EXAMPLE = `\
@@ -48,7 +49,7 @@ export default function App() {
                         { resizeHandle() }
 
                         <Panel defaultSize={25}>
-                            <div>Log / Metrics</div>
+                            <LogsPanel />
                         </Panel>
                     </PanelGroup>
                 </Panel>

@@ -1,5 +1,6 @@
-import createBackend, { Backend, Program } from "./backend";
+import * as protocol from "./protocol";
 import * as shaders from "./graphics";
+import createMachine, { Machine, Program } from "./machine";
 
 class DrawContext {
     #playing = false;
@@ -70,17 +71,11 @@ class DrawContext {
     }
 }
 
-interface StateChange {
-    source?: string;
-    size?: [number, number];
-    playing?: boolean;
-}
-
 interface State {
     drawContext?: DrawContext;
-    backend?: Backend;
+    machine?: Machine;
     program?: Program;
-    stateChanges?: StateChange[],
+    stateChanges?: protocol.StateChange[],
     resizeRequest?: [number, number];
     pendingDrawId?: number;
 }
@@ -88,33 +83,37 @@ interface State {
 const STATE: State = {};
 
 self.onmessage = event => {
+    const message: protocol.Request = event.data;
 
-    if (event.data === "init") {
-        createBackend().then(backend => {
-            STATE.backend = backend;
-            self.postMessage("init:ok");
-        });
-        return;
+    switch (message.request) {
+        case "init":
+            createMachine(responseSender).then(machine => {
+                STATE.machine = machine;
+                self.postMessage({ init: "ok" });
+            });
+
+            break;
+
+        case "register":
+            register(message.canvas);
+            break;
+
+        case "state":
+            STATE.stateChanges ??= [];
+            STATE.stateChanges.push(message.change);
+
+            if (STATE.machine)
+                requestRedraw();
+
+            break;
+
+        case "action":
+            handleAction(message.requestId, message.action);
+            break;
+
+        default:
+            console.error("Invalid message", event.data);
     }
-
-    const newCanvas = event.data.register;
-    if (newCanvas) {
-        register(newCanvas);
-        return;
-    }
-
-    const stateChange = event.data.state;
-    if (stateChange) {
-        STATE.stateChanges ??= [];
-        STATE.stateChanges.push(stateChange);
-
-        if (STATE.backend)
-            requestRedraw();
-
-        return;
-    }
-
-    console.error("Invalid message", event.data);
 };
 
 function register(canvas: OffscreenCanvas) {
@@ -167,9 +166,9 @@ function draw(timestamp?: number) {
 
     applyStateChanges(timestamp);
 
-    const { backend, drawContext, program, resizeRequest } = STATE;
+    const { drawContext, program, resizeRequest } = STATE;
 
-    if (backend === undefined || drawContext === undefined || program === undefined)
+    if (drawContext === undefined || program === undefined)
         return;
 
     const { canvas, gl, verticesCount } = drawContext;
@@ -218,15 +217,15 @@ function draw(timestamp?: number) {
 }
 
 function applyStateChanges(timestamp?: number) {
-    const { backend, drawContext, stateChanges } = STATE;
+    const { machine, drawContext, stateChanges } = STATE;
 
-    if (backend === undefined || stateChanges === undefined || drawContext === undefined)
+    if (machine === undefined || stateChanges === undefined || drawContext === undefined)
         return;
 
     for (const change of stateChanges) {
 
         if (change.source) {
-            const vgsProgram = backend.compile(change.source);
+            const vgsProgram = machine.compile(change.source);
             if (vgsProgram !== null) {
                 STATE.program?.free();
                 STATE.program = vgsProgram;
@@ -244,6 +243,18 @@ function applyStateChanges(timestamp?: number) {
     }
 
     STATE.stateChanges = undefined;
+}
+
+function handleAction(requestId: number, request: protocol.Action) {
+    switch (request) {
+        case "GetLogs":
+            STATE.machine?.ffi.logsSend(requestId);
+            break;
+    }
+}
+
+function responseSender(response: protocol.Response) {
+    self.postMessage(response);
 }
 
 /*

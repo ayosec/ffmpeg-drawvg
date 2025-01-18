@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import Backend from "./backend";
+import Backend from "../backend";
 
 interface Props {
     source: string;
