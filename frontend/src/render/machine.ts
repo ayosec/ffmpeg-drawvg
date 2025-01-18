@@ -1,4 +1,5 @@
 import { Response } from "./protocol";
+import { deserializeLogEvent } from "@backend/deserializers";
 
 const WASM_MODULE_URL = import.meta.env.BASE_URL + "wasm-backend/play.mjs";
 
@@ -118,38 +119,26 @@ export class Machine {
         eventsCount: number,
         bufferOffset: number,
         lostEvents: number,
-        sizeLogEvent: number,
-        fieldLogEventRepeat: number,
-        fieldLogEventLevel: number,
-        fieldLogEventClassName: number,
-        fieldLogEventMessage: number,
-        fieldLogStringPosition: number,
-        fieldLogStringLength: number,
     ) {
         const heap = this.wasmInstance["HEAPU8"].buffer;
 
-        const getString = (event: DataView, logStringField: number) => {
-            const position = event.getInt32(logStringField + fieldLogStringPosition, true);
-            const length = event.getInt32(logStringField + fieldLogStringLength, true);
-
-            if (length === 0)
+        const getString = (str: { position: number, length: number }) => {
+            if (str.length === 0)
                 return "";
 
-            const bytes = new DataView(heap, bufferOffset + position, length);
-
-            const decoder = new TextDecoder();
-            return decoder.decode(bytes);
+            return new TextDecoder()
+                .decode(new DataView(heap, bufferOffset + str.position, str.length));
         };
 
         const events = [];
 
         for (let index = 0; index < eventsCount; index++) {
-            const eventBytes = new DataView(heap, eventsOffset + index * sizeLogEvent, sizeLogEvent);
+            const event = deserializeLogEvent(heap, eventsOffset, index);
             events.push({
-                repeat: eventBytes.getInt32(fieldLogEventRepeat, true),
-                level: eventBytes.getInt32(fieldLogEventLevel, true),
-                className: getString(eventBytes, fieldLogEventClassName),
-                message: getString(eventBytes, fieldLogEventMessage),
+                repeat: event.repeat,
+                level: event.level,
+                className: getString(event.class_name),
+                message: getString(event.message),
             });
         }
 

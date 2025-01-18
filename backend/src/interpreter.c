@@ -7,6 +7,7 @@
 #include <emscripten/html5.h>
 
 #include "libavfilter/vf_drawvg.c"
+#include "backend_logs.h"
 #include "mallinfo.h"
 
 static void *log_ctx() {
@@ -82,6 +83,9 @@ void* backend_program_run(
     cairo_surface_t *surface;
     struct VGSEvalState eval_state;
 
+    CurrentFrameVariables.n = var_n;
+    CurrentFrameVariables.t = var_t;
+
     // Initialize the image with a white background.
     data_len = width * height * 4;
     data = malloc(data_len);
@@ -115,6 +119,9 @@ void* backend_program_run(
 
     if (report_mem_stats)
         memstats();
+
+    CurrentFrameVariables.n = NAN;
+    CurrentFrameVariables.t = NAN;
 
     if (ret != 0) {
         free(data);

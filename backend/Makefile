@@ -3,10 +3,11 @@ RUN_CLOSURE ?= 0
 FFMPEG_ROOT ?= ../FFmpeg
 
 AVUTIL_SOURCES = avstring.c eval.c mathematics.c mem.c parseutils.c reverse.c time.c
-PLAY_SOURCES = api.c logs.c math.c
+PLAY_SOURCES = interpreter.c logs.c math.c
 
 DEPENDENCIES = cairo zlib
 
+NODEJS = node
 CC = emcc
 
 
@@ -57,18 +58,19 @@ OBJECTS = $(patsubst %.c,$(TARGET)/avutil/%.o,$(AVUTIL_SOURCES))
 OBJECTS += $(patsubst %.c,$(TARGET)/play/%.o,$(PLAY_SOURCES))
 
 SYNTAX_INFO = $(TARGET)/build/syntax.ts
+DESERIALIZERS = $(TARGET)/build/deserializers.ts
 
 COMPILEDB = compile_commands.json
 
 .PHONY: all
-all: $(OUTPUT) $(SYNTAX_INFO) $(COMPILEDB)
+all: $(OUTPUT) $(DESERIALIZERS) $(SYNTAX_INFO) $(COMPILEDB)
 
 
 .PHONY: clean
 clean: GARBAGE = $(OBJECTS) $(OUTPUT)
 clean: GARBAGE += $(patsubst %.js,%.wasm,$(OUTPUT))
 clean: GARBAGE += $(addsuffix .mj,$(OBJECTS))
-clean: GARBAGE += $(SYNTAX_INFO)
+clean: GARBAGE += $(SYNTAX_INFO) $(DESERIALIZERS)
 clean:
 	rm -f $(GARBAGE)
 
@@ -99,6 +101,13 @@ $(TARGET)/play/%.o: src/%.c | $(EM_CONFIG)
 
 $(SYNTAX_INFO): src/syntax-info/gentables.sh src/syntax-info/extract_colors.jq
 	$< $(FFMPEG_ROOT) $@
+
+$(DESERIALIZERS): GENERATOR = $(TARGET)/deserializers-generator.js
+$(DESERIALIZERS): src/deserializers.c
+	$(CC) -Wall -o $(GENERATOR) $<
+	$(NODEJS) $(GENERATOR) > $@.tmp
+	mv $@.tmp $@
+	rm $(GENERATOR) $(patsubst %.js,%.wasm,$(GENERATOR))
 
 $(COMPILEDB): TMPFILE=$(TARGET)/compiledb.tmp
 $(COMPILEDB): $(OBJECTS)

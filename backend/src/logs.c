@@ -1,27 +1,17 @@
-#include <sys/param.h>
 #include <emscripten.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/param.h>
 
 #include "libavutil/log.h"
+#include "backend_logs.h"
 
 #define LOG_EVENTS 256
 
 #define LOG_BUFFER_BYTES 4096
-
-struct LogString {
-    long position;
-    long length;
-};
-
-struct LogEvent {
-    int repeat;
-    int level;
-    struct LogString class_name;
-    struct LogString message;
-};
 
 static struct {
     FILE *stream;
@@ -33,6 +23,8 @@ static struct {
 
     char buffer[LOG_BUFFER_BYTES];
 } LOG = { NULL };
+
+struct FrameVariables CurrentFrameVariables = { NAN, NAN };
 
 static void logs_reset() {
     LOG.lost_events = 0;
@@ -68,6 +60,9 @@ static bool log_string_eq(const struct LogString *a, const struct LogString *b) 
     );
 }
 
+// Check if the last two messages have the same content.
+//
+// The values for `var_n` and `var_t` are ignored.
 static bool repeated_message() {
     struct LogEvent *current, *previous;
 
@@ -108,7 +103,10 @@ void av_log(void* avcl, int level, const char *fmt, ...)
         goto lost;
 
     memset(event, 0, sizeof(*event));
+
     event->level = level;
+    event->var_n = CurrentFrameVariables.n;
+    event->var_t = CurrentFrameVariables.t;
 
     if (avcl != NULL) {
         bool written = log_write_string(
@@ -146,19 +144,12 @@ void backend_logs_send(int request_id) {
     fflush(LOG.stream);
 
     EM_ASM(
-        { Module['machine']?.logsReceive($0, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12); },
+        { Module['machine']?.['logsReceive']($0, $1, $2, $3, $4); },
         request_id,
         LOG.events,
         MIN(LOG.events_count, LOG_EVENTS),
         LOG.buffer,
-        LOG.lost_events,
-        sizeof(struct LogEvent),
-        offsetof(struct LogEvent, repeat),
-        offsetof(struct LogEvent, level),
-        offsetof(struct LogEvent, class_name),
-        offsetof(struct LogEvent, message),
-        offsetof(struct LogString, position),
-        offsetof(struct LogString, length)
+        LOG.lost_events
     );
 
     logs_reset();
