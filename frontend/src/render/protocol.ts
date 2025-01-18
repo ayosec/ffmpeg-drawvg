@@ -7,6 +7,7 @@ export interface StateChange {
 export type Action
     = "GetLogs"
     | "NextFrame"
+    | "PreviousFrame"
     | "ResetPlayback"
     ;
 

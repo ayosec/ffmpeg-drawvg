@@ -63,6 +63,14 @@ class DrawContext {
         this.#playFixedTime += this.#lastDuration * 1000;
     }
 
+    playbackPreviousFrame() {
+        if (this.#playing)
+            return;
+
+        this.#frameCount--;
+        this.#playFixedTime -= this.#lastDuration * 1000;
+    }
+
     nextFrameVars(timestamp?: number): { D: number; N: number; T: number } {
         if (this.#playing) {
             const now = timestamp ?? performance.now();
@@ -138,10 +146,10 @@ function register(canvas: OffscreenCanvas) {
 
     const gl = canvas.getContext("webgl", {
         alpha: false,
+        antialias: false,
         depth: false,
-        stencil: false,
         desynchronized: true,
-        preserveDrawingBuffer: true,
+        stencil: false,
     });
 
     if (gl === null) {
@@ -278,6 +286,11 @@ function handleAction(requestId: number, action: protocol.Action) {
 
         case "NextFrame":
             drawContext.playbackNextFrame();
+            requestRedraw();
+            break;
+
+        case "PreviousFrame":
+            drawContext.playbackPreviousFrame();
             requestRedraw();
             break;
 

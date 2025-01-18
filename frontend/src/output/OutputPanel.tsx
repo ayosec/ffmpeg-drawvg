@@ -61,11 +61,8 @@ export default function OutputPanel({ source }: Props) {
                     onClick={() => Backend.sendAction("ResetPlayback") }
                 >Reset Playback</button>
 
-                { !playing &&
-                    <button
-                        onClick={() => Backend.sendAction("NextFrame") }
-                    >Next frame</button>
-                }
+                { !playing && <button onClick={() => Backend.sendAction("PreviousFrame") }>Previous frame</button> }
+                { !playing && <button onClick={() => Backend.sendAction("NextFrame") }>Next frame</button> }
             </div>
 
             <div
