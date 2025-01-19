@@ -1,45 +1,83 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 
 import Backend from "./backend";
 import { LogEvent } from "./render/protocol";
 
-const GET_LOGS_FREQ = 1000 / 2;
+const GET_LOGS_FREQ = 1000 / 3;
 
-function getLogs(
-    setLogEvents: (e: LogEvent[]) => void,
-    setLostEvents: (n: number) => void
-) {
-    Backend.sendAction("GetLogs", (response) => {
-        if ("logs" in response && response.logs.events.length > 0) {
-            setLogEvents(response.logs.events);
-            setLostEvents(response.logs.lostEvents);
-        }
-    });
+const SerialNumber = {
+    _last: 0,
+    next() { return ++this._last; },
+};
+
+type Row
+    = { key: number; lostEvents: number; }
+    | { key: number; logEvent: LogEvent; }
+    ;
+
+interface Content {
+    rows: Row[];
+    max: number;
 }
+
+interface RowChange {
+    addRows?: Row[];
+    setMax?: number;
+};
 
 export default function LogsPanel() {
 
-    const [ logEvents, setLogEvents ] = useState<LogEvent[]>([]);
+    const [ content, updateRows ] = useReducer(
+        (content: Content, change: RowChange) => {
+            let { rows, max } = content;
 
-    const [ lostEvents, setLostEvents ] = useState(0);
+            if (change.setMax)
+                max = change.setMax;
+
+            if (change.addRows) {
+                const toRemove = (change.addRows.length + rows.length) - max;
+                const prevRows = toRemove > 0 ? rows.slice(toRemove) : rows;
+                rows = [ ...prevRows, ...change.addRows];
+            }
+
+            return { rows, max };
+        },
+        { rows: [], max: 10 },
+    );
+
+    const getEventsFromBackend = useCallback(() => {
+        Backend.sendAction("GetLogs", (response) => {
+            if (!("logs" in response))
+                return;
+
+            const addRows: Row[] = [];
+
+            for (const logEvent of response.logs.events)
+                addRows.push({ key: SerialNumber.next(), logEvent });
+
+            const lostEvents = response.logs.lostEvents;
+            if (lostEvents > 0)
+                addRows.push({ key: SerialNumber.next(), lostEvents });
+
+            if (addRows.length > 0)
+                updateRows({ addRows });
+
+            // TODO: notify syntax errors if `Invalid token` is found.
+        });
+    }, []);
 
     useEffect(() => {
         const task = setInterval(
-            () => {
-                requestAnimationFrame(() => {
-                    getLogs(setLogEvents, setLostEvents);
-                });
-            },
-            GET_LOGS_FREQ
+            () => requestAnimationFrame(getEventsFromBackend),
+            GET_LOGS_FREQ,
         );
 
         return () => { clearInterval(task); };
-    }, []);
+    }, [ getEventsFromBackend ]);
 
     return (
         <div>
-            <div>{lostEvents}</div>
-            <div>{JSON.stringify(logEvents)}</div>
+            <div>{content.rows.map(e => <div key={e.key}>{JSON.stringify(e)}</div>)}</div>
         </div>
     );
 }

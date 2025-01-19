@@ -24,6 +24,8 @@ export interface LogEvent {
     level: number;
     className: string;
     message: string;
+    varN: number;
+    varT: number;
 }
 
 export interface LogsData {

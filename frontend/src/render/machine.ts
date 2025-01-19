@@ -139,6 +139,8 @@ export class Machine {
                 level: event.level,
                 className: getString(event.class_name),
                 message: getString(event.message),
+                varN: event.var_n,
+                varT: event.var_t,
             });
         }
 
@@ -149,7 +151,7 @@ export class Machine {
 export default async function createMachine(responseSender: ResponseSender) {
     const base: any = {};
 
-    const module = await import(WASM_MODULE_URL);
+    const module = await import(/* @vite-ignore */ WASM_MODULE_URL);
     const instance = await module.default(base);
 
     const machine = new Machine(instance, responseSender);
