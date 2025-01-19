@@ -1,10 +1,12 @@
 .editor {
     --line-numbers-width: 4ch;
 
-    display: grid;
-    padding: 0.5ch;
-    height: 100%;
+    border-radius: 2ch;
+
     overflow: auto;
+    padding: 0.5ch;
+
+    composes: panel from "../panels.module.css";
 
     textarea, pre {
         grid-area: 1 / 1;
@@ -45,10 +47,12 @@
 .lineNumber {
     float: left;
     display: block;
+
     width: var(--line-numbers-width);
     margin-left: calc(-1 * var(--line-numbers-width));
     text-align: right;
-    color: light-dark(#999, #555);
+
+    color: light-dark(#999, #777);
 
     &::after { content: " "; }
 }

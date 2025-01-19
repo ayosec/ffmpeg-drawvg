@@ -1,0 +1,3 @@
+.logs {
+    composes: panel from "../panels.module.css";
+}

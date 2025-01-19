@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import RenderView from "./RenderView";
+import styles from "./Output.module.css";
 
-import styles from "./main.module.css";
 import Backend from "../backend";
 
 interface Props {

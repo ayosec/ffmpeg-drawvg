@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useReducer } from "react";
 
-import Backend from "./backend";
-import { LogEvent } from "./render/protocol";
+import Backend from "../backend";
+import { LogEvent } from "../render/protocol";
+import styles from "./Logs.module.css";
 
 const GET_LOGS_FREQ = 1000 / 3;
 
@@ -76,7 +77,7 @@ export default function LogsPanel() {
     }, [ getEventsFromBackend ]);
 
     return (
-        <div>
+        <div className={styles.logs}>
             <div>{content.rows.map(e => <div key={e.key}>{JSON.stringify(e)}</div>)}</div>
         </div>
     );

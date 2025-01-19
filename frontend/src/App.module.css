@@ -1,10 +1,21 @@
 .main {
+    --main-fg: light-dark(black, white);
+    --main-bg: light-dark(#ddd, #111);
+    --panel-border-color: light-dark(#ccc, #222);
+
     height: 100vh;
     width: 100vw;
+    box-sizing: border-box;
+
+    padding-left: 1ch;
+    padding-bottom: 1ch;
 
     display: grid;
     grid-template-rows: auto 1fr;
     grid-template-columns: 1fr auto;
+
+    color: var(--main-fg);
+    background: var(--main-bg);
 
     header {
         grid-column: 1 / 3;
@@ -13,8 +24,6 @@
         padding: 1em;
         text-align: center;
         font-size: 1.2rem;
-
-        border-bottom: 2px solid #aaa;
     }
 
     canvas {
@@ -24,7 +33,40 @@
 }
 
 .resizeHandle {
-    min-width: 2px;
-    min-height: 2px;
-    background: #aaa;
+    min-width: 1ch;
+    min-height: 1ch;
+    background: var(--main-bg);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    --resize-handles-color: light-dark(#999, #555);
+
+    &[data-resize-handle-state="hover"],
+    &[data-resize-handle-state="drag"] {
+        --resize-handles-color: light-dark(#444, #ccc);
+    }
+
+    span {
+        display: block;
+        content: " ";
+
+        border-color: var(--resize-handles-color);
+        border-style: solid;
+
+        transition: border-color 200ms ease-out;
+    }
+
+    &[data-panel-group-direction="horizontal"] span {
+        width: 2px;
+        height: clamp(2ch, 5%, 2ch);
+        border-width: 0 2px;
+    }
+
+    &[data-panel-group-direction="vertical"] span {
+        width: clamp(2ch, 5%, 2ch);
+        height: 2px;
+        border-width: 2px 0;
+    }
 }

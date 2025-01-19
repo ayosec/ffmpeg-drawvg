@@ -4,7 +4,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import styles from "./App.module.css";
 
 import Editor from "./editor/Editor";
-import LogsPanel from "./LogsPanel";
+import LogsPanel from "./logs/LogsPanel";
 import OutputPanel from "./output/OutputPanel";
 
 const EXAMPLE = `\
@@ -29,7 +29,9 @@ stroke
 export default function App() {
     const [ source, setSource ] = useState(EXAMPLE);
 
-    const resizeHandle = () => <PanelResizeHandle className={styles.resizeHandle} />;
+    const resizeHandle = () => (
+        <PanelResizeHandle className={styles.resizeHandle} children={<span />} />
+    );
 
     return (
         <div className={styles.main} >

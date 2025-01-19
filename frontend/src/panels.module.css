@@ -1,0 +1,11 @@
+.panel {
+    display: grid;
+
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+
+    border: 1.5px solid var(--panel-border-color);
+
+    background: light-dark(white, #333);
+}
