@@ -1,4 +1,6 @@
 .editor {
+    --line-numbers-width: 4ch;
+
     display: grid;
     padding: 0.5ch;
     height: 100%;
@@ -19,6 +21,8 @@
 
         font-family: monospace;
         font-size: 1rem;
+
+        padding-left: var(--line-numbers-width);
     }
 
     pre {
@@ -36,4 +40,15 @@
         overflow-y: hidden;
     }
 
+}
+
+.lineNumber {
+    float: left;
+    display: block;
+    width: var(--line-numbers-width);
+    margin-left: calc(-1 * var(--line-numbers-width));
+    text-align: right;
+    color: light-dark(#999, #555);
+
+    &::after { content: " "; }
 }

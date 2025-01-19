@@ -88,4 +88,6 @@ export default function* tokenize(code: string) {
         cursor += token.lexeme.length;
         yield token;
     }
+
+    yield { kind: "whitespace", lexeme: "\n" };
 }

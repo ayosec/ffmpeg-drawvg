@@ -6,7 +6,7 @@ import { LogEvent } from "./render/protocol";
 const GET_LOGS_FREQ = 1000 / 3;
 
 const SerialNumber = {
-    _last: 0,
+    _last: Math.round(performance.now()),
     next() { return ++this._last; },
 };
 

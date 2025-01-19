@@ -18,6 +18,7 @@ const EXAMPLE = `\
 //    setcolor blue@0.2 fill
 //    if (eq(mod(i,3), 0)) { newpath }
 //}
+
 setvar a (mod(n,180)/180)
 setvar b (mod(t,3)/3)
 M 0 (h-h*a) L (w) (h*b)
