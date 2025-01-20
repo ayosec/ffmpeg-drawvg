@@ -1,3 +1,4 @@
 .logs {
-    composes: panel from "../panels.module.css";
+    composes: panel from "../layout.module.css";
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
 }

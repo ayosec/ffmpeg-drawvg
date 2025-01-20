@@ -1,12 +1,12 @@
 .editor {
     --line-numbers-width: 4ch;
 
-    border-radius: 2ch;
+    border-radius: var(--border-radius);
 
     overflow: auto;
     padding: 0.5ch;
 
-    composes: panel from "../panels.module.css";
+    composes: panel from "../layout.module.css";
 
     textarea, pre {
         grid-area: 1 / 1;
@@ -41,7 +41,6 @@
         background: transparent;
         overflow-y: hidden;
     }
-
 }
 
 .lineNumber {

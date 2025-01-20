@@ -7,8 +7,9 @@
     width: 100vw;
     box-sizing: border-box;
 
-    padding-left: 1ch;
-    padding-bottom: 1ch;
+    padding: 0 0 1ch 0;
+
+    row-gap: 1ch;
 
     display: grid;
     grid-template-rows: auto 1fr;
@@ -21,14 +22,18 @@
         grid-column: 1 / 3;
         grid-row: 1 / 2;
 
-        padding: 1em;
+        padding: 1ch;
+
         text-align: center;
         font-size: 1.2rem;
+
+        color: white;
+        background: #333;
     }
 
-    canvas {
-        grid-column: 2 / 3;
-        grid-row: 2 / 3;
+    & > div {
+        & > div:first-child { margin-left: 1ch; }
+        & > div:last-child { margin-right: 1ch; }
     }
 }
 

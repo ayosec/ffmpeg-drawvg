@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { BsFillSkipBackwardFill } from "react-icons/bs";
+import { HiLockClosed } from "react-icons/hi";
+import { IoCamera, IoExpand, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward, IoVideocam } from "react-icons/io5";
+
+import Icon from "../Icon";
 import RenderView from "./RenderView";
 import styles from "./Output.module.css";
 
@@ -44,25 +49,81 @@ export default function OutputPanel({ source }: Props) {
 
     return (
         <div className={styles.output}>
-            <div className={styles.settings}>
-                <label> <input
-                    type="checkbox"
-                    checked={fitRenderView}
-                    onChange={e => setFitRenderView(e.target.checked)}
-                /> Fit</label>
+            <div className={styles.toolbar}>
+                <div>
+                    { fitRenderView &&
+                        <Icon
+                            icon={HiLockClosed}
+                            label="Fix canvas size"
+                            onClick={() => setFitRenderView(!fitRenderView)}
+                        />
+                    }
 
-                <label> <input
-                    type="checkbox"
-                    checked={playing}
-                    onChange={e => setPlaying(e.target.checked)}
-                /> Playing</label>
+                    { !fitRenderView &&
+                        <Icon
+                            icon={IoExpand}
+                            label="Adjust canvas size to panel"
+                            onClick={() => setFitRenderView(!fitRenderView)}
+                        />
+                    }
 
-                <button
-                    onClick={() => Backend.sendAction("ResetPlayback") }
-                >Reset Playback</button>
+                    <div className={styles.canvasSize}>{ canvasSize.join("×") }</div>
+                </div>
 
-                { !playing && <button onClick={() => Backend.sendAction("PreviousFrame") }>Previous frame</button> }
-                { !playing && <button onClick={() => Backend.sendAction("NextFrame") }>Next frame</button> }
+                <div>
+                    <Icon
+                        icon={BsFillSkipBackwardFill}
+                        label="Reset playback"
+                        onClick={() => Backend.sendAction("ResetPlayback") }
+                    />
+
+                    <Icon
+                        icon={IoPlaySkipBack}
+                        label="Next frame"
+                        onClick={() => {
+                            setPlaying(false);
+                            Backend.sendAction("PreviousFrame");
+                        }}
+                    />
+
+                    { playing
+                        ?
+                            <Icon
+                                icon={IoPause}
+                                label="Pause animation"
+                                onClick={() => setPlaying(!playing)}
+                            />
+                        :
+                            <Icon
+                                icon={IoPlay}
+                                label="Play animation"
+                                onClick={() => setPlaying(!playing)}
+                            />
+                    }
+
+                    <Icon
+                        icon={IoPlaySkipForward}
+                        label="Previous frame"
+                        onClick={() => {
+                            setPlaying(false);
+                            Backend.sendAction("NextFrame");
+                        }}
+                    />
+                </div>
+
+                <div>
+                    <Icon
+                        icon={IoCamera}
+                        label="Export to image"
+                        onClick={() => { console.log("TODO"); }}
+                    />
+
+                    <Icon
+                        icon={IoVideocam}
+                        label="Export to video"
+                        onClick={() => { console.log("TODO"); }}
+                    />
+                </div>
             </div>
 
             <div

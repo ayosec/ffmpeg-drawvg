@@ -6,6 +6,18 @@ import styles from "./Logs.module.css";
 
 const GET_LOGS_FREQ = 1000 / 3;
 
+const LeveNames = new Map([
+    [ -8, "Quiet" ],
+    [ 0, "Panic" ],
+    [ 8, "Fatal" ],
+    [ 16, "Error" ],
+    [ 24, "Warning" ],
+    [ 32, "Info" ],
+    [ 40, "Verbose" ],
+    [ 48, "Debug" ],
+    [ 56, "Trace" ],
+]);
+
 const SerialNumber = {
     _last: Math.round(performance.now()),
     next() { return ++this._last; },

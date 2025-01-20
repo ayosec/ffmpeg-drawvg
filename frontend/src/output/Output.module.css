@@ -1,10 +1,31 @@
 .output {
+    composes: panel from "../layout.module.css";
+
     grid-template-rows: auto 1fr;
-    composes: panel from "../panels.module.css";
+    background: #EEE;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
 }
 
-.settings {
-    background: #EEE;
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+
+    padding: 1ch 2ch;
+    border-bottom: 1.5px solid var(--panel-border-color);
+
+    & > div {
+        display: flex;
+        height: 30px;
+    }
+}
+
+.canvasSize {
+    font-family: monospace;
+    font-size: 0.7rem;
+
+    display: flex;
+    align-items: center;
 }
 
 .renderView {
