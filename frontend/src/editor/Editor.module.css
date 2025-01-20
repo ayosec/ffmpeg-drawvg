@@ -1,7 +1,7 @@
 .editor {
     --line-numbers-width: 4ch;
 
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius) 0 0 var(--border-radius);
 
     overflow: auto;
     padding: 0.5ch;

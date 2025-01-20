@@ -4,7 +4,7 @@ import { BsFillSkipBackwardFill } from "react-icons/bs";
 import { HiLockClosed } from "react-icons/hi";
 import { IoCamera, IoExpand, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward, IoVideocam } from "react-icons/io5";
 
-import Icon from "../Icon";
+import IconButton from "../IconButton";
 import RenderView from "./RenderView";
 import styles from "./Output.module.css";
 
@@ -20,9 +20,13 @@ export default function OutputPanel({ source }: Props) {
 
     const [ fitRenderView, setFitRenderView ] = useState(true);
 
+    const lastFitRenderView = useRef(fitRenderView);
+
     const [ playing, setPlaying ] = useState(false);
 
     const containerRef = useRef<HTMLDivElement|null>(null);
+
+    const canvasSizeInfoRef = useRef<HTMLDivElement|null>(null);
 
     const resizeHandler = useCallback(
         () => {
@@ -45,39 +49,72 @@ export default function OutputPanel({ source }: Props) {
         return () => resizeObserver.disconnect();
     }, [ fitRenderView, resizeHandler ]);
 
-    useEffect(() => Backend.setPlaying(playing), [ playing ]);
+    useEffect(
+        () => Backend.setPlaying(playing),
+        [ playing ],
+    );
+
+    useEffect(() => {
+        if (lastFitRenderView.current === fitRenderView
+            || canvasSizeInfoRef.current === null
+        ) {
+            return;
+        }
+
+        // When the `fitRenderView` option is modified, use a blink effect
+        // on the canvas size, so the user can see that the option affects
+        // its value.
+
+        lastFitRenderView.current = fitRenderView;
+
+        let animation: Animation|null = canvasSizeInfoRef.current.animate(
+            [
+              { opacity: "unset" },
+              { opacity: "0" },
+              { opacity: "unset" },
+            ], {
+              duration: 500,
+              easing: "ease",
+              iterations: 1,
+            });
+
+        animation.addEventListener("finish", () => { animation = null; });
+
+        return () => animation?.finish();
+    }, [ fitRenderView ]);
 
     return (
         <div className={styles.output}>
             <div className={styles.toolbar}>
                 <div>
-                    { fitRenderView &&
-                        <Icon
-                            icon={HiLockClosed}
-                            label="Fix canvas size"
-                            onClick={() => setFitRenderView(!fitRenderView)}
-                        />
-                    }
+                    <IconButton
+                        icon={fitRenderView ? IoExpand : HiLockClosed}
+                        label={
+                            (
+                                fitRenderView
+                                    ? "Canvas size fits the panel"
+                                    : "Canvas size is fixed"
+                            ) + ".\nClick to toggle"
+                        }
+                        onClick={() => setFitRenderView(!fitRenderView)}
+                    />
 
-                    { !fitRenderView &&
-                        <Icon
-                            icon={IoExpand}
-                            label="Adjust canvas size to panel"
-                            onClick={() => setFitRenderView(!fitRenderView)}
-                        />
-                    }
-
-                    <div className={styles.canvasSize}>{ canvasSize.join("×") }</div>
+                    <div
+                        ref={canvasSizeInfoRef}
+                        className={styles.canvasSize}
+                    >
+                        { canvasSize.join("×") }
+                    </div>
                 </div>
 
                 <div>
-                    <Icon
+                    <IconButton
                         icon={BsFillSkipBackwardFill}
                         label="Reset playback"
                         onClick={() => Backend.sendAction("ResetPlayback") }
                     />
 
-                    <Icon
+                    <IconButton
                         icon={IoPlaySkipBack}
                         label="Next frame"
                         onClick={() => {
@@ -88,20 +125,20 @@ export default function OutputPanel({ source }: Props) {
 
                     { playing
                         ?
-                            <Icon
+                            <IconButton
                                 icon={IoPause}
                                 label="Pause animation"
                                 onClick={() => setPlaying(!playing)}
                             />
                         :
-                            <Icon
+                            <IconButton
                                 icon={IoPlay}
                                 label="Play animation"
                                 onClick={() => setPlaying(!playing)}
                             />
                     }
 
-                    <Icon
+                    <IconButton
                         icon={IoPlaySkipForward}
                         label="Previous frame"
                         onClick={() => {
@@ -112,13 +149,13 @@ export default function OutputPanel({ source }: Props) {
                 </div>
 
                 <div>
-                    <Icon
+                    <IconButton
                         icon={IoCamera}
                         label="Export to image"
                         onClick={() => { console.log("TODO"); }}
                     />
 
-                    <Icon
+                    <IconButton
                         icon={IoVideocam}
                         label="Export to video"
                         onClick={() => { console.log("TODO"); }}

@@ -3,7 +3,7 @@
 
     grid-template-rows: auto 1fr;
     background: #EEE;
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    border-radius: 0 var(--border-radius) 0 0;
 }
 
 .toolbar {
@@ -11,11 +11,13 @@
     justify-content: space-between;
     flex-direction: row;
 
-    padding: 1ch 2ch;
+    padding: 1ch;
     border-bottom: 1.5px solid var(--panel-border-color);
 
     & > div {
-        display: flex;
+        --icon-size: 20px;
+
+        display: inline-flex;
         height: 30px;
     }
 }

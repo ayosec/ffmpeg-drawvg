@@ -8,15 +8,14 @@ interface Props {
     onClick: () => void;
 }
 
-export default function Icon({ icon, label, onClick }: Props) {
+export default function IconButton({ icon, label, onClick }: Props) {
     return (
-        <div
-            role="button"
+        <button
             aria-label={label}
             className={styles.icon}
             onClick={onClick}
         >
-            { icon({ size: "90%"}) }
-        </div>
+            { icon({ size: "10px"}) }
+        </button>
     );
 }
