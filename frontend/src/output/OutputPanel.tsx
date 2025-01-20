@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { BsFillSkipBackwardFill } from "react-icons/bs";
 import { HiLockClosed } from "react-icons/hi";
@@ -8,13 +8,15 @@ import IconButton from "../IconButton";
 import RenderView from "./RenderView";
 import styles from "./Output.module.css";
 
-import Backend from "../backend";
+import BackendContext from "../backend";
 
 interface Props {
     source: string;
 }
 
 export default function OutputPanel({ source }: Props) {
+
+    const backend = useContext(BackendContext);
 
     const [ canvasSize, setCanvasSize ] = useState<[number, number]>([320, 240]);
 
@@ -50,7 +52,7 @@ export default function OutputPanel({ source }: Props) {
     }, [ fitRenderView, resizeHandler ]);
 
     useEffect(
-        () => Backend.setPlaying(playing),
+        () => backend.setPlaying(playing),
         [ playing ],
     );
 
@@ -111,7 +113,7 @@ export default function OutputPanel({ source }: Props) {
                     <IconButton
                         icon={BsFillSkipBackwardFill}
                         label="Reset playback"
-                        onClick={() => Backend.sendAction("ResetPlayback") }
+                        onClick={() => backend.sendAction("ResetPlayback") }
                     />
 
                     <IconButton
@@ -119,7 +121,7 @@ export default function OutputPanel({ source }: Props) {
                         label="Next frame"
                         onClick={() => {
                             setPlaying(false);
-                            Backend.sendAction("PreviousFrame");
+                            backend.sendAction("PreviousFrame");
                         }}
                     />
 
@@ -143,7 +145,7 @@ export default function OutputPanel({ source }: Props) {
                         label="Previous frame"
                         onClick={() => {
                             setPlaying(false);
-                            Backend.sendAction("NextFrame");
+                            backend.sendAction("NextFrame");
                         }}
                     />
                 </div>

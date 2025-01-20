@@ -1,7 +1,14 @@
+import { createContext, createElement } from "react";
+
 import RenderWorkerImpl from "./render/worker?worker";
 import { Action, Request, Response } from "./render/protocol";
 
-type Listener = (response: Response) => void;
+type ListenerCallback = (response: Response) => void;
+
+interface Listener {
+    timeoutId: ReturnType<typeof setTimeout>;
+    callback: ListenerCallback;
+}
 
 const Backend = {
 
@@ -44,8 +51,10 @@ const Backend = {
             const listener = this.responseListeners.get(response.requestId);
             this.responseListeners.delete(response.requestId);
 
-            if (listener)
-                listener(response);
+            if (listener) {
+                listener.callback(response)
+                clearTimeout(listener.timeoutId);
+            }
 
             return;
         }
@@ -53,11 +62,18 @@ const Backend = {
         console.error("Invalid response from worker:", response);
     },
 
-    sendAction(action: Action, listener?: Listener) {
+    sendAction(action: Action, callback?: ListenerCallback) {
         const requestId = ++this.lastRequestId;
 
-        if (listener !== undefined) {
-            this.responseListeners.set(requestId, listener);
+        if (callback !== undefined) {
+            const timeoutId = setTimeout(
+                () => {
+                    this.responseListeners.delete(requestId);
+                    console.error("Timeout waiting for response.", { action });
+                }, 3000,
+            );
+
+            this.responseListeners.set(requestId, { timeoutId, callback });
         }
 
         this._postMessage({ request: "action", requestId, action });
@@ -81,4 +97,10 @@ const Backend = {
 
 };
 
-export default Backend;
+const Context = createContext(Backend);
+
+export function BackendProvider({ children }: { children: React.ReactNode }) {
+    return createElement(Context.Provider, { children, value: Backend });
+}
+
+export default Context;

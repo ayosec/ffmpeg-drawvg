@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 
-import Backend from "../backend";
+import BackendContext from "../backend";
 
 interface Props {
     source: string;
@@ -9,11 +9,13 @@ interface Props {
 
 export default function RenderView({ source, size }: Props) {
 
+    const backend = useContext(BackendContext);
+
     const canvasRef = useRef<HTMLCanvasElement|null>(null);
 
     // Debounce updates.
     useEffect(() => {
-        const update = setTimeout(() => Backend.setSource(source), 100);
+        const update = setTimeout(() => backend.setSource(source), 100);
         return () => clearTimeout(update);
     }, [ source ]);
 
@@ -21,12 +23,12 @@ export default function RenderView({ source, size }: Props) {
         if (canvas === null || Object.is(canvas, canvasRef.current))
             return;
 
-        Backend.init(canvas);
-        Backend.setSource(source);
+        backend.init(canvas);
+        backend.setSource(source);
         canvasRef.current = canvas;
     };
 
-    useEffect(() => Backend.setSize(size), [ size ]);
+    useEffect(() => backend.setSize(size), [ size ]);
 
     return <canvas ref={setCanvas} />;
 

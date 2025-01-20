@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useContext, useEffect, useReducer } from "react";
 
-import Backend from "../backend";
-import { LogEvent } from "../render/protocol";
+import BackendContext from "../backend";
 import styles from "./Logs.module.css";
+import { LogEvent } from "../render/protocol";
 
 const GET_LOGS_FREQ = 1000 / 3;
 
@@ -40,6 +40,8 @@ interface RowChange {
 
 export default function LogsPanel() {
 
+    const backend = useContext(BackendContext);
+
     const [ content, updateRows ] = useReducer(
         (content: Content, change: RowChange) => {
             let { rows, max } = content;
@@ -59,7 +61,7 @@ export default function LogsPanel() {
     );
 
     const getEventsFromBackend = useCallback(() => {
-        Backend.sendAction("GetLogs", (response) => {
+        backend.sendAction("GetLogs", (response) => {
             if (!("logs" in response))
                 return;
 
