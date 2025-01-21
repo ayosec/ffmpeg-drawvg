@@ -1,18 +1,17 @@
+.output, .toolbar {
+    border-radius: 0 var(--border-radius) 0 0;
+}
+
 .output {
     composes: panel from "../layout.module.css";
 
     grid-template-rows: auto 1fr;
-    background: #EEE;
-    border-radius: 0 var(--border-radius) 0 0;
+    background: unset;
 }
 
 .toolbar {
-    display: flex;
-    justify-content: space-between;
-    flex-direction: row;
-
+    composes: toolbar from "../layout.module.css";
     padding: 1ch;
-    border-bottom: 1.5px solid var(--panel-border-color);
 
     & > div {
         --icon-size: 20px;
@@ -31,6 +30,10 @@
 }
 
 .renderView {
+
+    background-attachment: fixed;
+    background-color: #f0f0f0;
+    background-image: url(./checkerboard.svg);
 
     &[data-fit-render="1"] {
         overflow: hidden;

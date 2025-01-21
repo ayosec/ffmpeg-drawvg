@@ -6,7 +6,7 @@ import { IoCamera, IoExpand, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward,
 
 import IconButton from "../IconButton";
 import RenderView from "./RenderView";
-import styles from "./Output.module.css";
+import styles from "./output.module.css";
 
 import BackendContext from "../backend";
 
@@ -24,6 +24,7 @@ export default function OutputPanel({ source }: Props) {
 
     const lastFitRenderView = useRef(fitRenderView);
 
+    // TODO: play backwards
     const [ playing, setPlaying ] = useState(false);
 
     const containerRef = useRef<HTMLDivElement|null>(null);
@@ -53,7 +54,7 @@ export default function OutputPanel({ source }: Props) {
 
     useEffect(
         () => backend.setPlaying(playing),
-        [ playing ],
+        [ backend, playing ],
     );
 
     useEffect(() => {
@@ -135,7 +136,7 @@ export default function OutputPanel({ source }: Props) {
                         :
                             <IconButton
                                 icon={IoPlay}
-                                label="Play animation"
+                                label="Play forward"
                                 onClick={() => setPlaying(!playing)}
                             />
                     }

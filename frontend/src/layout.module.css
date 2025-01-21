@@ -9,7 +9,18 @@
 
     border: 1.5px solid var(--panel-border-color);
 
-    background: light-dark(white, #333);
+    background: var(--panel-bg);
+}
+
+.toolbar {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+
+    color: var(--toolbar-fg);
+    background: var(--toolbar-bg);
+
+    border-bottom: var(--toolbar-border-width) solid var(--panel-border-color);
 }
 
 .icon {
@@ -30,24 +41,7 @@
     transition: background-color 200ms ease-out;
 
     &:hover {
-        background-color: #eee;
-
-        &:before {
-            font-size: 1rem;
-            content: attr(aria-label);
-            white-space: pre-wrap;
-
-            pointer-events: none;
-
-            position: absolute;
-            transform: translateY(110%);
-            padding: 0.5ch 1ch;
-
-            border-radius: 0.5ch;
-
-            background: black;
-            color: white;
-        }
+        background-color: var(--toolbar-item-focus-bg);
     }
 
     & > svg {

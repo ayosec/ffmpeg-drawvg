@@ -5,6 +5,7 @@ import App from "./App.tsx";
 import { BackendProvider } from "./backend";
 
 import "./root.css";
+import "./theme.css";
 
 createRoot(document.getElementById("root")!).render(
     <StrictMode>

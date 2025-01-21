@@ -1,4 +1,0 @@
-.logs {
-    composes: panel from "../layout.module.css";
-    border-radius: 0 0 var(--border-radius) 0;
-}

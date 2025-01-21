@@ -13,3 +13,22 @@ html, body, #root {
     color: light-dark(black, white);
     background: light-dark(white, #222);
 }
+
+[aria-label]:hover {
+    &:before {
+        font-size: 1rem;
+        content: attr(aria-label);
+        white-space: pre-wrap;
+
+        pointer-events: none;
+
+        position: absolute;
+        transform: translateY(110%);
+        padding: 0.5ch 1ch;
+
+        border-radius: 0.5ch;
+
+        background: black;
+        color: white;
+    }
+}

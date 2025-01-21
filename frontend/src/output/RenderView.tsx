@@ -17,7 +17,7 @@ export default function RenderView({ source, size }: Props) {
     useEffect(() => {
         const update = setTimeout(() => backend.setSource(source), 100);
         return () => clearTimeout(update);
-    }, [ source ]);
+    }, [ backend, source ]);
 
     const setCanvas = (canvas: HTMLCanvasElement | null) => {
         if (canvas === null || Object.is(canvas, canvasRef.current))
@@ -28,7 +28,7 @@ export default function RenderView({ source, size }: Props) {
         canvasRef.current = canvas;
     };
 
-    useEffect(() => backend.setSize(size), [ size ]);
+    useEffect(() => backend.setSize(size), [ backend, size ]);
 
     return <canvas ref={setCanvas} />;
 

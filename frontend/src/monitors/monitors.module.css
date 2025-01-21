@@ -1,0 +1,59 @@
+.monitors {
+    composes: panel from "../layout.module.css";
+    border-radius: 0 0 var(--border-radius) 0;
+
+    grid-template-rows: auto 1fr;
+}
+
+.toolbar {
+    composes: toolbar from "../layout.module.css";
+    padding: 0;
+    place-items: center;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    & > button {
+        padding: 1ch 2ch;
+
+        border: 0;
+
+        display: flex;
+        align-items: center;
+
+        font-size: 0.8rem;
+
+        &[aria-selected="true"] {
+            color: var(--tab-selected-fg);
+            background: var(--tab-selected-bg);
+            box-shadow: 0 var(--toolbar-border-width) 0 var(--tab-selected-fg);
+        }
+
+        &:hover, &:hover {
+            background-color: var(--toolbar-item-focus-bg);
+        }
+
+        svg {
+            margin-right: 0.5ch;
+        }
+    }
+}
+
+.content {
+    overflow: auto;
+}
+
+.logs {
+    font-family: monospace;
+    font-size: 0.8rem;
+
+    td {
+        vertical-align: top;
+    }
+
+    .info { color: hsl(200, 70%, 30%); }
+    .error { color: hsl(0, 70%, 50%); }
+}

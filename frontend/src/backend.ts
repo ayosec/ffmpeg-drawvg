@@ -52,7 +52,7 @@ const Backend = {
             this.responseListeners.delete(response.requestId);
 
             if (listener) {
-                listener.callback(response)
+                listener.callback(response);
                 clearTimeout(listener.timeoutId);
             }
 

@@ -1,4 +1,4 @@
-import styles from "./Editor.module.css";
+import styles from "./editor.module.css";
 import tokenize from "./tokenizer";
 import { Colors } from "@backend/syntax";
 

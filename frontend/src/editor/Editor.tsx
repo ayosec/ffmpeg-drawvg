@@ -1,4 +1,4 @@
-import styles from "./Editor.module.css";
+import styles from "./editor.module.css";
 import Highlights from "./Highlights";
 
 interface Props {

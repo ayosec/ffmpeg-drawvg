@@ -1,29 +1,23 @@
-import { useCallback, useContext, useEffect, useReducer } from "react";
+import { useCallback, useContext, useEffect, useReducer, useState } from "react";
+
+import { IoTimerOutline } from "react-icons/io5";
+import { LuLogs } from "react-icons/lu";
+import { PiMemoryLight } from "react-icons/pi";
 
 import BackendContext from "../backend";
-import styles from "./Logs.module.css";
+import Logs from "./Logs";
+import styles from "./monitors.module.css";
+import { FiTrash } from "react-icons/fi";
 import { LogEvent } from "../render/protocol";
 
 const GET_LOGS_FREQ = 1000 / 3;
-
-const LeveNames = new Map([
-    [ -8, "Quiet" ],
-    [ 0, "Panic" ],
-    [ 8, "Fatal" ],
-    [ 16, "Error" ],
-    [ 24, "Warning" ],
-    [ 32, "Info" ],
-    [ 40, "Verbose" ],
-    [ 48, "Debug" ],
-    [ 56, "Trace" ],
-]);
 
 const SerialNumber = {
     _last: Math.round(performance.now()),
     next() { return ++this._last; },
 };
 
-type Row
+export type Row
     = { key: number; lostEvents: number; }
     | { key: number; logEvent: LogEvent; }
     ;
@@ -36,11 +30,20 @@ interface Content {
 interface RowChange {
     addRows?: Row[];
     setMax?: number;
+    reset?: true,
 };
 
-export default function LogsPanel() {
+enum Tab {
+    Logs,
+    RenderTime,
+    MemoryUsage,
+}
+
+export default function MonitorsPanel() {
 
     const backend = useContext(BackendContext);
+
+    const [ selectedTab, setSelectedTab ] = useState(Tab.Logs);
 
     const [ content, updateRows ] = useReducer(
         (content: Content, change: RowChange) => {
@@ -54,6 +57,9 @@ export default function LogsPanel() {
                 const prevRows = toRemove > 0 ? rows.slice(toRemove) : rows;
                 rows = [ ...prevRows, ...change.addRows];
             }
+
+            if (change.reset)
+                rows = [];
 
             return { rows, max };
         },
@@ -79,7 +85,7 @@ export default function LogsPanel() {
 
             // TODO: notify syntax errors if `Invalid token` is found.
         });
-    }, []);
+    }, [ backend ]);
 
     useEffect(() => {
         const task = setInterval(
@@ -90,9 +96,45 @@ export default function LogsPanel() {
         return () => { clearInterval(task); };
     }, [ getEventsFromBackend ]);
 
+    const clear = useCallback(() => updateRows({ reset: true }), []);
+
+    const ButtonTab = ({tab, children}: {tab: Tab, children: React.ReactNode}) => (
+        <button
+            role="tab"
+            aria-selected={selectedTab == tab}
+            onClick={() => setSelectedTab(tab)}
+        >
+            {children}
+        </button>
+    );
+
     return (
-        <div className={styles.logs}>
-            <div>{content.rows.map(e => <div key={e.key}>{JSON.stringify(e)}</div>)}</div>
+        <div className={styles.monitors}>
+            <div className={styles.toolbar}>
+                <div role="tablist" className={styles.buttons}>
+                    <ButtonTab tab={Tab.Logs}>
+                        <LuLogs /> Logs
+                    </ButtonTab>
+
+                    <ButtonTab tab={Tab.MemoryUsage}>
+                        <IoTimerOutline /> Render Time
+                    </ButtonTab>
+
+                    <ButtonTab tab={Tab.RenderTime}>
+                        <PiMemoryLight /> Memory Usage
+                    </ButtonTab>
+                </div>
+
+                <div className={styles.buttons}>
+                    <button onClick={clear}>
+                        <FiTrash /> Clear
+                    </button>
+                </div>
+            </div>
+
+            <div className={styles.content}>
+                <Logs rows={content.rows} />
+            </div>
         </div>
     );
 }

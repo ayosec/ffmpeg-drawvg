@@ -1,8 +1,4 @@
 .main {
-    --main-fg: light-dark(black, white);
-    --main-bg: light-dark(#ddd, #111);
-    --panel-border-color: light-dark(#ccc, #222);
-
     height: 100vh;
     width: 100vw;
     box-sizing: border-box;

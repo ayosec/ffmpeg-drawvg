@@ -1,0 +1,16 @@
+:root {
+    --main-fg: light-dark(black, white);
+    --main-bg: light-dark(#ddd, #111);
+
+    --panel-border-color: light-dark(#ccc, #222);
+    --panel-bg: light-dark(white, #333);
+
+    --toolbar-fg: #222;
+    --toolbar-bg: #eee;
+    --toolbar-border-width: 2px;
+
+    --toolbar-item-focus-bg: #ddf;
+
+    --tab-selected-fg: #22f;
+    --tab-selected-bg: #eee;
+}
