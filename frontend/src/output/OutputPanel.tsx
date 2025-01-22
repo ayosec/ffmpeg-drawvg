@@ -155,7 +155,7 @@ export default function OutputPanel({ source }: Props) {
                     <IconButton
                         icon={IoCamera}
                         label="Export to image"
-                        onClick={() => { console.log("TODO"); }}
+                        onClick={() => saveToImage(containerRef.current)}
                     />
 
                     <IconButton
@@ -175,4 +175,25 @@ export default function OutputPanel({ source }: Props) {
             </div>
         </div>
     );
+}
+
+function saveToImage(ref: HTMLDivElement|null) {
+    ref?.querySelector("canvas")?.toBlob(blob => {
+        if (blob === null) {
+            console.error("Unable to get the image from the canvas.");
+            return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        try {
+            const anchor = document.createElement("a");
+            anchor.href = url;
+            anchor.download = "vgs.png";
+            document.body.append(anchor);
+            anchor.click();
+            anchor.remove();
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    });
 }
