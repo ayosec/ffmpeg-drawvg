@@ -14,27 +14,25 @@
 #define LOG_BUFFER_BYTES 4096
 
 static struct {
-    FILE *stream;
-
     int lost_events;
-
     int events_count;
     struct LogEvent events[LOG_EVENTS];
 
+    long buffer_position;
     char buffer[LOG_BUFFER_BYTES];
-} LOG = { NULL };
+} LOG = { 0 };
 
 struct FrameVariables CurrentFrameVariables = { NAN, NAN };
 
 static void logs_reset() {
-    LOG.lost_events = 0;
+    LOG.buffer_position = 0;
     LOG.events_count = 0;
-
-    if (LOG.stream != NULL)
-        rewind(LOG.stream);
+    LOG.lost_events = 0;
 }
 
 static bool log_write_string(const char *src, struct LogString *dst) {
+    int len;
+
     if (LOG.lost_events != 0)
         return false;
 
@@ -44,9 +42,18 @@ static bool log_write_string(const char *src, struct LogString *dst) {
         return true;
     }
 
-    dst->position = ftell(LOG.stream);
-    dst->length = fprintf(LOG.stream, "%s", src);
-    return dst->length > 0;
+    len = strlen(src);
+
+    if (LOG.buffer_position + len >= sizeof(LOG.buffer))
+        return false;
+
+    dst->position = LOG.buffer_position;
+    dst->length = len;
+
+    memcpy(LOG.buffer + LOG.buffer_position, src, len);
+    LOG.buffer_position += len;
+
+    return true;
 }
 
 static bool log_string_eq(const struct LogString *a, const struct LogString *b) {
@@ -92,24 +99,26 @@ void av_log(void* avcl, int level, const char *fmt, ...)
 {
     va_list vl;
     struct LogEvent *event;
+    long old_bufpos;
 
-    if (LOG.stream == NULL) {
-        LOG.stream = fmemopen(LOG.buffer, sizeof(LOG.buffer), "w");
-        logs_reset();
-    }
+    bool written;
+    char msg[1024];
 
     event = &LOG.events[LOG.events_count++];
     if (LOG.lost_events > 0 || LOG.events_count >= LOG_EVENTS)
         goto lost;
 
+    old_bufpos = LOG.buffer_position;
+
     memset(event, 0, sizeof(*event));
 
+    event->repeat = 1;
     event->level = level;
     event->var_n = CurrentFrameVariables.n;
     event->var_t = CurrentFrameVariables.t;
 
     if (avcl != NULL) {
-        bool written = log_write_string(
+        written = log_write_string(
             av_default_item_name(avcl),
             &event->class_name
         );
@@ -119,16 +128,18 @@ void av_log(void* avcl, int level, const char *fmt, ...)
     }
 
     va_start(vl, fmt);
-    event->message.position = ftell(LOG.stream);
-    event->message.length = vfprintf(LOG.stream, fmt, vl);
+    vsnprintf(msg, sizeof(msg), fmt, vl);
     va_end(vl);
+
+    written = log_write_string(msg, &event->message);
+    if (!written)
+        goto lost;
 
     if (repeated_message()) {
         // On repeated messages, increment counter of the previous message,
         // and discard the new entry.
 
-        fseek(LOG.stream, SEEK_SET, event->message.position);
-
+        LOG.buffer_position = old_bufpos;
         LOG.events_count--;
         LOG.events[LOG.events_count - 1].repeat++;
     }
@@ -136,13 +147,12 @@ void av_log(void* avcl, int level, const char *fmt, ...)
     return;
 
 lost:
+    LOG.events_count--;
     LOG.lost_events++;
 }
 
 EMSCRIPTEN_KEEPALIVE
 void backend_logs_send(int request_id) {
-    fflush(LOG.stream);
-
     EM_ASM(
         { Module['machine']?.['logsReceive']($0, $1, $2, $3, $4); },
         request_id,
