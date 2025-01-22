@@ -332,6 +332,7 @@ struct VGSParserToken {
     size_t length;
 };
 
+// Return `1` if `token` is the value of `str`.
 static int vgs_token_is_string(const struct VGSParserToken *token, const char *str) {
     return strncmp(str, token->lexeme, token->length) == 0
         && str[token->length] == '\0';
@@ -491,15 +492,17 @@ next_token:
 // Instruction arguments.
 struct VGSArgument {
     enum {
-        ARG_CONST = 1,
-        ARG_LITERAL,
+        ARG_COLOR = 1,
+        ARG_CONST,
         ARG_EXPR,
-        ARG_COLOR,
+        ARG_LITERAL,
         ARG_SUBPROGRAM,
+        ARG_VARIABLE,
     } type;
 
     union {
         int constant;
+        int variable;
         double literal;
         AVExpr *expr;
         uint8_t color[4];
@@ -608,6 +611,26 @@ static int vgs_parse_numeric_argument(
         );
         break;
 
+    case TOKEN_WORD:
+        ret = 1;
+        for (int i = 0; i < VAR_COUNT; i++) {
+            const char *var = parser->var_names[i];
+            if (var == NULL)
+                break;
+
+            if (vgs_token_is_string(&token, var)) {
+                arg->type = ARG_VARIABLE;
+                arg->variable = i;
+                ret = 0;
+                break;
+            }
+        }
+
+        if (ret == 0)
+            break;
+
+        /* fallthrough */
+
     default:
         vgs_log_invalid_token(log_ctx, parser, &token, "Expected numeric argument.");
         ret = AVERROR(EINVAL);
@@ -621,6 +644,46 @@ static int vgs_parse_numeric_argument(
 
     return ret;
 }
+
+// Check if the next token repeats the current instruction,
+// like in `l 10 10 20 20`.
+static int vgs_parser_can_repeat_inst(void *log_ctx, struct VGSParser *parser) {
+    struct VGSParserToken token = { 0 };
+
+    int ret = vgs_parser_next_token(log_ctx, parser, &token, 0);
+
+    if (ret != 0)
+        return ret;
+
+    switch (token.type) {
+    case TOKEN_EXPR:
+    case TOKEN_LITERAL:
+        return 0;
+
+    case TOKEN_WORD:
+        // If the next token is a word, it will be considered to repeat
+        // the instruction only if it is a variable, and there is not
+        // known instruction with the same name.
+
+        if (vgs_get_instruction(token.lexeme, token.length) != NULL)
+            return 1;
+
+        for (int i = 0; i < VAR_COUNT; i++) {
+            const char *var = parser->var_names[i];
+            if (var == NULL)
+                return 1;
+
+            if (vgs_token_is_string(&token, var))
+                return 0;
+        }
+
+        return 1;
+
+    default:
+        return 1;
+    }
+}
+
 
 // Extract the arguments for an instruction, and add a new statement
 // to the program.
@@ -671,8 +734,7 @@ static int vgs_parse_statement(
 
             // May repeat if the next token is numeric.
             if (param->type == PARAM_MAY_REPEAT
-                && vgs_parser_next_token(log_ctx, parser, &token, 0) == 0
-                && (token.type == TOKEN_EXPR || token.type == TOKEN_LITERAL)
+                && vgs_parser_can_repeat_inst(log_ctx, parser) == 0
             ) {
                 param = &decl->params[0];
                 statement.args = NULL;
@@ -1274,12 +1336,17 @@ static int vgs_eval(
             const struct VGSArgument *a = &statement->args[arg];
 
             switch (a->type) {
+            case ARG_EXPR:
+                numerics[arg] = av_expr_eval(a->expr, state->vars, state);
+                break;
+
             case ARG_LITERAL:
                 numerics[arg] = a->literal;
                 break;
 
-            case ARG_EXPR:
-                numerics[arg] = av_expr_eval(a->expr, state->vars, state);
+            case ARG_VARIABLE:
+                av_assert0(a->variable < VAR_COUNT);
+                numerics[arg] = state->vars[a->variable];
                 break;
 
             default:

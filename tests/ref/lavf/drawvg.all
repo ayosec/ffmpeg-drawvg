@@ -23,7 +23,7 @@ repeat 10 {
 // User variables.
 setvar foo -1
 setvar bar -2
-lineto (foo) (bar)
+lineto foo (bar)
 
 // State
 save
