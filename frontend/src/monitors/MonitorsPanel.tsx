@@ -7,10 +7,13 @@ import { PiMemoryLight } from "react-icons/pi";
 import BackendContext from "../backend";
 import Logs from "./Logs";
 import styles from "./monitors.module.css";
-import { FiTrash } from "react-icons/fi";
 import { LogEvent } from "../render/protocol";
+import IconButton from "../IconButton";
+import { FaTrash } from "react-icons/fa";
 
 const GET_LOGS_FREQ = 1000 / 3;
+
+const DEFAULT_MAX = 100;
 
 const SerialNumber = {
     _last: Math.round(performance.now()),
@@ -63,7 +66,7 @@ export default function MonitorsPanel() {
 
             return { rows, max };
         },
-        { rows: [], max: 10 },
+        { rows: [], max: DEFAULT_MAX },
     );
 
     const getEventsFromBackend = useCallback(() => {
@@ -111,7 +114,11 @@ export default function MonitorsPanel() {
     return (
         <div className={styles.monitors}>
             <div className={styles.toolbar}>
-                <div role="tablist" className={styles.buttons}>
+                <div className={styles.actions}>
+                    <IconButton icon={FaTrash} onClick={clear} label="Clear" />
+                </div>
+
+                <div role="tablist" className={styles.tabs}>
                     <ButtonTab tab={Tab.Logs}>
                         <LuLogs /> Logs
                     </ButtonTab>
@@ -123,12 +130,6 @@ export default function MonitorsPanel() {
                     <ButtonTab tab={Tab.RenderTime}>
                         <PiMemoryLight /> Memory Usage
                     </ButtonTab>
-                </div>
-
-                <div className={styles.buttons}>
-                    <button onClick={clear}>
-                        <FiTrash /> Clear
-                    </button>
                 </div>
             </div>
 

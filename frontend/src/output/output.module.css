@@ -11,6 +11,8 @@
 
 .toolbar {
     composes: toolbar from "../layout.module.css";
+
+    justify-content: space-between;
     padding: 1ch;
 
     & > div {

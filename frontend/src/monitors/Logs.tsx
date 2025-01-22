@@ -1,7 +1,7 @@
 import styles from "./monitors.module.css";
 import { LogEvent } from "../render/protocol";
 import { Row } from "./MonitorsPanel";
-import { BiSolidError, BiSolidInfoCircle } from "react-icons/bi";
+import { useLayoutEffect, useRef } from "react";
 
 interface Props {
     rows: Row[];
@@ -19,40 +19,75 @@ const LevelNames = new Map([
     [ 56, "Trace" ],
 ]);
 
-function makeLogEvent(logEvent: LogEvent) {
+function makeLogEvent(key: number, logEvent: LogEvent) {
     const levelName = LevelNames.get(logEvent.level) ?? logEvent.level.toString();
 
-    return <>
-        <td data-field="level" title={levelName}>
-            {
-                logEvent.level < 32
-                    ? <BiSolidError className={styles.error} />
-                    : <BiSolidInfoCircle className={styles.info} />
+    const className = logEvent.level < 32 ? styles.error : styles.info;
+
+    const showVar = (varName: string, value: number, fixed?: number) => (
+        isFinite(value) && <>
+            <span data-field="variable" data-name={varName}>
+                {fixed ? value.toFixed(fixed) : value}
+            </span>
+        </>
+    );
+
+    return (
+        <div key={key} className={`${styles.event} ${className}`}>
+            <span data-field="level" aria-label={levelName}>●</span>
+
+            <span data-field="message">{logEvent.message}</span>
+
+            { logEvent.repeat > 1
+                && <span data-field="repeat">{logEvent.repeat}</span>
             }
-        </td>
 
-        <td data-field="class-name">{logEvent.className}</td>
+            { showVar("n", logEvent.varN) }
 
-        <td>{logEvent.message}</td>
+            { showVar("t", logEvent.varT, 2) }
+        </div>
+    );
+}
 
-        { logEvent.repeat > 0
-            && <td data-field="repeat">{logEvent.repeat}</td> }
-    </>;
+function makeLostEvents(key: number, lostEvents: number) {
+    return (
+        <div key={key} className={styles.lostEvents}>
+            {lostEvents} events lost.
+        </div>
+    );
 }
 
 function makeRow(row: Row) {
-    let columns;
     if ("logEvent" in row)
-        columns = makeLogEvent(row.logEvent);
+        return makeLogEvent(row.key, row.logEvent);
     else if ("lostEvents" in row)
-        columns = <b>{row.lostEvents}</b>; // TODO
-    else
-        columns = <></>;
-
-    return <tr key={row.key}>{columns}</tr>;
+        return makeLostEvents(row.key, row.lostEvents);
 }
 
 export default function Logs({ rows }: Props) {
-    //return <div>{rows.map(e => <div key={e.key}>{JSON.stringify(e)}</div>)}</div>
-    return <table className={styles.logs}><tbody>{rows.map(makeRow)}</tbody></table>;
+    const container = useRef<HTMLDivElement|null>(null);
+
+    // When `rows` is updated, and the scroll is close to the
+    // bottom, updates the scroll after render.
+
+    let needScrollToBottom = false;
+    if (container.current !== null) {
+        const { scrollTop, clientHeight, scrollHeight } = container.current;
+        if ((scrollTop + clientHeight) > (scrollHeight * 0.95))
+            needScrollToBottom = true;
+    }
+
+    useLayoutEffect(() => {
+        const ref = container.current;
+        if (ref !== null && needScrollToBottom) {
+            ref.scrollTo(0, ref.scrollHeight);
+        }
+
+    }, [ rows, needScrollToBottom ]);
+
+    return (
+        <div ref={container} className={styles.logs}>
+            {rows.map(makeRow)}
+        </div>
+    );
 }

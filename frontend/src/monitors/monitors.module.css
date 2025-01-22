@@ -7,14 +7,27 @@
 
 .toolbar {
     composes: toolbar from "../layout.module.css";
+    justify-content: flex-start;
     padding: 0;
     place-items: center;
 }
 
-.buttons {
+.actions {
+    --icon-size: 10px;
+
+    padding: 0 1ch;
+    border-right: var(--toolbar-border-width) solid var(--panel-border-color);
+}
+
+.actions,
+.tabs {
     display: flex;
     flex-direction: row;
     align-items: center;
+}
+
+.tabs {
+    height: 100%;
 
     & > button {
         padding: 1ch 2ch;
@@ -23,6 +36,10 @@
 
         display: flex;
         align-items: center;
+        justify-content: center;
+
+        color: var(--toolbar-fg);
+        background: var(--toolbar-bg);;
 
         font-size: 0.8rem;
 
@@ -47,13 +64,58 @@
 }
 
 .logs {
+    overflow: auto;
+    height: 100%;
+
     font-family: monospace;
     font-size: 0.8rem;
 
-    td {
-        vertical-align: top;
+    & > div {
+        padding: 0.2ch;
+        display: flex;
+        gap: 0.5ch;
     }
 
-    .info { color: hsl(200, 70%, 30%); }
-    .error { color: hsl(0, 70%, 50%); }
+    [data-field="level"] {
+        position: relative;
+        &:before { z-index: 1; }
+    }
+
+    [data-field="message"] {
+        flex: 1;
+    }
+
+    [data-field="repeat"] {
+        color: black;
+        background: #e0e0e0;
+
+        text-align: center;
+
+        line-height: 1rem;
+        min-width: 1rem;
+        font-size: 0.7rem;
+        border-radius: 50%;
+    }
+
+    .info { [data-field="level"] { color: hsl(200, 70%, 30%); } }
+    .error { [data-field="level"] { color: hsl(0, 70%, 50%); } }
+
+    .lostEvents {
+        color: light-dark(black, white);
+        background: light-dark(#fee, #422);
+        border: solid light-dark(#f77, #944);
+        border-width: 1px 0;
+    }
+
+    [data-field="variable"] {
+        display: inline-block;
+        padding-left: 1.5ch;
+    }
+
+    &:hover {
+        [data-field="variable"]:before {
+            content: attr(data-name) " = ";
+            font-style: italic;
+        }
+    }
 }

@@ -14,7 +14,6 @@
 
 .toolbar {
     display: flex;
-    justify-content: space-between;
     flex-direction: row;
 
     color: var(--toolbar-fg);
@@ -28,17 +27,20 @@
     justify-content: center;
     align-items: center;
 
-    border: 0;
-    box-shadow: 0 0 3px #444;
-    border-radius: 10%;
-
-    margin-right: 1ch;
-    padding: 0.75ch;
-
     color: #222;
     background: #fff;
 
     transition: background-color 200ms ease-out;
+
+    border: 0;
+    box-shadow: 0 0 3px #444;
+    border-radius: 10%;
+
+    padding: 0.75ch;
+
+    &:not(:last-child) {
+        margin-right: 1ch;
+    }
 
     &:hover {
         background-color: var(--toolbar-item-focus-bg);

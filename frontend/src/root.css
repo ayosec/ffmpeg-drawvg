@@ -23,10 +23,11 @@ html, body, #root {
         pointer-events: none;
 
         position: absolute;
-        transform: translateY(110%);
-        padding: 0.5ch 1ch;
+        z-index: 1000;
 
+        padding: 0.5ch 1ch;
         border-radius: 0.5ch;
+        transform: translateY(110%);
 
         background: black;
         color: white;
