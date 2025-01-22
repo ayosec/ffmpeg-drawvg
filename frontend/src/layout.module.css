@@ -9,6 +9,7 @@
 
     border: 1.5px solid var(--panel-border-color);
 
+    color: var(--panel-fg);
     background: var(--panel-bg);
 }
 
@@ -27,13 +28,13 @@
     justify-content: center;
     align-items: center;
 
-    color: #222;
-    background: #fff;
+    color: var(--icon-button-fg);
+    background: var(--icon-button-bg);
 
     transition: background-color 200ms ease-out;
 
     border: 0;
-    box-shadow: 0 0 3px #444;
+    box-shadow: 0 0 3px var(--icon-button-shadow);
     border-radius: 10%;
 
     padding: 0.75ch;

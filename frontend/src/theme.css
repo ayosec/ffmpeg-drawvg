@@ -2,15 +2,21 @@
     --main-fg: light-dark(black, white);
     --main-bg: light-dark(#ddd, #111);
 
-    --panel-border-color: light-dark(#ccc, #222);
-    --panel-bg: light-dark(white, #333);
+    --panel-border-color: light-dark(#ccc, #333);
 
-    --toolbar-fg: #222;
-    --toolbar-bg: #eee;
+    --panel-fg: var(--main-fg);
+    --panel-bg: light-dark(white, #222);
+
+    --toolbar-fg: light-dark(#222, #eee);
+    --toolbar-bg: light-dark(#eee, #171717);
     --toolbar-border-width: 2px;
 
-    --toolbar-item-focus-bg: #ddf;
+    --toolbar-item-focus-bg: light-dark(#ddf, #227);
 
-    --tab-selected-fg: #22f;
-    --tab-selected-bg: #eee;
+    --icon-button-fg: light-dark(#222, #ddd);
+    --icon-button-bg: light-dark(#fff, #171717);
+    --icon-button-shadow: light-dark(#444, #aaa);
+
+    --tab-selected-fg: light-dark(#24f, #79f);
+    --tab-selected-bg: var(--toolbar-bg);
 }

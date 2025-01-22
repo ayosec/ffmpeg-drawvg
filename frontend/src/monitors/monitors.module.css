@@ -70,8 +70,8 @@
     font-family: monospace;
     font-size: 0.8rem;
 
-    & > div {
-        padding: 0.2ch;
+    .event {
+        padding: 0.3ch 0.5ch;
         display: flex;
         gap: 0.5ch;
     }
@@ -101,6 +101,8 @@
     .error { [data-field="level"] { color: hsl(0, 70%, 50%); } }
 
     .lostEvents {
+        padding: 0.5ch;
+
         color: light-dark(black, white);
         background: light-dark(#fee, #422);
         border: solid light-dark(#f77, #944);
@@ -110,6 +112,9 @@
     [data-field="variable"] {
         display: inline-block;
         padding-left: 1.5ch;
+
+        &[data-name="n"] { color: light-dark(#005, #aaf); }
+        &[data-name="t"] { color: light-dark(#050, #afa); }
     }
 
     &:hover {
