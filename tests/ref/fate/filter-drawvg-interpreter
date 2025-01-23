@@ -8,6 +8,7 @@ cairo_rel_line_to 0.0 0.0
 cairo_rel_line_to 1.0 1.0
 cairo_rel_line_to 2.0 2.0
 cairo_line_to -1.0 -2.0
+av_log[32]: 1 = 1.000000 | foo = -1.000000 | (bar - 2) = -4.000000
 cairo_set_source lineargrad(0.0 0.0 1.0 1.0) 0.0/#ff0000ff 1.0/#0000ffff
 cairo_save
 cairo_restore

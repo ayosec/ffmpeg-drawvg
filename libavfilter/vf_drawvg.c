@@ -115,6 +115,7 @@ enum VGSInstruction {
     INS_MOVE_TO,                ///<  M, moveto (x y)
     INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
     INS_NEW_PATH,               ///<  newpath
+    INS_PRINT,                  ///<  print (expr)
     INS_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
     INS_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
@@ -176,7 +177,9 @@ struct VGSParameter {
         PARAM_END,
         PARAM_MAY_REPEAT,
         PARAM_NUMERIC,
+        PARAM_NUMERIC_METADATA,
         PARAM_SUBPROGRAM,
+        PARAM_VARIADIC,
         PARAM_VAR_NAME,
     } type;
 
@@ -234,6 +237,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_MOVE_TO_REL,      "m",              R(N, N) },
     { INS_MOVE_TO,          "moveto",         R(N, N) },
     { INS_NEW_PATH,         "newpath",        NONE },
+    { INS_PRINT,            "print",          { { PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } } },
     { INS_STROKE_PRESERVE,  "pstroke",        NONE },
     { INS_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
     { INS_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
@@ -501,13 +505,15 @@ struct VGSArgument {
     } type;
 
     union {
-        int constant;
-        int variable;
-        double literal;
-        AVExpr *expr;
         uint8_t color[4];
+        int constant;
+        AVExpr *expr;
+        double literal;
         struct VGSProgram *subprogram;
+        int variable;
     };
+
+    char *metadata;
 };
 
 // Program statements.
@@ -536,16 +542,21 @@ static void vgs_statement_free(struct VGSStatement *stm) {
         return;
 
     for (int j = 0; j < stm->args_count; j++) {
-        switch (stm->args[j].type) {
+        struct VGSArgument *arg = &stm->args[j];
+
+        switch (arg->type) {
         case ARG_EXPR:
-            av_expr_free(stm->args[j].expr);
+            av_expr_free(arg->expr);
             break;
 
         case ARG_SUBPROGRAM:
-            vgs_free(stm->args[j].subprogram);
-            av_freep(&stm->args[j].subprogram);
+            vgs_free(arg->subprogram);
+            av_freep(&arg->subprogram);
             break;
         }
+
+        if (arg->metadata)
+            av_freep(&arg->metadata);
     }
 
     av_freep(&stm->args);
@@ -565,7 +576,8 @@ static void vgs_free(struct VGSProgram *program) {
 static int vgs_parse_numeric_argument(
     void *log_ctx,
     struct VGSParser *parser,
-    struct VGSArgument *arg
+    struct VGSArgument *arg,
+    int metadata
 ) {
     int ret;
     char stack_buf[64];
@@ -636,11 +648,13 @@ static int vgs_parse_numeric_argument(
         ret = AVERROR(EINVAL);
     }
 
+    if (ret == 0)
+        arg->metadata = metadata ? strdup(lexeme) : NULL;
+    else
+        memset(arg, 0, sizeof(*arg));
+
     if (lexeme != stack_buf)
         av_freep(&lexeme);
-
-    if (ret != 0)
-        memset(arg, 0, sizeof(*arg));
 
     return ret;
 }
@@ -719,6 +733,18 @@ static int vgs_parse_statement(
         struct VGSArgument arg = { 0 };
 
         switch (param->type) {
+        case PARAM_VARIADIC:
+            // Try to append the next numeric argument to the current
+            // statement.
+            if (statement.args_count < MAX_INSTRUCTION_PARAMS
+                && vgs_parser_can_repeat_inst(log_ctx, parser) == 0
+            ) {
+                param = &decl->params[0];
+                continue;
+            }
+
+            /* fallthrough */
+
         case PARAM_END:
         case PARAM_MAY_REPEAT:
             // Add the built statement to the program.
@@ -733,7 +759,7 @@ static int vgs_parse_statement(
                 FAIL(ENOMEM);
 
             // May repeat if the next token is numeric.
-            if (param->type == PARAM_MAY_REPEAT
+            if (param->type != PARAM_END
                 && vgs_parser_can_repeat_inst(log_ctx, parser) == 0
             ) {
                 param = &decl->params[0];
@@ -794,7 +820,14 @@ static int vgs_parse_statement(
         }
 
         case PARAM_NUMERIC:
-            ret = vgs_parse_numeric_argument(log_ctx, parser, &arg);
+        case PARAM_NUMERIC_METADATA:
+            ret = vgs_parse_numeric_argument(
+                log_ctx,
+                parser,
+                &arg,
+                param->type == PARAM_NUMERIC_METADATA
+            );
+
             if (ret != 0)
                 FAIL(EINVAL);
 
@@ -1317,8 +1350,8 @@ static int vgs_eval(
     for (int st_number = 0; st_number < program->statements_count; st_number++) {
         const struct VGSStatement *statement = &program->statements[st_number];
 
-        if (statement->args_count >= FF_ARRAY_ELEMS(numerics)) {
-            av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).", statement->args_count);
+        if (statement->args_count > FF_ARRAY_ELEMS(numerics)) {
+            av_log(state->log_ctx, AV_LOG_ERROR, "Too many arguments (%d).\n", statement->args_count);
             return AVERROR_BUG;
         }
 
@@ -1542,6 +1575,34 @@ static int vgs_eval(
             ASSERT_ARGS(0);
             cairo_new_path(state->cairo_ctx);
             break;
+
+        case INS_PRINT: {
+            char msg[256];
+            int len = 0;
+
+            for (int i = 0; i < statement->args_count; i++) {
+                int written;
+                int capacity = sizeof(msg) - len;
+
+                written = snprintf(
+                    msg + len,
+                    capacity,
+                    "%s%s = %f",
+                    i > 0 ? " | " : "",
+                    statement->args[i].metadata,
+                    numerics[i]
+                );
+
+                // If buffer is too small, discard the latest arguments.
+                if (written >= capacity)
+                    break;
+
+                len += written;
+            }
+
+            av_log(state->log_ctx, AV_LOG_INFO, "%.*s\n", len, msg);
+            break;
+        }
 
         case INS_Q_CURVE_TO:
         case INS_Q_CURVE_TO_REL:

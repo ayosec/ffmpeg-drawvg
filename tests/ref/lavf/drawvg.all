@@ -25,6 +25,9 @@ setvar foo -1
 setvar bar -2
 lineto foo (bar)
 
+// Print
+print 1 foo (bar - 2)
+
 // State
 save
 restore
