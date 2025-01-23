@@ -79,6 +79,10 @@ const Backend = {
         this._postMessage({ request: "action", requestId, action });
     },
 
+    setVisibility(visibility: boolean) {
+        this._postMessage({ request: "state", change: { visibility } });
+    },
+
     setPlaying(playing: boolean) {
         this._postMessage({ request: "state", change: { playing } });
     },
@@ -96,6 +100,11 @@ const Backend = {
     },
 
 };
+
+document.addEventListener(
+    "visibilitychange",
+    () => Backend.setVisibility(!document.hidden),
+);
 
 const Context = createContext(Backend);
 

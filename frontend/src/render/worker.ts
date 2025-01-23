@@ -7,6 +7,8 @@ class DrawContext {
     #frameCount: number = 0;
     #playFixedTime: number = 0;
 
+    #visibility = true;
+
     #playStart: number;
     #lastRenderTime: number;
 
@@ -23,6 +25,10 @@ class DrawContext {
 
     isPlaying(): boolean {
         return this.#playing;
+    }
+
+    isVisible(): boolean {
+        return this.#visibility;
     }
 
     setPlaying(playing: boolean, timestamp?: number) {
@@ -43,6 +49,10 @@ class DrawContext {
             this.#playFixedTime = now - this.#playStart;
             this.#playing = false;
         }
+    }
+
+    setVisibility(visibility: boolean) {
+        this.#visibility = visibility;
     }
 
     playbackReset() {
@@ -201,6 +211,15 @@ function draw(timestamp?: number) {
 
     const frameVars = drawContext.nextFrameVars(timestamp);
 
+    // If the page is not visible, skip the render after updating
+    // the frame variables.
+    if (!drawContext.isVisible()) {
+        if (drawContext.isPlaying())
+            requestRedraw();
+
+        return;
+    }
+
     const D = frameVars.D;
     const N = frameVars.N;
     const T = frameVars.T;
@@ -240,6 +259,7 @@ function draw(timestamp?: number) {
     if (drawContext.isPlaying()) {
         requestRedraw();
     }
+
 }
 
 function applyStateChanges(timestamp?: number) {
@@ -264,6 +284,10 @@ function applyStateChanges(timestamp?: number) {
 
         if (change.playing !== undefined) {
             drawContext.setPlaying(change.playing, timestamp);
+        }
+
+        if (change.visibility !== undefined) {
+            drawContext.setVisibility(change.visibility);
         }
 
     }

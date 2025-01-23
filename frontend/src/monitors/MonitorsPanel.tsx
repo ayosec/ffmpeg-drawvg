@@ -1,15 +1,17 @@
 import { useCallback, useContext, useEffect, useReducer, useState } from "react";
 
+import BackendContext from "../backend";
+import IconButton from "../IconButton";
+import Logs from "./Logs";
+import { LogEvent } from "../render/protocol";
+import { usePageVisible } from "../hooks";
+
+import { FaTrash } from "react-icons/fa";
 import { IoTimerOutline } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 import { PiMemoryLight } from "react-icons/pi";
 
-import BackendContext from "../backend";
-import Logs from "./Logs";
 import styles from "./monitors.module.css";
-import { LogEvent } from "../render/protocol";
-import IconButton from "../IconButton";
-import { FaTrash } from "react-icons/fa";
 
 const GET_LOGS_FREQ = 1000 / 3;
 
@@ -43,6 +45,8 @@ enum Tab {
 }
 
 export default function MonitorsPanel() {
+
+    const pageVisible = usePageVisible();
 
     const backend = useContext(BackendContext);
 
@@ -91,13 +95,16 @@ export default function MonitorsPanel() {
     }, [ backend ]);
 
     useEffect(() => {
+        if (!pageVisible)
+            return;
+
         const task = setInterval(
             () => requestAnimationFrame(getEventsFromBackend),
             GET_LOGS_FREQ,
         );
 
         return () => { clearInterval(task); };
-    }, [ getEventsFromBackend ]);
+    }, [ getEventsFromBackend, pageVisible ]);
 
     const clear = useCallback(() => updateRows({ reset: true }), []);
 
