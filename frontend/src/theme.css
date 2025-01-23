@@ -1,4 +1,6 @@
 :root {
+    color-scheme: light dark;
+
     --main-fg: light-dark(black, white);
     --main-bg: light-dark(#ddd, #111);
 
@@ -19,4 +21,12 @@
 
     --tab-selected-fg: light-dark(#24f, #79f);
     --tab-selected-bg: var(--toolbar-bg);
+}
+
+html:has(#selected-theme[data-select-theme="dark"]) {
+    color-scheme: dark;
+}
+
+html:has(#selected-theme[data-select-theme="light"]) {
+    color-scheme: light;
 }

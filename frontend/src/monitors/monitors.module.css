@@ -71,8 +71,9 @@
     font-size: 0.8rem;
 
     .event {
-        padding: 0.3ch 0.5ch;
         display: flex;
+        align-items: flex-start;
+        padding: 0.3ch 0.5ch;
         gap: 0.5ch;
     }
 

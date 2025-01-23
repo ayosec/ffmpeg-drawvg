@@ -1,0 +1,51 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.actions {
+}
+
+.title {
+    text-shadow: 1px 1px 2px black;
+}
+
+.themeSwitcher {
+    display: inline-flex;
+    flex-direction: row;
+
+    color: white;
+    background: #111;
+
+    height: 1rem;
+    gap: 5px;
+    padding: 5px;
+    border-radius: 1rem;
+
+    --background-start: 0%;
+    transition: --background-start ease-out 200ms;
+
+    background-image: linear-gradient(
+        to right,
+        #777 var(--background-start),
+        transparent var(--background-start),
+        transparent calc(var(--background-start) + 50%),
+        #777 calc(var(--background-start) + 50%)
+    );
+
+    &[data-select-theme="light"] {
+        --background-start: 50%;
+    }
+
+    & > svg {
+        width: 1rem;
+        height: 1rem;
+    }
+}
+
+@property --background-start {
+    syntax: "<percentage>";
+    inherits: true;
+    initial-value: 0%;
+}

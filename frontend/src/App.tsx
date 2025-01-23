@@ -4,6 +4,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import styles from "./app.module.css";
 
 import Editor from "./editor/Editor";
+import Header from "./Header";
 import MonitorsPanel from "./monitors/MonitorsPanel";
 import OutputPanel from "./output/OutputPanel";
 
@@ -35,7 +36,7 @@ export default function App() {
 
     return (
         <div className={styles.main} >
-            <header>Playground</header>
+            <Header />
             <PanelGroup direction="horizontal">
                 <Panel>
                     <Editor autoFocus={true} source={source} setSource={setSource} />
