@@ -342,6 +342,29 @@ static int vgs_token_is_string(const struct VGSParserToken *token, const char *s
         && str[token->length] == '\0';
 }
 
+static void vgs_token_span(
+    const struct VGSParser *parser,
+    const struct VGSParserToken *token,
+    size_t *line,
+    size_t *column
+) {
+    const char *source = parser->source;
+
+    *line = 1;
+
+    for (;;) {
+        const char *sep = strchr(source, '\n');
+
+        if (sep == NULL || (sep - parser->source) > token->position) {
+            *column = token->position - (source - parser->source) + 1;
+            break;
+        }
+
+        ++*line;
+        source = sep + 1;
+    }
+}
+
 static av_printf_format(4, 5)
 void vgs_log_invalid_token(
     void *log_ctx,
@@ -352,21 +375,9 @@ void vgs_log_invalid_token(
 ) {
     va_list ap;
     char extra[256];
-    size_t line = 1, column = 0;
-    const char *source = parser->source;
+    size_t line, column;
 
-    // Determine line/column of the token.
-    for (;;) {
-        const char *sep = strchr(source, '\n');
-
-        if (sep == NULL || (sep - parser->source) > token->position) {
-            column = token->position - (source - parser->source) + 1;
-            break;
-        }
-
-        line++;
-        source = sep + 1;
-    }
+    vgs_token_span(parser, token, &line, &column);
 
     // Format extra message.
     va_start(ap, extra_fmt);
@@ -648,10 +659,17 @@ static int vgs_parse_numeric_argument(
         ret = AVERROR(EINVAL);
     }
 
-    if (ret == 0)
-        arg->metadata = metadata ? strdup(lexeme) : NULL;
-    else
+    if (ret == 0) {
+        if (metadata) {
+            size_t line, column;
+            vgs_token_span(parser, &token, &line, &column);
+            arg->metadata = av_asprintf("[%zu:%zu] %s", line, column, lexeme);
+        } else {
+            arg->metadata = NULL;
+        }
+    } else {
         memset(arg, 0, sizeof(*arg));
+    }
 
     if (lexeme != stack_buf)
         av_freep(&lexeme);
