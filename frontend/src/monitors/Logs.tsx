@@ -24,9 +24,9 @@ function makeLogEvent(key: number, logEvent: LogEvent) {
 
     const className = logEvent.level < 32 ? styles.error : styles.info;
 
-    const showVar = (varName: string, value: number, fixed?: number) => (
+    const showVar = (varName: string, label: string, value: number, fixed?: number) => (
         isFinite(value) && <>
-            <span data-field="variable" data-name={varName}>
+            <span data-field="variable" title={label} data-name={varName}>
                 {fixed ? value.toFixed(fixed) : value}
             </span>
         </>
@@ -34,17 +34,22 @@ function makeLogEvent(key: number, logEvent: LogEvent) {
 
     return (
         <div key={key} className={`${styles.event} ${className}`}>
-            <span data-field="level" aria-label={levelName}>●</span>
+            {
+                logEvent.repeat > 1
+                    ? <span
+                        data-field="repeat"
+                        title="Number of times the message was repeated"
+                      >
+                          {logEvent.repeat}
+                      </span>
+                    : <span data-field="level" aria-label={levelName}>●</span>
+            }
 
             <span data-field="message">{logEvent.message}</span>
 
-            { logEvent.repeat > 1
-                && <span data-field="repeat">{logEvent.repeat}</span>
-            }
+            { showVar("n", "(n) Frame number", logEvent.varN) }
 
-            { showVar("n", logEvent.varN) }
-
-            { showVar("t", logEvent.varT, 2) }
+            { showVar("t", "(t) Playback time", logEvent.varT, 2) }
         </div>
     );
 }

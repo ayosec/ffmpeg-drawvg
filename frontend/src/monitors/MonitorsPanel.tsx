@@ -60,6 +60,22 @@ export default function MonitorsPanel() {
                 max = change.setMax;
 
             if (change.addRows) {
+                // Combine oldest event in `addRows` and newest event in `rows`
+                // if they have the same contents.
+                const a = change.addRows[0];
+                const b = rows.at(-1);
+                if (a && b && "logEvent" in a && "logEvent" in b) {
+                    const repeated =
+                        a.logEvent.className == b.logEvent.className
+                            && a.logEvent.message == b.logEvent.message
+                            && a.logEvent.level == b.logEvent.level;
+
+                    if (repeated) {
+                        rows.pop();
+                        a.logEvent.repeat += b.logEvent.repeat;
+                    }
+                }
+
                 const toRemove = (change.addRows.length + rows.length) - max;
                 const prevRows = toRemove > 0 ? rows.slice(toRemove) : rows;
                 rows = [ ...prevRows, ...change.addRows];

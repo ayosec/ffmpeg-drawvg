@@ -77,6 +77,9 @@
         gap: 0.5ch;
     }
 
+    .info { --level-bg: light-dark(#def0fa, #305070); }
+    .error { --level-bg: light-dark(#fad0d0, #710); }
+
     [data-field="level"] {
         position: relative;
         &:before { z-index: 1; }
@@ -84,22 +87,27 @@
 
     [data-field="message"] {
         flex: 1;
+        word-break: break-all;
+    }
+
+    [data-field="level"] {
+        color: var(--level-bg);
     }
 
     [data-field="repeat"] {
-        color: black;
-        background: #e0e0e0;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
 
-        text-align: center;
+        color: light-dark(black, white);
+        background: var(--level-bg);
 
-        line-height: 1rem;
-        min-width: 1rem;
-        font-size: 0.7rem;
-        border-radius: 50%;
+        height: 0.80rem;
+        min-width: 0.80rem;
+        font-size: 0.6rem;
+        padding: 0 2px;
+        border-radius: 25%;
     }
-
-    .info { [data-field="level"] { color: hsl(200, 70%, 30%); } }
-    .error { [data-field="level"] { color: hsl(0, 70%, 50%); } }
 
     .lostEvents {
         padding: 0.5ch;
@@ -116,12 +124,5 @@
 
         &[data-name="n"] { color: light-dark(#005, #aaf); }
         &[data-name="t"] { color: light-dark(#050, #afa); }
-    }
-
-    &:hover {
-        [data-field="variable"]:before {
-            content: attr(data-name) " = ";
-            font-style: italic;
-        }
     }
 }
