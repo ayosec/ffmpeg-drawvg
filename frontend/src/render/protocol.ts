@@ -7,6 +7,7 @@ export interface StateChange {
 
 export type Action
     = "GetLogs"
+    | "GetResourceUsage"
     | "NextFrame"
     | "PreviousFrame"
     | "ResetPlayback"
@@ -34,8 +35,28 @@ export interface LogsData {
     events: LogEvent[];
 }
 
+
+export interface RenderTime {
+    max: number;
+    min: number;
+    sum: number;
+    frameStart: number;
+    frameCount: number;
+}
+
+export interface MemoryUsage {
+    totalFreeSpace: number;
+    totalInUseSpace: number;
+}
+
+export interface ResourceUsage {
+    renderTime?: RenderTime;
+    memoryUsage?: MemoryUsage;
+}
+
 export type Response
     = { init: "ok"; }
     | { requestId: number; failure: string; }
     | { requestId: number; logs: LogsData; }
+    | { requestId: number; resourceUsage: ResourceUsage; }
     ;

@@ -6,21 +6,22 @@ const WASM_MODULE_URL = import.meta.env.BASE_URL + "wasm-backend/play.mjs";
 type ResponseSender = (response: Response) => void;
 
 interface FFI {
+    logsSend(requestId: number): void;
+
+    memstats(): number;
+
     programNew(source: string): number;
 
     programFree(id: number): null;
 
     programRun(
         programId: number,
-        reportMemStats: number,
         width: number,
         height: number,
         varT: number,
         varN: number,
         varDuration: number,
     ): number;
-
-    logsSend(requestId: number): void;
 };
 
 class OwnedBuffer {
@@ -47,7 +48,6 @@ export class Program {
     constructor(private machine: Machine, private id: number) {}
 
     run(
-        reportMemStats: boolean,
         width: number,
         height: number,
         varT: number,
@@ -56,7 +56,6 @@ export class Program {
     ): OwnedBuffer | null {
         const addr = this.machine.ffi.programRun(
             this.id,
-            reportMemStats ? 1 : 0,
             width,
             height,
             varT,
@@ -89,10 +88,11 @@ export class Machine {
     constructor(readonly wasmInstance: any, readonly responseSender: ResponseSender) {
         const N = "number";
         this.ffi = {
+            logsSend: wasmInstance.cwrap("backend_logs_send", null, [N]),
+            memstats: wasmInstance.cwrap("backend_memstats", N, []),
             programNew: wasmInstance.cwrap("backend_program_new", N, ["string"]),
             programFree: wasmInstance.cwrap("backend_program_free", null, [N]),
             programRun: wasmInstance.cwrap("backend_program_run", N, Array(6).fill(N)),
-            logsSend: wasmInstance.cwrap("backend_logs_send", null, [N]),
         };
     }
 
@@ -145,6 +145,15 @@ export class Machine {
         }
 
         this.responseSender({ requestId, logs: { lostEvents, events } });
+    }
+
+    memStats() {
+        const bufOffset = this.ffi.memstats();
+        const buffer = new DataView(this.wasmInstance["HEAPU8"].buffer, bufOffset, 8);
+        return {
+            totalFreeSpace: buffer.getInt32(0, true),
+            totalInUseSpace: buffer.getInt32(4, true),
+        };
     }
 }
 

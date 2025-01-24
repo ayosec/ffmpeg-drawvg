@@ -109,6 +109,7 @@ class DrawContext {
 
 interface State {
     drawContext?: DrawContext;
+    renderTime?: protocol.RenderTime;
     machine?: Machine;
     program?: Program;
     stateChanges?: protocol.StateChange[],
@@ -227,7 +228,9 @@ function draw(timestamp?: number) {
     const W = resizeRequest ? resizeRequest[0] : canvas.width;
     const H = resizeRequest ? resizeRequest[1] : canvas.height;
 
-    const data = program.run(false /*N % 25 == 0*/, W, H, T, N, D);
+    const startTime = performance.now();
+
+    const data = program.run(W, H, T, N, D);
 
     if (data == null)
         return;
@@ -241,6 +244,8 @@ function draw(timestamp?: number) {
         gl.UNSIGNED_BYTE,
         data.get(),
     );
+
+    const renderTime = performance.now() - startTime;
 
     data.free();
 
@@ -259,6 +264,24 @@ function draw(timestamp?: number) {
     if (drawContext.isPlaying()) {
         requestRedraw();
     }
+
+
+    // Render time stats.
+
+    const timeTracker = (
+        STATE.renderTime ??= {
+            max: -Infinity,
+            min: Infinity,
+            sum: 0,
+            frameStart: N,
+            frameCount: 0,
+        }
+    );
+
+    if (renderTime > timeTracker.max) timeTracker.max = renderTime;
+    if (renderTime < timeTracker.min) timeTracker.min = renderTime;
+    timeTracker.sum += renderTime;
+    timeTracker.frameCount++;
 
 }
 
@@ -308,6 +331,10 @@ function handleAction(requestId: number, action: protocol.Action) {
             machine.ffi.logsSend(requestId);
             break;
 
+        case "GetResourceUsage":
+            sendResourceUsage(requestId);
+            break;
+
         case "NextFrame":
             drawContext.playbackNextFrame();
             requestRedraw();
@@ -326,6 +353,17 @@ function handleAction(requestId: number, action: protocol.Action) {
         default:
             responseSender({ requestId, failure: `Invalid action: ${JSON.stringify(action)}` });
     }
+}
+
+function sendResourceUsage(requestId: number) {
+
+    const { machine, renderTime } = STATE;
+
+    STATE.renderTime = undefined;
+
+    const memoryUsage = machine?.memStats();
+
+    responseSender({ requestId, resourceUsage: { memoryUsage, renderTime } });
 }
 
 function responseSender(response: protocol.Response) {

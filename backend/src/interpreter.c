@@ -20,19 +20,16 @@ static void *log_ctx() {
     return &inst;
 }
 
-static void memstats() {
-    struct mallinfo mi = mallinfo();;
+EMSCRIPTEN_KEEPALIVE
+int *backend_memstats() {
+    static int shared_buffer[2] = { 0, 0 };
 
-    EM_ASM({
-        const memTracker = Module["memTracker"];
-        if (typeof memTracker === "function") {
-            memTracker({
-               maxTotalAllocatedSpace: $0,
-               totalAllocatedSpace: $1,
-               totalFreeSpace: $2,
-           });
-        }
-    }, mi.usmblks, mi.uordblks, mi.fordblks);
+    struct mallinfo mi = mallinfo();
+
+    shared_buffer[0] = mi.fordblks;     // totalFreeSpace
+    shared_buffer[1] = mi.uordblks;     // totalInUseSpace
+
+    return shared_buffer;
 }
 
 // Parse a VGS script and return a program. The caller must free the
@@ -70,7 +67,6 @@ void backend_program_free(struct VGSProgram *program) {
 EMSCRIPTEN_KEEPALIVE
 void* backend_program_run(
     const struct VGSProgram *program,
-    int report_mem_stats,
     int width,
     int height,
     double var_t,
@@ -116,9 +112,6 @@ void* backend_program_run(
     cairo_surface_destroy(surface);
 
     vgs_eval_state_free(&eval_state);
-
-    if (report_mem_stats)
-        memstats();
 
     CurrentFrameVariables.n = NAN;
     CurrentFrameVariables.t = NAN;

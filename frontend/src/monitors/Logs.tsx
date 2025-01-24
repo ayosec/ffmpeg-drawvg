@@ -47,9 +47,9 @@ function makeLogEvent(key: number, logEvent: LogEvent) {
 
             <span data-field="message">{logEvent.message}</span>
 
-            { showVar("n", "(n) Frame number", logEvent.varN) }
+            { showVar("n", "Frame number (n)", logEvent.varN) }
 
-            { showVar("t", "(t) Playback time", logEvent.varT, 2) }
+            { showVar("t", `Timestamp (t = ${logEvent.varT.toFixed(4)})`, logEvent.varT, 2) }
         </div>
     );
 }
