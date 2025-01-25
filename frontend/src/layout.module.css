@@ -23,19 +23,23 @@
     border-bottom: var(--toolbar-border-width) solid var(--panel-border-color);
 }
 
-.icon {
+.select {
+    appearance: none;
+    position: relative;
+    display: inline-flex;
+    place-items: center;
+
+    &:is(select) {
+        padding: 0 1ch;
+    }
+}
+
+.button {
     display: inline-flex;
     justify-content: center;
     align-items: center;
 
-    color: var(--icon-button-fg);
-    background: var(--icon-button-bg);
-
     transition: background-color 200ms ease-out;
-
-    border: 0;
-    box-shadow: 0 0 3px var(--icon-button-shadow);
-    border-radius: 10%;
 
     padding: 0.75ch;
 
@@ -43,12 +47,26 @@
         margin-right: 1ch;
     }
 
-    &:hover {
-        background-color: var(--toolbar-item-focus-bg);
-    }
-
     & > svg {
-        height: var(--icon-size, 20px);
-        width: var(--icon-size, 20px);
+        height: var(--button-size, 20px);
+        width: var(--button-size, 20px);
+    }
+}
+
+.select, .button {
+    color: var(--icon-button-fg);
+    background: var(--icon-button-bg);
+
+    border: 0;
+    border-radius: 10%;
+
+    outline: none;
+
+    transition: box-shadow 200ms ease-out;
+    box-shadow: 0 0 3px var(--icon-button-shadow);
+
+    &:hover,
+    &:focus {
+        box-shadow: 0 0 6px var(--icon-button-shadow-focus);
     }
 }

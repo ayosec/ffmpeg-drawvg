@@ -1,10 +1,12 @@
 import { useCallback, useContext, useEffect, useReducer, useState } from "react";
 
 import BackendContext from "../backend";
-import IconButton from "../IconButton";
-import Logs from "./Logs";
 import { LogEvent, MemoryUsage, RenderTime, ResourceUsage } from "../render/protocol";
 import { usePageVisible } from "../hooks";
+
+import IconButton from "../IconButton";
+import Logs from "./Logs";
+import Select from "../Select";
 
 import { FaTrash } from "react-icons/fa";
 import { IoTimerOutline } from "react-icons/io5";
@@ -31,14 +33,14 @@ interface Content {
     memoryUsageItems: MemoryUsage[];
     renderTimeItems: RenderTime[];
     rows: Row[];
-    max: number;
+    limit: number;
 }
 
 interface RowChange {
     reset?: true,
     addRows?: Row[];
     resourceUsage?: ResourceUsage;
-    setMax?: number;
+    setLimit?: number;
 };
 
 enum Tab {
@@ -47,11 +49,36 @@ enum Tab {
     MemoryUsage,
 }
 
-function updateContentImpl(content: Content, change: RowChange): Content {
-    let { memoryUsageItems, renderTimeItems, rows, max } = content;
+function addToList<T>(limit: number, list: T[], newItems: T[]): T[] {
+    const nl = newItems.length;
 
-    if (change.setMax)
-        max = change.setMax;
+    if (nl === limit)
+        return newItems;
+
+    if (nl > limit)
+        return newItems.slice(nl - limit);
+
+    const needRemove = list.length + nl - limit;
+    if (needRemove < 1)
+        return [...list, ...newItems];
+
+    return [...list.slice(needRemove), ...newItems];
+}
+
+function truncateList<T>(limit: number, items: T[]): T[] {
+    const needRemove = items.length - limit;
+    return needRemove > 0 ? items.slice(needRemove) : items;
+}
+
+function updateContentImpl(content: Content, change: RowChange): Content {
+    let { memoryUsageItems, renderTimeItems, rows, limit } = content;
+
+    if (change.setLimit) {
+        limit = change.setLimit;
+        memoryUsageItems = truncateList(limit, memoryUsageItems);
+        renderTimeItems = truncateList(limit, renderTimeItems);
+        rows = truncateList(limit, rows);
+    }
 
     if (change.addRows) {
         // Combine oldest event in `addRows` and newest event in `rows`
@@ -70,9 +97,7 @@ function updateContentImpl(content: Content, change: RowChange): Content {
             }
         }
 
-        const toRemove = (change.addRows.length + rows.length) - max;
-        const prevRows = toRemove > 0 ? rows.slice(toRemove) : rows;
-        rows = [ ...prevRows, ...change.addRows];
+        rows = addToList(limit, rows, change.addRows);
     }
 
     if (change.resourceUsage) {
@@ -85,24 +110,31 @@ function updateContentImpl(content: Content, change: RowChange): Content {
                 || last.totalFreeSpace != memoryUsage.totalFreeSpace
                 || last.totalInUseSpace != memoryUsage.totalInUseSpace
             ) {
-                memoryUsageItems.push(memoryUsage);
-                if (memoryUsageItems.length > max)
-                    memoryUsageItems.splice(0, memoryUsageItems.length - max);
+                memoryUsageItems = addToList(limit, memoryUsageItems, [memoryUsage]);
             }
         }
 
-        if (renderTime !== undefined) {
-            renderTimeItems.push(renderTime);
-            if (renderTimeItems.length > max)
-                renderTimeItems.splice(0, renderTimeItems.length - max);
-        }
+        if (renderTime !== undefined)
+            renderTimeItems = addToList(limit, renderTimeItems, [renderTime]);
     }
 
     if (change.reset)
         rows = [];
 
-    return { memoryUsageItems, renderTimeItems, rows, max };
+    // Reuse the same object if there are no changes.
+    if (
+        content.limit == limit
+        && Object.is(content.renderTimeItems, renderTimeItems)
+        && Object.is(content.memoryUsageItems, memoryUsageItems)
+        && Object.is(content.rows, rows)
+    ) {
+        return content;
+    }
+
+    return { memoryUsageItems, renderTimeItems, rows, limit };
 }
+
+const LIMIT_OPTIONS = [ 10, 100, 500, 1000 ];
 
 export default function MonitorsPanel() {
 
@@ -116,8 +148,13 @@ export default function MonitorsPanel() {
         memoryUsageItems: [],
         renderTimeItems: [],
         rows: [],
-        max: DEFAULT_LIMIT,
+        limit: DEFAULT_LIMIT,
     });
+
+    const setLimitHandler = useCallback(
+        (value: number) => { updateContent({ setLimit: value }) },
+        [ updateContent ],
+    );
 
     const getDataFromBackend = useCallback(() => {
         backend.sendAction("GetLogs", (response) => {
@@ -187,10 +224,6 @@ export default function MonitorsPanel() {
     return (
         <div className={styles.monitors}>
             <div className={styles.toolbar}>
-                <div className={styles.actions}>
-                    <IconButton icon={FaTrash} onClick={clear} label="Clear" />
-                </div>
-
                 <div role="tablist" className={styles.tabs}>
                     <ButtonTab tab={Tab.Logs}>
                         <LuLogs /> Logs
@@ -203,6 +236,17 @@ export default function MonitorsPanel() {
                     <ButtonTab tab={Tab.MemoryUsage}>
                         <PiMemoryLight /> Memory Usage
                     </ButtonTab>
+                </div>
+
+                <div className={styles.actions}>
+                    <Select
+                        title="Events limit"
+                        value={content.limit}
+                        onChange={setLimitHandler}
+                        options={ LIMIT_OPTIONS }
+                    />
+
+                    <IconButton icon={FaTrash} onClick={clear} label="Clear" />
                 </div>
             </div>
 

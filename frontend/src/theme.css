@@ -18,6 +18,7 @@
     --icon-button-fg: light-dark(#222, #ddd);
     --icon-button-bg: light-dark(#fff, #111);
     --icon-button-shadow: light-dark(#444, #444);
+    --icon-button-shadow-focus: light-dark(#007, #77f);
 
     --tab-selected-fg: light-dark(#24f, #79f);
     --tab-selected-bg: var(--toolbar-bg);

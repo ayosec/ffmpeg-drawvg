@@ -16,7 +16,7 @@
     padding: 1ch;
 
     & > div {
-        --icon-size: 20px;
+        --button-size: 20px;
 
         display: inline-flex;
         height: 30px;

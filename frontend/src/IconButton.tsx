@@ -12,7 +12,7 @@ export default function IconButton({ icon, label, onClick }: Props) {
     return (
         <button
             aria-label={label}
-            className={styles.icon}
+            className={styles.button}
             onClick={onClick}
         >
             { icon({ size: "10px"}) }

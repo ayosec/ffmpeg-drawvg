@@ -23,7 +23,7 @@ html, body, #root {
 
         padding: 0.5ch 1ch;
         border-radius: 0.5ch;
-        transform: translateY(110%);
+        transform: translateY(2rem);
 
         background: black;
         color: white;

@@ -7,29 +7,36 @@
 
 .toolbar {
     composes: toolbar from "../layout.module.css";
-    justify-content: flex-start;
+    justify-content: space-between;
     padding: 0;
     place-items: center;
 
     white-space: nowrap;
 }
 
-.actions {
-    --icon-size: 10px;
-
-    padding: 0 1ch;
-    border-right: var(--toolbar-border-width) solid var(--panel-border-color);
-}
-
 .actions,
 .tabs {
     display: flex;
     flex-direction: row;
-    align-items: center;
+}
+
+.actions {
+    --button-size: 10px;
+
+    padding: 0 1ch;
+    border-left: var(--toolbar-border-width) solid var(--panel-border-color);
+
+    gap: 0.5ch;
+    align-items: stretch;
+
+    select {
+        text-align: right;
+    }
 }
 
 .tabs {
     height: 100%;
+    align-items: center;
 
     & > button {
         padding: 1ch 2ch;
