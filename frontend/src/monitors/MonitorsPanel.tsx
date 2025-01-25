@@ -118,8 +118,11 @@ function updateContentImpl(content: Content, change: RowChange): Content {
             renderTimeItems = addToList(limit, renderTimeItems, [renderTime]);
     }
 
-    if (change.reset)
+    if (change.reset) {
+        memoryUsageItems = [];
+        renderTimeItems = [];
         rows = [];
+    }
 
     // Reuse the same object if there are no changes.
     if (
