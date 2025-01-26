@@ -36,21 +36,18 @@ export interface LogsData {
 }
 
 
-export interface RenderTime {
-    max: number;
-    min: number;
-    sum: number;
-    frameStart: number;
-    frameCount: number;
-}
-
 export interface MemoryUsage {
     totalFreeSpace: number;
     totalInUseSpace: number;
 }
 
+export interface RenderTimeChunk {
+    startFrame: number;
+    data: Float32Array;
+}
+
 export interface ResourceUsage {
-    renderTime?: RenderTime;
+    renderTimeChunk?: RenderTimeChunk;
     memoryUsage?: MemoryUsage;
 }
 

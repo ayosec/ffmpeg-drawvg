@@ -1,12 +1,14 @@
 import { useCallback, useContext, useEffect, useReducer, useState } from "react";
 
 import BackendContext from "../backend";
-import { LogEvent, MemoryUsage, RenderTime, ResourceUsage } from "../render/protocol";
+import { LogEvent, MemoryUsage, RenderTimeChunk, ResourceUsage } from "../render/protocol";
 import { usePageVisible } from "../hooks";
 
 import IconButton from "../IconButton";
 import Logs from "./Logs";
+import RenderTimeChart from "./RenderTimeChart";
 import Select from "../Select";
+import SerialNumber from "./serial";
 
 import { FaTrash } from "react-icons/fa";
 import { IoTimerOutline } from "react-icons/io5";
@@ -19,11 +21,6 @@ const GET_LOGS_FREQ = 1000 / 2;
 
 const DEFAULT_LIMIT = 100;
 
-const SerialNumber = {
-    _last: Math.round(performance.now()),
-    next() { return ++this._last; },
-};
-
 export type Row
     = { key: number; lostEvents: number; }
     | { key: number; logEvent: LogEvent; }
@@ -31,7 +28,7 @@ export type Row
 
 interface Content {
     memoryUsageItems: MemoryUsage[];
-    renderTimeItems: RenderTime[];
+    renderTimeChunks: RenderTimeChunk[];
     rows: Row[];
     limit: number;
 }
@@ -71,7 +68,7 @@ function truncateList<T>(limit: number, items: T[]): T[] {
 }
 
 function updateContentImpl(content: Content, change: RowChange): Content {
-    let { memoryUsageItems, renderTimeItems, rows, limit } = content;
+    let { memoryUsageItems, renderTimeChunks: renderTimeItems, rows, limit } = content;
 
     if (change.setLimit) {
         limit = change.setLimit;
@@ -101,7 +98,7 @@ function updateContentImpl(content: Content, change: RowChange): Content {
     }
 
     if (change.resourceUsage) {
-        const { memoryUsage, renderTime } = change.resourceUsage;
+        const { memoryUsage, renderTimeChunk: renderTimes } = change.resourceUsage;
 
         if (memoryUsage !== undefined) {
             // Add the item if it is different to the last one.
@@ -114,8 +111,8 @@ function updateContentImpl(content: Content, change: RowChange): Content {
             }
         }
 
-        if (renderTime !== undefined)
-            renderTimeItems = addToList(limit, renderTimeItems, [renderTime]);
+        if (renderTimes !== undefined && renderTimes.data.length > 0)
+            renderTimeItems = addToList(limit, renderTimeItems, [ renderTimes ]);
     }
 
     if (change.reset) {
@@ -127,14 +124,14 @@ function updateContentImpl(content: Content, change: RowChange): Content {
     // Reuse the same object if there are no changes.
     if (
         content.limit == limit
-        && Object.is(content.renderTimeItems, renderTimeItems)
+        && Object.is(content.renderTimeChunks, renderTimeItems)
         && Object.is(content.memoryUsageItems, memoryUsageItems)
         && Object.is(content.rows, rows)
     ) {
         return content;
     }
 
-    return { memoryUsageItems, renderTimeItems, rows, limit };
+    return { memoryUsageItems, renderTimeChunks: renderTimeItems, rows, limit };
 }
 
 const LIMIT_OPTIONS = [ 10, 100, 500, 1000 ];
@@ -149,7 +146,7 @@ export default function MonitorsPanel() {
 
     const [ content, updateContent ] = useReducer(updateContentImpl, {
         memoryUsageItems: [],
-        renderTimeItems: [],
+        renderTimeChunks: [],
         rows: [],
         limit: DEFAULT_LIMIT,
     });
@@ -213,7 +210,7 @@ export default function MonitorsPanel() {
             break;
 
         case Tab.RenderTime:
-            currentTab = <pre>{JSON.stringify(content.renderTimeItems, null, 2)}</pre>;
+            currentTab = <RenderTimeChart chunks={content.renderTimeChunks} />;
             break;
 
         case Tab.MemoryUsage:

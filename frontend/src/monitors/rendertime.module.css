@@ -1,0 +1,25 @@
+.renderTime {
+    overflow: hidden;
+    height: 100%;
+}
+
+.dataRows {
+
+    font-size: 0.9rem;
+    border-collapse: collapse;
+
+    thead {
+        border-bottom: 1px solid #777;
+    }
+
+    th, td:first-child {
+        color: light-dark(#555, #aaa);
+        font-weight: bold;
+    }
+
+    td, th {
+        padding: 0.2ch 1ch;
+        text-align: right;
+    }
+
+}

@@ -1,7 +1,9 @@
-import styles from "./monitors.module.css";
+import { useLayoutEffect, useRef } from "react";
+
 import { LogEvent } from "../render/protocol";
 import { Row } from "./MonitorsPanel";
-import { useLayoutEffect, useRef } from "react";
+
+import styles from "./logs.module.css";
 
 interface Props {
     rows: Row[];

@@ -1,0 +1,63 @@
+.logs {
+    overflow: auto;
+    height: 100%;
+
+    font-family: monospace;
+    font-size: 0.8rem;
+
+    .event {
+        display: flex;
+        align-items: flex-start;
+        padding: 0.3ch 0.5ch;
+        gap: 0.5ch;
+    }
+
+    .info { --level-bg: light-dark(#def0fa, #305070); }
+    .error { --level-bg: light-dark(#fad0d0, #710); }
+
+    [data-field="level"] {
+        position: relative;
+        &:before { z-index: 1; }
+    }
+
+    [data-field="message"] {
+        flex: 1;
+        word-break: break-all;
+    }
+
+    [data-field="level"] {
+        color: var(--level-bg);
+    }
+
+    [data-field="repeat"] {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+
+        color: light-dark(black, white);
+        background: var(--level-bg);
+
+        height: 0.80rem;
+        min-width: 0.80rem;
+        font-size: 0.6rem;
+        padding: 0 2px;
+        border-radius: 25%;
+    }
+
+    .lostEvents {
+        padding: 0.5ch;
+
+        color: light-dark(black, white);
+        background: light-dark(#fee, #422);
+        border: solid light-dark(#f77, #944);
+        border-width: 1px 0;
+    }
+
+    [data-field="variable"] {
+        display: inline-block;
+        padding-left: 1.5ch;
+
+        &[data-name="n"] { color: light-dark(#005, #aaf); }
+        &[data-name="t"] { color: light-dark(#050, #afa); }
+    }
+}

@@ -107,9 +107,28 @@ class DrawContext {
     }
 }
 
+const RenderTimeBuffer = {
+    array: new Float32Array(512),
+    count: 0,
+    startFrame: NaN,
+
+    add(frameNumber: number, value: number) {
+        if (this.count === 0)
+            this.startFrame = frameNumber;
+
+        if (this.count < this.array.length)
+            this.array[this.count++] = value;
+    },
+
+    dump() {
+        const data = this.array.slice(0, this.count);
+        this.count = 0;
+        return { startFrame: this.startFrame, data };
+    },
+};
+
 interface State {
     drawContext?: DrawContext;
-    renderTime?: protocol.RenderTime;
     machine?: Machine;
     program?: Program;
     stateChanges?: protocol.StateChange[],
@@ -266,22 +285,7 @@ function draw(timestamp?: number) {
     }
 
 
-    // Render time stats.
-
-    const timeTracker = (
-        STATE.renderTime ??= {
-            max: -Infinity,
-            min: Infinity,
-            sum: 0,
-            frameStart: N,
-            frameCount: 0,
-        }
-    );
-
-    if (renderTime > timeTracker.max) timeTracker.max = renderTime;
-    if (renderTime < timeTracker.min) timeTracker.min = renderTime;
-    timeTracker.sum += renderTime;
-    timeTracker.frameCount++;
+    RenderTimeBuffer.add(N, renderTime);
 
 }
 
@@ -357,13 +361,12 @@ function handleAction(requestId: number, action: protocol.Action) {
 
 function sendResourceUsage(requestId: number) {
 
-    const { machine, renderTime } = STATE;
+    const { machine } = STATE;
 
-    STATE.renderTime = undefined;
-
+    const renderTimeChunk = RenderTimeBuffer.dump();
     const memoryUsage = machine?.memStats();
 
-    responseSender({ requestId, resourceUsage: { memoryUsage, renderTime } });
+    responseSender({ requestId, resourceUsage: { memoryUsage, renderTimeChunk } });
 }
 
 function responseSender(response: protocol.Response) {
