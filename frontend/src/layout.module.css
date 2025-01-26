@@ -67,6 +67,6 @@
 
     &:hover,
     &:focus {
-        box-shadow: 0 0 6px var(--icon-button-shadow-focus);
+        box-shadow: 0 0 9px var(--icon-button-shadow-focus);
     }
 }

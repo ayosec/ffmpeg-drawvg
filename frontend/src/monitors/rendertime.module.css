@@ -4,9 +4,23 @@
 }
 
 .dataRows {
+    width: 100%;
 
     font-size: 0.9rem;
+
     border-collapse: collapse;
+    border-spacing: 0;
+
+    --heatmap-border-color: light-dark(#aaa, #777);
+
+    &, tr {
+        /* We have to set an height to use `height: 100%` on .heatGrid */
+        height: 1px;
+    }
+
+    tr:nth-child(even) {
+        background: light-dark(#fafafa, #262626);
+    }
 
     thead {
         border-bottom: 1px solid #777;
@@ -17,9 +31,93 @@
         font-weight: bold;
     }
 
-    td, th {
-        padding: 0.2ch 1ch;
-        text-align: right;
+    th:first-child, td:first-child {
+        border-right: 1px solid #777;
     }
 
+    td, th {
+        &:not(:last-child) {
+            padding: 0.2ch 1ch;
+        }
+
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .frameCount {
+        display: block;
+        font-size: 0.6rem;
+        text-align: center;
+    }
+
+}
+
+.heatMapRange {
+    border-left: 1px solid var(--heatmap-border-color);
+
+    .activeColumn {
+        display: none;
+    }
+
+    .fullRange {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 1ch;
+    }
+
+
+    .activeColumn, .fullRange {
+        font-size: 0.6rem;
+    }
+
+}
+
+.heatGrid {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+
+    --heatmap-hot: light-dark(#f55, #711);
+    --heatmap-cold: light-dark(#ff5, #770);
+
+    div {
+        box-sizing: border-box;
+        display: flex;
+
+        align-items: stretch;
+        justify-items: center;
+
+        margin: 0;
+        padding: 0;
+        height: 100%;
+
+        span {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            place-items: center;
+            border-left: 1px solid var(--heatmap-border-color);
+        }
+
+        &:hover span[data-items]:before {
+            content: attr(data-items);
+            font-size: 0.6rem;
+            width: 100%;
+            text-align: center;
+        }
+    }
+}
+
+.renderTime table:has(span[data-time-range]:hover) {
+    .heatMapRange {
+        text-align: left;
+
+        .fullRange {
+            display: none;
+        }
+
+        .activeColumn {
+            display: flex;
+        }
+    }
 }
