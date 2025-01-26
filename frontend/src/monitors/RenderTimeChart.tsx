@@ -17,10 +17,10 @@ function columnNumber(n: number) {
         value = Math.round(n);
     else if (n > 10)
         value = n.toFixed(1);
-    else if (n > 0.01)
+    else if (n > 0.1)
         value = n.toFixed(2);
     else
-        value = "≈ 0";
+        value = "< 0.1";
 
     return <td title={`${n} millisecons`}>{value}</td>;
 }
@@ -40,29 +40,37 @@ const ChunksKeys = {
 };
 
 function* dataRows(rowSize: number, chunks: RenderTimeChunk[]) {
+    // To produce the expected number of rows we have to consider the
+    // fractional part of `rowSize` (i.e. we cannot round its value).
+    //
+    // For example, if `rowSize` is `56.7`, some rows will have `56`
+    // items, and other rows will have `57`.
+
+    let nextFullRow = rowSize;
+    let totalFrames = 0;
+
     let dataRow = [];
     let key = undefined;
-    let frame = 0;
 
     for (const chunk of chunks) {
-        if (dataRow.length === 0) {
+        if (dataRow.length === 0)
             key = ChunksKeys.get(chunk.data);
-            frame = chunk.startFrame;
-        }
 
         for (const renderTime of chunk.data) {
-            frame++;
+            totalFrames++;
             dataRow.push(renderTime);
 
-            if (dataRow.length >= rowSize) {
-                yield { key: `${key}-${frame}`, dataRow };
+            if (totalFrames >= nextFullRow) {
+                yield { key: `${key}-${totalFrames}`, dataRow };
+
+                nextFullRow += rowSize;
                 dataRow = [];
             }
         }
     }
 
     if (dataRow.length > 0)
-        yield { key: `${key}-${frame}`, dataRow };
+        yield { key: `${key}-${totalFrames}`, dataRow };
 }
 
 function useTableRects() {
@@ -98,10 +106,10 @@ function useTableRects() {
 export default function RenderTimeChart({ chunks }: Props) {
     const [ rowHeight, tableBodyHeight, setContainerRef ] = useTableRects();
 
-    const numRows = Math.max(2, Math.floor(tableBodyHeight / Math.max(1, rowHeight)) - 1);
+    const numRows = Math.max(2, Math.floor(tableBodyHeight / Math.max(1, rowHeight)));
 
     const totalData = chunks.reduce((a, c) => c.data.length + a,  0);
-    const rowSize = Math.floor(Math.max(totalData / numRows, 5));
+    const rowSize = Math.max(totalData / numRows, 5);
 
     // Process data to determine the data in each row.
 
@@ -130,12 +138,12 @@ export default function RenderTimeChart({ chunks }: Props) {
 
     let frame = 0;
     const tbody = rows.map(row => {
-        const frames = `${frame} - ${frame + row.dataRow.length}`;
-        frame += row.dataRow.length;
+        const currentFrame = frame;
+        frame += row.dataRow.length + 1;
 
         return (
             <tr key={row.key}>
-                <td>{frames}</td>
+                <td aria-label={`Frames range (${currentFrame} - ${frame - 1})`}>{currentFrame}</td>
                 {columnNumber(row.min)}
                 {columnNumber(row.max)}
                 {columnNumber(row.sum / row.dataRow.length)}
@@ -148,7 +156,7 @@ export default function RenderTimeChart({ chunks }: Props) {
             <table className={styles.dataRows}>
                 <thead>
                     <tr>
-                        <th>Frames</th>
+                        <th>{" "}</th>
                         <th>Min.</th>
                         <th>Max.</th>
                         <th>Avg.</th>

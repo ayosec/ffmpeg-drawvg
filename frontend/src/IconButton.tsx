@@ -1,4 +1,4 @@
-import { IconType } from "react-icons";
+import { IconType } from "react-icons/lib";
 
 import styles from "./layout.module.css";
 

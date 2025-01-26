@@ -14,6 +14,7 @@
 
     justify-content: space-between;
     padding: 1ch;
+    gap: 3ch;
 
     & > div {
         --button-size: 20px;

@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useReducer, useState } from "react";
+import { memo, useCallback, useContext, useEffect, useReducer, useState } from "react";
 
 import BackendContext from "../backend";
 import { LogEvent, MemoryUsage, RenderTimeChunk, ResourceUsage } from "../render/protocol";
@@ -136,6 +136,10 @@ function updateContentImpl(content: Content, change: RowChange): Content {
 
 const LIMIT_OPTIONS = [ 10, 100, 500, 1000 ];
 
+const IconLogs = memo(LuLogs);
+const IconMemory = memo(PiMemoryLight);
+const IconTimer = memo(IoTimerOutline);
+
 export default function MonitorsPanel() {
 
     const pageVisible = usePageVisible();
@@ -152,7 +156,7 @@ export default function MonitorsPanel() {
     });
 
     const setLimitHandler = useCallback(
-        (value: number) => { updateContent({ setLimit: value }) },
+        (value: number) => { updateContent({ setLimit: value }); },
         [ updateContent ],
     );
 
@@ -226,15 +230,15 @@ export default function MonitorsPanel() {
             <div className={styles.toolbar}>
                 <div role="tablist" className={styles.tabs}>
                     <ButtonTab tab={Tab.Logs}>
-                        <LuLogs /> Logs
+                        <IconLogs /> Logs
                     </ButtonTab>
 
                     <ButtonTab tab={Tab.RenderTime}>
-                        <IoTimerOutline /> Render Time
+                        <IconTimer /> Render Time
                     </ButtonTab>
 
                     <ButtonTab tab={Tab.MemoryUsage}>
-                        <PiMemoryLight /> Memory Usage
+                        <IconMemory /> Memory Usage
                     </ButtonTab>
                 </div>
 
