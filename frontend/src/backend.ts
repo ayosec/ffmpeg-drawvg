@@ -106,6 +106,10 @@ document.addEventListener(
     () => Backend.setVisibility(!document.hidden),
 );
 
+(<any>window).renderWorkerDumpMemoryStats = () => {
+    Backend.sendAction("DumpMemoryStats");
+};
+
 const Context = createContext(Backend);
 
 export function BackendProvider({ children }: { children: React.ReactNode }) {

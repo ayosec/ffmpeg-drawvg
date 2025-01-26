@@ -1,7 +1,7 @@
 import { memo, useCallback, useContext, useEffect, useReducer, useState } from "react";
 
 import BackendContext from "../backend";
-import { LogEvent, MemoryUsage, RenderTimeChunk, ResourceUsage } from "../render/protocol";
+import { LogEvent, RenderTimeChunk, ResourceUsage } from "../render/protocol";
 import { usePageVisible } from "../hooks";
 
 import IconButton from "../IconButton";
@@ -13,7 +13,6 @@ import SerialNumber from "./serial";
 import { FaTrash } from "react-icons/fa";
 import { IoTimerOutline } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
-import { PiMemoryLight } from "react-icons/pi";
 
 import styles from "./monitors.module.css";
 
@@ -27,7 +26,6 @@ export type Row
     ;
 
 interface Content {
-    memoryUsageItems: MemoryUsage[];
     renderTimeChunks: RenderTimeChunk[];
     rows: Row[];
     limit: number;
@@ -43,7 +41,6 @@ interface RowChange {
 enum Tab {
     Logs,
     RenderTime,
-    MemoryUsage,
 }
 
 function addToList<T>(limit: number, list: T[], newItems: T[]): T[] {
@@ -68,12 +65,11 @@ function truncateList<T>(limit: number, items: T[]): T[] {
 }
 
 function updateContentImpl(content: Content, change: RowChange): Content {
-    let { memoryUsageItems, renderTimeChunks: renderTimeItems, rows, limit } = content;
+    let { renderTimeChunks: renderTimeChunks, rows, limit } = content;
 
     if (change.setLimit) {
         limit = change.setLimit;
-        memoryUsageItems = truncateList(limit, memoryUsageItems);
-        renderTimeItems = truncateList(limit, renderTimeItems);
+        renderTimeChunks = truncateList(limit, renderTimeChunks);
         rows = truncateList(limit, rows);
     }
 
@@ -98,46 +94,32 @@ function updateContentImpl(content: Content, change: RowChange): Content {
     }
 
     if (change.resourceUsage) {
-        const { memoryUsage, renderTimeChunk: renderTimes } = change.resourceUsage;
+        const { renderTimeChunk } = change.resourceUsage;
 
-        if (memoryUsage !== undefined) {
-            // Add the item if it is different to the last one.
-            const last = memoryUsageItems.at(-1);
-            if (last === undefined
-                || last.totalFreeSpace != memoryUsage.totalFreeSpace
-                || last.totalInUseSpace != memoryUsage.totalInUseSpace
-            ) {
-                memoryUsageItems = addToList(limit, memoryUsageItems, [memoryUsage]);
-            }
-        }
-
-        if (renderTimes !== undefined && renderTimes.data.length > 0)
-            renderTimeItems = addToList(limit, renderTimeItems, [ renderTimes ]);
+        if (renderTimeChunk !== undefined && renderTimeChunk.data.length > 0)
+            renderTimeChunks = addToList(limit, renderTimeChunks, [ renderTimeChunk ]);
     }
 
     if (change.reset) {
-        memoryUsageItems = [];
-        renderTimeItems = [];
+        renderTimeChunks = [];
         rows = [];
     }
 
     // Reuse the same object if there are no changes.
     if (
         content.limit == limit
-        && Object.is(content.renderTimeChunks, renderTimeItems)
-        && Object.is(content.memoryUsageItems, memoryUsageItems)
+        && Object.is(content.renderTimeChunks, renderTimeChunks)
         && Object.is(content.rows, rows)
     ) {
         return content;
     }
 
-    return { memoryUsageItems, renderTimeChunks: renderTimeItems, rows, limit };
+    return { renderTimeChunks, rows, limit };
 }
 
 const LIMIT_OPTIONS = [ 10, 100, 500, 1000 ];
 
 const IconLogs = memo(LuLogs);
-const IconMemory = memo(PiMemoryLight);
 const IconTimer = memo(IoTimerOutline);
 
 export default function MonitorsPanel() {
@@ -149,7 +131,6 @@ export default function MonitorsPanel() {
     const [ selectedTab, setSelectedTab ] = useState(Tab.Logs);
 
     const [ content, updateContent ] = useReducer(updateContentImpl, {
-        memoryUsageItems: [],
         renderTimeChunks: [],
         rows: [],
         limit: DEFAULT_LIMIT,
@@ -217,10 +198,6 @@ export default function MonitorsPanel() {
             currentTab = <RenderTimeChart chunks={content.renderTimeChunks} />;
             break;
 
-        case Tab.MemoryUsage:
-            currentTab = <pre>{JSON.stringify(content.memoryUsageItems, null, 2)}</pre>;
-            break;
-
         default:
             currentTab = selectedTab;
     }
@@ -235,10 +212,6 @@ export default function MonitorsPanel() {
 
                     <ButtonTab tab={Tab.RenderTime}>
                         <IconTimer /> Render Time
-                    </ButtonTab>
-
-                    <ButtonTab tab={Tab.MemoryUsage}>
-                        <IconMemory /> Memory Usage
                     </ButtonTab>
                 </div>
 

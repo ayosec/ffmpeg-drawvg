@@ -331,6 +331,10 @@ function handleAction(requestId: number, action: protocol.Action) {
     }
 
     switch (action) {
+        case "DumpMemoryStats":
+            console.log(machine.memStats());
+            break;
+
         case "GetLogs":
             machine.ffi.logsSend(requestId);
             break;
@@ -360,13 +364,9 @@ function handleAction(requestId: number, action: protocol.Action) {
 }
 
 function sendResourceUsage(requestId: number) {
-
-    const { machine } = STATE;
-
     const renderTimeChunk = RenderTimeBuffer.dump();
-    const memoryUsage = machine?.memStats();
 
-    responseSender({ requestId, resourceUsage: { memoryUsage, renderTimeChunk } });
+    responseSender({ requestId, resourceUsage: { renderTimeChunk } });
 }
 
 function responseSender(response: protocol.Response) {

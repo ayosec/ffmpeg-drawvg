@@ -6,7 +6,8 @@ export interface StateChange {
 }
 
 export type Action
-    = "GetLogs"
+    = "DumpMemoryStats"
+    | "GetLogs"
     | "GetResourceUsage"
     | "NextFrame"
     | "PreviousFrame"
@@ -36,11 +37,6 @@ export interface LogsData {
 }
 
 
-export interface MemoryUsage {
-    totalFreeSpace: number;
-    totalInUseSpace: number;
-}
-
 export interface RenderTimeChunk {
     startFrame: number;
     data: Float32Array;
@@ -48,7 +44,6 @@ export interface RenderTimeChunk {
 
 export interface ResourceUsage {
     renderTimeChunk?: RenderTimeChunk;
-    memoryUsage?: MemoryUsage;
 }
 
 export type Response
