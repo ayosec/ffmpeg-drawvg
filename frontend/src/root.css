@@ -10,22 +10,58 @@ html, body, #root {
     background: light-dark(white, #222);
 }
 
-[aria-label]:hover {
-    &:before {
-        font-size: 1rem;
-        content: attr(aria-label);
-        white-space: pre-wrap;
+#tooltip-floating-box {
+    display: none;
 
-        pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+
+    pointer-events: none;
+
+    white-space: pre-wrap;
+
+    font-size: 1rem;
+    padding: 0.5ch 1ch;
+    border-radius: 0.5ch;
+
+    &, &::before {
+        background: light-dark(black, #fff);
+        color: light-dark(white, black);
+        border: 1px solid black;
+    }
+
+    &::before {
+        display: block;
 
         position: absolute;
-        z-index: 1000;
+        left: calc(var(--arrow-left, 50%) - 0.5ch);
 
-        padding: 0.5ch 1ch;
-        border-radius: 0.5ch;
-        transform: translateY(2rem);
+        content: "";
+        width: 1ch;
+        height: 1ch;
 
-        background: black;
-        color: white;
+        transform: rotate(45deg);
     }
+
+    &[data-position="above"] {
+        margin-bottom: 1ch;
+
+        &::before {
+            top: calc(100% - 0.5ch);
+        }
+    }
+
+    &[data-position="below"] {
+        margin-top: 1ch;
+
+        &::before {
+            top: -0.5ch;
+        }
+    }
+}
+
+body:has([aria-label]:hover) #tooltip-floating-box {
+    display: unset;
 }

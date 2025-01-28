@@ -21,7 +21,8 @@ function formatNumber(n: number) {
 
 function columnNumber(n: number) {
     const value = formatNumber(n);
-    return <td aria-label={`${n.toFixed(4)} millisecons`}>{value}</td>;
+    const ariaLabel = Math.round(n * 1e6) % 1e3 > 0 ? `${n.toFixed(5)} millisecons` : undefined;
+    return <td aria-label={ariaLabel}>{value}</td>;
 }
 
 function HeatMapTimesHeader({ max, min, columns }: { max: number, min: number, columns: number }) {

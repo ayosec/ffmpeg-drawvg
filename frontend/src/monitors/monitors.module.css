@@ -21,7 +21,7 @@
 }
 
 .actions {
-    --button-size: 10px;
+    --button-size: 15px;
 
     padding: 0 1ch;
     border-left: var(--toolbar-border-width) solid var(--panel-border-color);

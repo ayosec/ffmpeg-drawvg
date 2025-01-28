@@ -10,7 +10,7 @@ import RenderTimeChart from "./RenderTimeChart";
 import Select from "../Select";
 import SerialNumber from "../serial";
 
-import { FaTrash } from "react-icons/fa";
+import { HiOutlineTrash } from "react-icons/hi2";
 import { IoTimerOutline } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 
@@ -253,7 +253,7 @@ export default function MonitorsPanel() {
                 <div className={styles.actions}>
                     {limitSetting}
 
-                    <IconButton icon={FaTrash} onClick={clear} label="Clear" />
+                    <IconButton icon={HiOutlineTrash} onClick={clear} label="Clear" />
                 </div>
             </div>
 
