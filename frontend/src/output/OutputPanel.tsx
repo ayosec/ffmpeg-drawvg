@@ -1,14 +1,14 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { BsFillSkipBackwardFill } from "react-icons/bs";
-import { HiLockClosed } from "react-icons/hi";
-import { IoCamera, IoExpand, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward, IoVideocam } from "react-icons/io5";
+import { IoCamera, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward, IoVideocam } from "react-icons/io5";
 
 import IconButton from "../IconButton";
 import RenderView from "./RenderView";
 import styles from "./output.module.css";
 
 import BackendContext from "../backend";
+import Select from "../Select";
 
 interface Props {
     source: string;
@@ -22,14 +22,10 @@ export default function OutputPanel({ source }: Props) {
 
     const [ fitRenderView, setFitRenderView ] = useState(true);
 
-    const lastFitRenderView = useRef(fitRenderView);
-
     // TODO: play backwards
     const [ playing, setPlaying ] = useState(false);
 
     const containerRef = useRef<HTMLDivElement|null>(null);
-
-    const canvasSizeInfoRef = useRef<HTMLDivElement|null>(null);
 
     const resizeHandler = useCallback(
         () => {
@@ -57,57 +53,33 @@ export default function OutputPanel({ source }: Props) {
         [ backend, playing ],
     );
 
-    useEffect(() => {
-        if (lastFitRenderView.current === fitRenderView
-            || canvasSizeInfoRef.current === null
-        ) {
-            return;
+    const configureCanvasSize = ([fit, cs]: [boolean, [number, number]]) => {
+        if (fit) {
+            setFitRenderView(true);
+        } else {
+            setFitRenderView(false);
+            setCanvasSize(cs);
         }
+    };
 
-        // When the `fitRenderView` option is modified, use a blink effect
-        // on the canvas size, so the user can see that the option affects
-        // its value.
-
-        lastFitRenderView.current = fitRenderView;
-
-        let animation: Animation|null = canvasSizeInfoRef.current.animate(
-            [
-              { opacity: "unset" },
-              { opacity: "0" },
-              { opacity: "unset" },
-            ], {
-              duration: 500,
-              easing: "ease",
-              iterations: 1,
-            });
-
-        animation.addEventListener("finish", () => { animation = null; });
-
-        return () => animation?.finish();
-    }, [ fitRenderView ]);
+    const canvasSizeOptions: [ [ boolean, [ number, number ] ], string ][] = [
+        [ [ true, canvasSize ], "Fit to panel size" ],
+        [ [ false, canvasSize ], "Keep this size" ],
+        [ [ false, [ 1024, 768 ] ], "1024×768" ],
+        [ [ false, [ 640, 480 ] ], "640×480" ],
+        [ [ false, [ 200, 200 ] ], "200×200" ],
+    ];
 
     return (
         <div className={styles.output}>
             <div className={styles.toolbar}>
                 <div>
-                    <IconButton
-                        icon={fitRenderView ? IoExpand : HiLockClosed}
-                        label={
-                            (
-                                fitRenderView
-                                    ? "Canvas size fits the panel"
-                                    : "Canvas size is fixed"
-                            ) + ".\nClick to toggle"
-                        }
-                        onClick={() => setFitRenderView(!fitRenderView)}
+                    <Select
+                        value={[fitRenderView, canvasSize]}
+                        valueLabel={canvasSize.join("×")}
+                        onChange={configureCanvasSize}
+                        options={canvasSizeOptions}
                     />
-
-                    <div
-                        ref={canvasSizeInfoRef}
-                        className={styles.canvasSize}
-                    >
-                        { canvasSize.join("×") }
-                    </div>
                 </div>
 
                 <div>

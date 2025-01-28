@@ -1,3 +1,4 @@
+import deepEqual from "fast-deep-equal";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import widgets from "./widgets.module.css";
@@ -55,7 +56,7 @@ export default function Select<T>({ title, value, valueLabel, options, onChange 
                 : selectRect.x + selectRect.width - optionsRect.width;
 
         o.style.left = `${left}px`;
-    }, [ open ])
+    }, [ open ]);
 
     return <>
         <button
@@ -72,7 +73,7 @@ export default function Select<T>({ title, value, valueLabel, options, onChange 
             open &&
                 <select
                     ref={optionsRef}
-                    value={options.findIndex(option => option[0] === selected)}
+                    value={options.findIndex(option => deepEqual(option[0], selected))}
                     autoFocus={true}
                     className={widgets.floatingSelect}
                     onBlur={closeAfterBlur}
