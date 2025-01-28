@@ -18,24 +18,26 @@ import styles from "./monitors.module.css";
 
 const GET_LOGS_FREQ = 1000 / 2;
 
-const DEFAULT_LIMIT = 100;
-
-export type Row
+export type LogRow
     = { key: number; lostEvents: number; }
     | { key: number; logEvent: LogEvent; }
     ;
 
 interface Content {
     renderTimeChunks: RenderTimeChunk[];
-    rows: Row[];
-    limit: number;
+    renderTimeCount: number;
+    renderTimeLimit: number;
+
+    logs: LogRow[];
+    logsLimit: number;
 }
 
 interface RowChange {
     reset?: true,
-    addRows?: Row[];
+    addRows?: LogRow[];
     resourceUsage?: ResourceUsage;
-    setLimit?: number;
+    setLogsLimit?: number;
+    setRenderTimeLimit?: number;
 };
 
 enum Tab {
@@ -59,25 +61,26 @@ function addToList<T>(limit: number, list: T[], newItems: T[]): T[] {
     return [...list.slice(needRemove), ...newItems];
 }
 
-function truncateList<T>(limit: number, items: T[]): T[] {
-    const needRemove = items.length - limit;
-    return needRemove > 0 ? items.slice(needRemove) : items;
-}
-
 function updateContentImpl(content: Content, change: RowChange): Content {
-    let { renderTimeChunks: renderTimeChunks, rows, limit } = content;
+    let { renderTimeChunks, renderTimeCount, renderTimeLimit, logs, logsLimit } = content;
 
-    if (change.setLimit) {
-        limit = change.setLimit;
-        renderTimeChunks = truncateList(limit, renderTimeChunks);
-        rows = truncateList(limit, rows);
+    if (change.setLogsLimit) {
+        logsLimit = change.setLogsLimit;
+
+        const needRemove = logs.length - logsLimit;
+        if (needRemove > 0)
+            logs = logs.slice(needRemove);
+    }
+
+    if (change.setRenderTimeLimit) {
+        renderTimeLimit = change.setRenderTimeLimit;
     }
 
     if (change.addRows) {
         // Combine oldest event in `addRows` and newest event in `rows`
         // if they have the same contents.
         const a = change.addRows[0];
-        const b = rows.at(-1);
+        const b = logs.at(-1);
         if (a && b && "logEvent" in a && "logEvent" in b) {
             const repeated =
                 a.logEvent.className == b.logEvent.className
@@ -85,40 +88,57 @@ function updateContentImpl(content: Content, change: RowChange): Content {
                     && a.logEvent.level == b.logEvent.level;
 
             if (repeated) {
-                rows.pop();
+                logs.pop();
                 a.logEvent.repeat += b.logEvent.repeat;
             }
         }
 
-        rows = addToList(limit, rows, change.addRows);
+        logs = addToList(logsLimit, logs, change.addRows);
     }
 
     if (change.resourceUsage) {
         const { renderTimeChunk } = change.resourceUsage;
 
-        if (renderTimeChunk !== undefined && renderTimeChunk.data.length > 0)
-            renderTimeChunks = addToList(limit, renderTimeChunks, [ renderTimeChunk ]);
+        if (renderTimeChunk !== undefined && renderTimeChunk.data.length > 0) {
+            renderTimeCount += renderTimeChunk.data.length;
+            renderTimeChunks = [...renderTimeChunks, renderTimeChunk ];
+        }
     }
 
     if (change.reset) {
+        renderTimeCount = 0;
         renderTimeChunks = [];
-        rows = [];
+        logs = [];
+    }
+
+    while (renderTimeCount > renderTimeLimit) {
+        renderTimeCount -= renderTimeChunks[0].data.length;
+
+        if (Object.is(content.renderTimeChunks, renderTimeChunks))
+            renderTimeChunks = renderTimeChunks.slice(1);
+        else
+            renderTimeChunks.splice(0, 1);
     }
 
     // Reuse the same object if there are no changes.
     if (
-        content.limit == limit
-        && Object.is(content.renderTimeChunks, renderTimeChunks)
-        && Object.is(content.rows, rows)
+        content.logsLimit == logsLimit
+            && content.renderTimeCount == renderTimeCount
+            && content.renderTimeLimit == renderTimeLimit
+            && Object.is(content.renderTimeChunks, renderTimeChunks)
+            && Object.is(content.logs, logs)
     ) {
         return content;
     }
 
-    return { renderTimeChunks, rows, limit };
+    return { renderTimeChunks, renderTimeCount, renderTimeLimit, logs, logsLimit };
 }
 
 const LOGS_LIMIT_OPTIONS: [number, string][] =
     [ 10, 100, 500, 1000 ].map(n => [n, `${n} messages`]);
+
+const RENDER_TIME_LIMIT_OPTIONS: [number, string][] =
+    [ 120, 600, 1200, 3000 ].map(n => [n, `${n} frames`]);
 
 const IconLogs = memo(LuLogs);
 const IconTimer = memo(IoTimerOutline);
@@ -133,21 +153,18 @@ export default function MonitorsPanel() {
 
     const [ content, updateContent ] = useReducer(updateContentImpl, {
         renderTimeChunks: [],
-        rows: [],
-        limit: DEFAULT_LIMIT,
+        renderTimeCount: 0,
+        renderTimeLimit: 600,
+        logs: [],
+        logsLimit: 100,
     });
-
-    const setLimitHandler = useCallback(
-        (value: number) => { updateContent({ setLimit: value }); },
-        [ updateContent ],
-    );
 
     const getDataFromBackend = useCallback(() => {
         backend.sendAction("GetLogs", (response) => {
             if (!("logs" in response))
                 return;
 
-            const addRows: Row[] = [];
+            const addRows: LogRow[] = [];
 
             for (const logEvent of response.logs.events)
                 addRows.push({ key: SerialNumber.next(), logEvent });
@@ -192,12 +209,14 @@ export default function MonitorsPanel() {
     let currentTab, limitSetting;
     switch (selectedTab) {
         case Tab.Logs:
-            currentTab = <Logs rows={content.rows} />;
+            currentTab = <Logs rows={content.logs} />;
+
             limitSetting = (
                 <Select
-                    value={content.limit}
-                    valueLabel={content.limit}
-                    onChange={setLimitHandler}
+                    key="setLogsLimit"
+                    value={content.logsLimit}
+                    valueLabel={content.logsLimit}
+                    onChange={n => updateContent({ setLogsLimit: n })}
                     options={LOGS_LIMIT_OPTIONS}
                 />
             );
@@ -205,6 +224,16 @@ export default function MonitorsPanel() {
 
         case Tab.RenderTime:
             currentTab = <RenderTimeChart chunks={content.renderTimeChunks} />;
+
+            limitSetting = (
+                <Select
+                    key="setRenderTimeLimit"
+                    value={content.renderTimeLimit}
+                    valueLabel={content.renderTimeLimit}
+                    onChange={n => updateContent({ setRenderTimeLimit: n })}
+                    options={RENDER_TIME_LIMIT_OPTIONS}
+                />
+            );
             break;
     }
 

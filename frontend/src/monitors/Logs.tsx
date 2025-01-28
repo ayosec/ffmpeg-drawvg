@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef } from "react";
 
 import { LogEvent } from "../render/protocol";
-import { Row } from "./MonitorsPanel";
+import { LogRow } from "./MonitorsPanel";
 
 import styles from "./logs.module.css";
 
 interface Props {
-    rows: Row[];
+    rows: LogRow[];
 }
 
 const LevelNames = new Map([
@@ -64,7 +64,7 @@ function makeLostEvents(key: number, lostEvents: number) {
     );
 }
 
-function makeRow(row: Row) {
+function makeRow(row: LogRow) {
     if ("logEvent" in row)
         return makeLogEvent(row.key, row.logEvent);
     else if ("lostEvents" in row)
