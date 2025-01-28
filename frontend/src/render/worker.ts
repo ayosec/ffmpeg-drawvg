@@ -1,5 +1,6 @@
 import * as protocol from "./protocol";
 import * as shaders from "./graphics";
+import SerialNumber from "../serial";
 import createMachine, { Machine, Program } from "./machine";
 
 class DrawContext {
@@ -123,7 +124,7 @@ const RenderTimeBuffer = {
     dump() {
         const data = this.array.slice(0, this.count);
         this.count = 0;
-        return { startFrame: this.startFrame, data };
+        return { uniqueId: SerialNumber.next(), startFrame: this.startFrame, data };
     },
 };
 

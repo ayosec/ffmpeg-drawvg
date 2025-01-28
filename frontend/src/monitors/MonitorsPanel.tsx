@@ -8,7 +8,7 @@ import IconButton from "../IconButton";
 import Logs from "./Logs";
 import RenderTimeChart from "./RenderTimeChart";
 import Select from "../Select";
-import SerialNumber from "./serial";
+import SerialNumber from "../serial";
 
 import { FaTrash } from "react-icons/fa";
 import { IoTimerOutline } from "react-icons/io5";

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-import SerialNumber from "./serial";
 import { RenderTimeChunk } from "../render/protocol";
 
 import styles from "./rendertime.module.css";
@@ -24,20 +23,6 @@ function columnNumber(n: number) {
     const value = formatNumber(n);
     return <td aria-label={`${n.toFixed(4)} millisecons`}>{value}</td>;
 }
-
-const ChunksKeys = {
-    cache: new WeakMap<Float32Array, number>(),
-
-    get(chunk: Float32Array): number {
-        const existing = this.cache.get(chunk);
-        if (existing !== undefined)
-            return existing;
-
-        const key = SerialNumber.next();
-        this.cache.set(chunk, key);
-        return key;
-    },
-};
 
 function HeatMapTimesHeader({ max, min, columns }: { max: number, min: number, columns: number }) {
     const headersCount = Math.floor(columns / 5);
@@ -77,7 +62,7 @@ function* dataRows(rowSize: number, chunks: RenderTimeChunk[]) {
 
     for (const chunk of chunks) {
         if (dataRow.length === 0)
-            key = ChunksKeys.get(chunk.data);
+            key = chunk.uniqueId;
 
         for (const renderTime of chunk.data) {
             totalFrames++;

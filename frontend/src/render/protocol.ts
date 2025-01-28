@@ -38,6 +38,7 @@ export interface LogsData {
 
 
 export interface RenderTimeChunk {
+    uniqueId: number;
     startFrame: number;
     data: Float32Array;
 }
