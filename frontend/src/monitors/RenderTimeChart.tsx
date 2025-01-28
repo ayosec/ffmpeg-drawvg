@@ -9,8 +9,6 @@ interface Props {
     chunks: RenderTimeChunk[];
 }
 
-const HEATMAP_COLUMNS = 10;
-
 function formatNumber(n: number) {
     if (n > 100)
         return Math.round(n);
@@ -40,6 +38,29 @@ const ChunksKeys = {
         return key;
     },
 };
+
+function HeatMapTimesHeader({ max, min, columns }: { max: number, min: number, columns: number }) {
+    const headersCount = Math.floor(columns / 5);
+
+    const headers = [
+        <span key="start">{formatNumber(min)} ms</span>,
+    ];
+
+    const step = (max - min) / (headersCount + 1);
+
+    for (let index = 1; index <= headersCount; index++) {
+        const value = min + step * index;
+        headers.push(<span key={index}>{value.toFixed(1)}</span>);
+    }
+
+    headers.push(<span key="end">{formatNumber(max)} ms</span>);
+
+    return (
+        <div className={styles.fullRange} aria-label="Render time">
+            {headers}
+        </div>
+    );
+}
 
 function* dataRows(rowSize: number, chunks: RenderTimeChunk[]) {
     // To produce the expected number of rows we have to consider the
@@ -78,7 +99,7 @@ function* dataRows(rowSize: number, chunks: RenderTimeChunk[]) {
 function useTableRects() {
     const [ containerRef, setContainerRef ] = useState<HTMLDivElement|null>(null);
 
-    const [ sizes, setSizes ] = useState({ row: 0, tbody: 0 });
+    const [ sizes, setSizes ] = useState({ row: 0, tbody: 0, heatMapColumns: 10 });
 
     useEffect(() => {
         if (containerRef === null)
@@ -91,10 +112,12 @@ function useTableRects() {
 
             const panelRect = containerRef.getBoundingClientRect();
             const rowRect = tr.getBoundingClientRect();
+            const firstColumn = tr.querySelector("td")!.getBoundingClientRect();
 
             setSizes({
                 row: rowRect.height,
                 tbody: panelRect.y + panelRect.height - rowRect.y,
+                heatMapColumns: Math.max(5, Math.floor(rowRect.width / firstColumn.width)),
             });
         });
 
@@ -170,14 +193,14 @@ export default function RenderTimeChart({ chunks }: Props) {
     // Build the elements.
 
     const globalRange = globalMax - globalMin + 0.01;
-    const heatMapStep = globalRange / HEATMAP_COLUMNS;
+    const heatMapStep = globalRange / sizes.heatMapColumns;
 
     let frame = 0;
     const tbody = rows.map(row => {
         const currentFrame = frame;
         frame += row.dataRow.length + 1;
 
-        const heat = Array(HEATMAP_COLUMNS).fill(0);
+        const heat = Array(sizes.heatMapColumns).fill(0);
 
         for (const item of row.dataRow)
             heat[Math.floor((item - globalMin) / heatMapStep)] += 1;
@@ -238,11 +261,12 @@ export default function RenderTimeChart({ chunks }: Props) {
                         <th>Avg.</th>
                         <th>Max.</th>
                         <th className={styles.heatMapRange}>
-                            <div className={styles.fullRange} aria-label="Render time">
-                                <span>{formatNumber(globalMin)} ms</span>
-                                <span>{formatNumber((globalMax + globalMin) / 2)} ms</span>
-                                <span>{formatNumber(globalMax)} ms</span>
-                            </div>
+                            <HeatMapTimesHeader
+                                min={globalMin}
+                                max={globalMax}
+                                columns={sizes.heatMapColumns}
+                            />
+
                             <div className={styles.activeColumn}><span></span></div>
                         </th>
                     </tr>
@@ -251,5 +275,4 @@ export default function RenderTimeChart({ chunks }: Props) {
             </table>
         </div>
     );
-
 }

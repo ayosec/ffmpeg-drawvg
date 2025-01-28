@@ -9,23 +9,29 @@ import MonitorsPanel from "./monitors/MonitorsPanel";
 import OutputPanel from "./output/OutputPanel";
 
 const EXAMPLE = `\
-//setcolor #eeeeee
-//rect 0 0 (w) (h)
-//fill
-//newpath
-//
-//repeat 4 {
-//    circle (w/8 * i + (1+sin(t))*w/4) (h/2) 50
-//    setcolor blue@0.2 fill
-//    if (eq(mod(i,3), 0)) { newpath }
-//}
+rect 0 0 w h
+setcolor #fefefe
+fill
 
-setvar a (mod(n,180)/180)
-setvar b (mod(t,3)/3)
-M 0 (h-h*a) L (w) (h*b)
-setlinewidth 5
-stroke
-`;
+setvar rad (h/8)
+setvar count (w/rad+1)
+setlinewidth (rad/8)
+
+repeat count {
+    setvar hue (360/count*i)
+    setvar top (rad*1.5)
+
+    circle (rad*i+rad/2) top rad
+    sethsla hue 0.9 0.5 1
+    pstroke
+    sethsla hue 0.9 0.7 1
+    fill
+
+    setvar p (t/1.5-floor(t/1.5))
+    sethsla hue 0.9 0.7 (1-p)
+    circle (rad*i+rad/2) (top+h*p) (rad-p*rad)
+    fill
+}`;
 
 export default function App() {
     const [ source, setSource ] = useState(EXAMPLE);
