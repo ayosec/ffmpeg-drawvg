@@ -117,7 +117,8 @@ function updateContentImpl(content: Content, change: RowChange): Content {
     return { renderTimeChunks, rows, limit };
 }
 
-const LIMIT_OPTIONS = [ 10, 100, 500, 1000 ];
+const LOGS_LIMIT_OPTIONS: [number, string][] =
+    [ 10, 100, 500, 1000 ].map(n => [n, `${n} messages`]);
 
 const IconLogs = memo(LuLogs);
 const IconTimer = memo(IoTimerOutline);
@@ -188,18 +189,23 @@ export default function MonitorsPanel() {
         </button>
     ), [ selectedTab ]);
 
-    let currentTab;
+    let currentTab, limitSetting;
     switch (selectedTab) {
         case Tab.Logs:
             currentTab = <Logs rows={content.rows} />;
+            limitSetting = (
+                <Select
+                    value={content.limit}
+                    valueLabel={content.limit}
+                    onChange={setLimitHandler}
+                    options={LOGS_LIMIT_OPTIONS}
+                />
+            );
             break;
 
         case Tab.RenderTime:
             currentTab = <RenderTimeChart chunks={content.renderTimeChunks} />;
             break;
-
-        default:
-            currentTab = selectedTab;
     }
 
     return (
@@ -216,12 +222,7 @@ export default function MonitorsPanel() {
                 </div>
 
                 <div className={styles.actions}>
-                    <Select
-                        title="Events limit"
-                        value={content.limit}
-                        onChange={setLimitHandler}
-                        options={ LIMIT_OPTIONS }
-                    />
+                    {limitSetting}
 
                     <IconButton icon={FaTrash} onClick={clear} label="Clear" />
                 </div>

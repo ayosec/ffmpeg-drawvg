@@ -6,7 +6,7 @@
     overflow: auto;
     padding: 0.5ch;
 
-    composes: panel from "../layout.module.css";
+    composes: panel from "../widgets.module.css";
 
     textarea, pre {
         grid-area: 1 / 1;

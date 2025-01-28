@@ -1,6 +1,6 @@
 import { IconType } from "react-icons/lib";
 
-import styles from "./layout.module.css";
+import styles from "./widgets.module.css";
 
 interface Props {
     icon: IconType;

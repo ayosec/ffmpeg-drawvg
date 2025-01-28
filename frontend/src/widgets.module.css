@@ -23,15 +23,24 @@
     border-bottom: var(--toolbar-border-width) solid var(--panel-border-color);
 }
 
-.select {
+.floatingSelect {
     appearance: none;
-    position: relative;
-    display: inline-flex;
-    place-items: center;
 
-    &:is(select) {
-        padding: 0 1ch;
-    }
+    position: absolute;
+    overflow: auto;
+    scrollbar-width: none;
+
+    padding: 2px;
+    font-size: 0.8rem;
+
+    border: 0;
+    outline: none;
+    padding: 0.5ch;
+    border-radius: 1ch;
+
+    color: var(--icon-button-fg);
+    background: var(--icon-button-bg);
+    box-shadow: 0 0 3px var(--icon-button-shadow);
 }
 
 .button {
@@ -43,17 +52,6 @@
 
     padding: 0.75ch;
 
-    &:not(:last-child) {
-        margin-right: 1ch;
-    }
-
-    & > svg {
-        height: var(--button-size, 20px);
-        width: var(--button-size, 20px);
-    }
-}
-
-.select, .button {
     color: var(--icon-button-fg);
     background: var(--icon-button-bg);
 
@@ -69,4 +67,27 @@
     &:focus {
         box-shadow: 0 0 9px var(--icon-button-shadow-focus);
     }
+
+    &:not(:last-child) {
+        margin-right: 1ch;
+    }
+
+    & > svg {
+        height: var(--button-size, 20px);
+        width: var(--button-size, 20px);
+    }
+}
+
+.dropdownArrow::after {
+    content: " ";
+    display: inline-block;
+
+    margin-left: 1ch;
+    width: 0.7ch;
+    height: 0.7ch;
+
+    border: solid currentcolor;
+    border-width: 0 2px 2px 0;
+
+    transform: translateY(-25%) rotate(45deg);
 }

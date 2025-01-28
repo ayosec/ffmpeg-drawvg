@@ -3,14 +3,14 @@
 }
 
 .output {
-    composes: panel from "../layout.module.css";
+    composes: panel from "../widgets.module.css";
 
     grid-template-rows: auto 1fr;
     background: unset;
 }
 
 .toolbar {
-    composes: toolbar from "../layout.module.css";
+    composes: toolbar from "../widgets.module.css";
 
     overflow: hidden;
 

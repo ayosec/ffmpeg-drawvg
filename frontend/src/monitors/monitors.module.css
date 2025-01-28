@@ -1,12 +1,12 @@
 .monitors {
-    composes: panel from "../layout.module.css";
+    composes: panel from "../widgets.module.css";
     border-radius: 0 0 var(--border-radius) 0;
 
     grid-template-rows: auto 1fr;
 }
 
 .toolbar {
-    composes: toolbar from "../layout.module.css";
+    composes: toolbar from "../widgets.module.css";
     justify-content: space-between;
     padding: 0;
     place-items: center;
