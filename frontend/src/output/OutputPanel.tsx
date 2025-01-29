@@ -14,6 +14,12 @@ interface Props {
     source: string;
 }
 
+const CANVAS_FIXED_SIZES: [ number, number][] = [
+    [ 1024, 768 ],
+    [ 640, 480 ],
+    [ 200, 200 ],
+];
+
 export default function OutputPanel({ source }: Props) {
 
     const backend = useContext(BackendContext);
@@ -64,11 +70,19 @@ export default function OutputPanel({ source }: Props) {
 
     const canvasSizeOptions: [ [ boolean, [ number, number ] ], string ][] = [
         [ [ true, canvasSize ], "Fit to panel size" ],
-        [ [ false, canvasSize ], "Keep this size" ],
-        [ [ false, [ 1024, 768 ] ], "1024×768" ],
-        [ [ false, [ 640, 480 ] ], "640×480" ],
-        [ [ false, [ 200, 200 ] ], "200×200" ],
     ];
+
+    let needCurrentSize = true;
+
+    for (const size of CANVAS_FIXED_SIZES) {
+        if (size[0] == canvasSize[0] && size[1] == canvasSize[1])
+            needCurrentSize = false;
+
+        canvasSizeOptions.push([ [ false, size ], size.join("×")]);
+    }
+
+    if (needCurrentSize)
+        canvasSizeOptions.splice(1, 0, [ [ false, canvasSize ], "Keep current size" ]);
 
     return (
         <div className={styles.output}>
