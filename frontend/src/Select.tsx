@@ -48,14 +48,16 @@ export default function Select<T>({ title, value, valueLabel, options, onChange 
         const selectRect = s.getBoundingClientRect();
         const optionsRect = o.getBoundingClientRect();
 
-        o.style.top = `${selectRect.y + selectRect.height + 3}px`;
+        o.style.top = `${selectRect.y + selectRect.height}px`;
 
-        const left =
-            (selectRect.x + optionsRect.width < window.innerWidth)
-                ? selectRect.x
-                : selectRect.x + selectRect.width - optionsRect.width;
+        const alignToRight = selectRect.x + optionsRect.width < window.innerWidth;
+
+        const left = alignToRight
+            ? selectRect.x
+            : selectRect.x + selectRect.width - optionsRect.width;
 
         o.style.left = `${left}px`;
+        o.dataset.align = alignToRight ? "to-right" : "to-left";
     }, [ open ]);
 
     return <>

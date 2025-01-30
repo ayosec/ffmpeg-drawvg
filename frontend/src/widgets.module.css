@@ -36,11 +36,12 @@
     border: 0;
     outline: none;
     padding: 0.5ch;
-    border-radius: 1ch;
 
     color: var(--icon-button-fg);
     background: var(--icon-button-bg);
-    box-shadow: 0 0 3px var(--icon-button-shadow);
+
+    &[data-align="to-right"] { border-radius: 0 1ch 1ch 1ch; }
+    &[data-align="to-left"] { border-radius: 1ch 0 1ch 1ch; }
 }
 
 .button {
@@ -60,12 +61,10 @@
 
     outline: none;
 
-    transition: box-shadow 200ms ease-out;
-    box-shadow: 0 0 3px var(--icon-button-shadow);
-
-    &:hover,
-    &:focus {
-        box-shadow: 0 0 9px var(--icon-button-shadow-focus);
+    &:hover, &:focus {
+        &, & + .floatingSelect {
+            box-shadow: 0 0 5px var(--icon-button-shadow-focus);
+        }
     }
 
     &:not(:last-child) {
@@ -76,6 +75,11 @@
         height: var(--button-size, 20px);
         width: var(--button-size, 20px);
     }
+}
+
+.button, .floatingSelect {
+    transition: box-shadow 200ms ease-out;
+    box-shadow: 0 0 3px var(--icon-button-shadow);
 }
 
 .dropdownArrow::after {
@@ -90,4 +94,35 @@
     border-width: 0 2px 2px 0;
 
     transform: translateY(-25%) rotate(45deg);
+}
+
+/*
+ * Join <button> and <select> elements. Use `clip-path` to prevent
+ * <button>'s box-shadow to overlap <select>.
+ */
+.button:has(+ select[data-align]) {
+    z-index: 1000;
+    border-radius: 1ch 1ch 0 0;
+}
+
+.button:has(+ select[data-align="to-right"]) {
+    clip-path: polygon(
+        -10px -10px,
+        calc(100% + 10px) -10px,
+        calc(100% + 10px) 100%,
+        0 100%,
+        0 calc(100% + 10px),
+        -10px calc(100% + 10px)
+    );
+}
+
+.button:has(+ select[data-align="to-left"]) {
+    clip-path: polygon(
+        -10px -10px,
+        calc(100% + 10px) -10px,
+        calc(100% + 10px) calc(100% + 10px),
+        calc(100%) calc(100% + 10px),
+        calc(100%) calc(100%),
+        -10px 100%
+    );
 }
