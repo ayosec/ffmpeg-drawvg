@@ -9,6 +9,7 @@ import styles from "./output.module.css";
 
 import BackendContext from "../backend";
 import Select from "../Select";
+import VideoExport from "./VideoExport";
 
 interface Props {
     source: string;
@@ -21,17 +22,18 @@ const CANVAS_FIXED_SIZES: [ number, number][] = [
 ];
 
 export default function OutputPanel({ source }: Props) {
-
     const backend = useContext(BackendContext);
 
     const [ canvasSize, setCanvasSize ] = useState<[number, number]>([320, 240]);
+
+    const [ openVideoExport, setOpenVideoExport ] = useState(false);
 
     const [ fitRenderView, setFitRenderView ] = useState(true);
 
     // TODO: play backwards
     const [ playing, setPlaying ] = useState(false);
 
-    const containerRef = useRef<HTMLDivElement|null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     const resizeHandler = useCallback(
         () => {
@@ -147,7 +149,7 @@ export default function OutputPanel({ source }: Props) {
                     <IconButton
                         icon={IoVideocam}
                         label="Export to video"
-                        onClick={() => { console.log("TODO"); }}
+                        onClick={() => setOpenVideoExport(true)}
                     />
                 </div>
             </div>
@@ -159,6 +161,15 @@ export default function OutputPanel({ source }: Props) {
             >
                 <RenderView source={source} size={canvasSize} />
             </div>
+
+            {
+                openVideoExport &&
+                    <VideoExport
+                        size={canvasSize}
+                        source={source}
+                        onClose={() => setOpenVideoExport(false)}
+                    />
+            }
         </div>
     );
 }

@@ -15,8 +15,8 @@ export default function Select<T>({ title, value, valueLabel, options, onChange 
     const [ open, setOpen ] = useState(false);
     const [ selected, setSelected ] = useState(value);
 
-    const selectRef = useRef<HTMLButtonElement|null>(null);
-    const optionsRef = useRef<HTMLSelectElement|null>(null);
+    const selectRef = useRef<HTMLButtonElement>(null);
+    const optionsRef = useRef<HTMLSelectElement>(null);
 
     const change = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const index = parseFloat(e.target.value);

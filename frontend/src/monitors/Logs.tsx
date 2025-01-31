@@ -72,7 +72,7 @@ function makeRow(row: LogRow) {
 }
 
 export default function Logs({ rows }: Props) {
-    const container = useRef<HTMLDivElement|null>(null);
+    const container = useRef<HTMLDivElement>(null);
 
     // When `rows` is updated, and the scroll is close to the
     // bottom, updates the scroll after render.

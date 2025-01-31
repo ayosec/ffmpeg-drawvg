@@ -1,0 +1,120 @@
+.modal {
+    border: 0;
+    box-shadow: 0 0 0.5ch var(--icon-button-shadow);
+    border-radius: 1ch;
+    padding: 0;
+
+    z-index: 1000;
+
+    &::backdrop {
+        backdrop-filter: blur(1px) saturate(0.1);
+    }
+}
+
+.twoCols {
+    display: flex;
+
+    .description {
+        width: min-content;
+
+        color: #fafafa;
+        background: light-dark(#248, #026);
+        padding: 2ch;
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            text-shadow: 0 0 2px #ccc;
+            white-space: nowrap;
+        }
+
+        .details {
+            margin-top: 4ch;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+    }
+
+    .content {
+        padding: 2ch;
+
+        color: light-dark(black, white);
+        background: light-dark(#f7f7f7, #111);
+    }
+}
+
+.verticalForm {
+    .param {
+        margin-bottom: 1ch;
+        padding-bottom: 1ch;
+        border-bottom: 1px solid #ccc;
+
+        &:first-child {
+            padding-top: 1ch;
+            border-top: 1px solid #ccc;
+        }
+
+        label > span:first-child {
+            display: block;
+            padding-bottom: 0.5ch;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        select, input {
+            background: white;
+            color: black;
+
+            outline: 0;
+            padding: 0.5ch 1ch;
+            border: 0;
+            box-shadow: 0 0 3px var(--icon-button-shadow);
+            border-radius: 0.5ch;
+
+            &:focus {
+                box-shadow: 0 0 5px var(--icon-button-shadow-focus);
+            }
+        }
+
+        select:has(+ :is(input, select)) {
+            margin-right: 2ch;
+        }
+    }
+
+    .actions {
+        margin-top: 4ch;
+        padding-top: 1ch;
+        text-align: right;
+
+        button {
+            appearance: none;
+            border: 0;
+            margin-left: 1ch;
+            padding: 0.5ch 2ch;
+            border-radius: 0.5ch;
+            box-shadow: 0 0 3px light-dark(black, #777);
+
+            font-size: 0.9rem;
+
+            &.close {
+                color: #fafafa;
+                background: light-dark(#700, #300);
+            }
+
+            &.submit {
+                color: #fafafa;
+                background: light-dark(#036, #036);
+            }
+        }
+    }
+}
+
+.errors {
+    padding: 1ch;
+    margin-top: 5ch;
+
+    font-size: 0.8rem;
+
+    color: black;
+    background: #faa;
+}

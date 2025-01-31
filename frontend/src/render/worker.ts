@@ -173,8 +173,7 @@ self.onmessage = event => {
     }
 };
 
-function register(canvas: OffscreenCanvas) {
-
+function configureGraphicsContext(canvas: OffscreenCanvas) {
     const gl = canvas.getContext("webgl", {
         alpha: false,
         antialias: false,
@@ -202,11 +201,14 @@ function register(canvas: OffscreenCanvas) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 
-    STATE.drawContext = new DrawContext(canvas, gl, vertices.count);
+    return new DrawContext(canvas, gl, vertices.count);
+}
+
+function register(canvas: OffscreenCanvas) {
+    STATE.drawContext = configureGraphicsContext(canvas);
 
     if (STATE.pendingDrawId === undefined)
         draw();
-
 }
 
 function requestRedraw() {

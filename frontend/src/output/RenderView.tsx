@@ -11,7 +11,7 @@ export default function RenderView({ source, size }: Props) {
 
     const backend = useContext(BackendContext);
 
-    const canvasRef = useRef<HTMLCanvasElement|null>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     // Debounce updates.
     useEffect(() => {
