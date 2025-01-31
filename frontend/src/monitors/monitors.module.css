@@ -48,8 +48,9 @@
         justify-content: center;
 
         color: var(--toolbar-fg);
-        background: var(--toolbar-bg);;
+        background: var(--toolbar-bg);
 
+        font-family: var(--regular-font, sans-serif), sans-serif;
         font-size: 0.8rem;
 
         &[aria-selected="true"] {

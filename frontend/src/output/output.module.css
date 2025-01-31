@@ -27,7 +27,7 @@
 }
 
 .canvasSize {
-    font-family: monospace;
+    font-family: var(--monospace-font, monospace), monospace;
     font-size: 0.7rem;
 
     display: flex;

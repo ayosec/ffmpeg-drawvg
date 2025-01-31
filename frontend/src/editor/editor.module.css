@@ -21,7 +21,7 @@
         white-space: pre-wrap;
         word-break: break-all;
 
-        font-family: monospace;
+        font-family: var(--monospace-font, monospace), monospace;
         font-size: 1rem;
 
         padding-left: var(--line-numbers-width);

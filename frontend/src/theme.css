@@ -1,6 +1,9 @@
 :root {
     color-scheme: light dark;
 
+    --regular-font: "Quicksand Variable";
+    --monospace-font: "Roboto Mono Variable";
+
     --main-fg: light-dark(black, white);
     --main-bg: light-dark(#ddd, #111);
 

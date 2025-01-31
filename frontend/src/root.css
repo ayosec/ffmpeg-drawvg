@@ -3,7 +3,7 @@ html, body, #root {
     margin: 0;
     box-sizing: border-box;
 
-    font-family: sans-serif;
+    font-family: var(--regular-font, sans-serif), sans-serif;
     font-size: 14pt;
 
     color: light-dark(black, white);

@@ -1,6 +1,8 @@
 .renderTime {
     overflow: hidden;
     height: 100%;
+
+    font-family: var(--monospace-font, monospace), monospace;
 }
 
 .dataRows {

@@ -2,7 +2,7 @@
     overflow: auto;
     height: 100%;
 
-    font-family: monospace;
+    font-family: var(--monospace-font, monospace), monospace;
     font-size: 0.8rem;
 
     .event {
