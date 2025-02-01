@@ -1,12 +1,24 @@
 .editor {
-    --line-numbers-width: 4ch;
-
-    border-radius: var(--border-radius) 0 0 var(--border-radius);
-
-    overflow: auto;
-    padding: 0.5ch;
+    grid-template-rows: auto 1fr;
 
     composes: panel from "../widgets.module.css";
+}
+
+.editor, .toolbar {
+    border-radius: var(--border-radius) 0 0 0;
+}
+
+.code {
+    --line-numbers-width: 4ch;
+
+    display: grid;
+
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 0.5ch;
+    overflow: auto;
 
     textarea, pre {
         grid-area: 1 / 1;
@@ -54,4 +66,26 @@
     color: light-dark(#999, #777);
 
     &::after { content: " "; }
+}
+
+.toolbar {
+    composes: toolbar from "../widgets.module.css";
+    composes: topToolbar from "../widgets.module.css";
+}
+
+.shareWidget {
+    appearance: none;
+    display: block;
+
+    width: 100%;
+    box-sizing: border-box;
+
+    padding: 1ch;
+    margin-top: 2ch;
+    margin-bottom: 4ch;
+
+    border: 0;
+    outline: 0;
+    border-radius: 1ch;
+    box-shadow: 0 0 3px var(--icon-button-shadow);
 }

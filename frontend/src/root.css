@@ -66,6 +66,6 @@ body:has([aria-label]:hover) #tooltip-floating-box {
     display: unset;
 }
 
-button, select {
+button, select, input {
     font-size: 0.75rem;
 }

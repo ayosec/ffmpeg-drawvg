@@ -1,4 +1,6 @@
+import { inflate } from "pako";
 import { useState } from "react";
+
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import styles from "./app.module.css";
@@ -8,7 +10,29 @@ import Header from "./Header";
 import MonitorsPanel from "./monitors/MonitorsPanel";
 import OutputPanel from "./output/OutputPanel";
 
-const EXAMPLE = `\
+function loadInitialCode() {
+    const zipRaw = /zip=([^&]+)/.exec(location.hash);
+    if (zipRaw) {
+        location.hash = "";
+
+        try {
+            const zip = decodeURIComponent(zipRaw[1]);
+
+            let stream;
+            if ((Uint8Array as any).fromBase64) {
+                stream = (Uint8Array as any).fromBase64(zip) as Uint8Array;
+            } else {
+                stream = Uint8Array.from(atob(zip), c => c.charCodeAt(0));
+            }
+
+            const bytes = inflate(stream);
+            return new TextDecoder().decode(bytes);
+        } catch (error) {
+            console.log("Unable to load code from URL.", error);
+        }
+    }
+
+    return `\
 rect 0 0 w h
 setcolor #fefefe
 fill
@@ -32,9 +56,10 @@ repeat count {
     circle (rad*i+rad/2) (top+h*p) (rad-p*rad)
     fill
 }`;
+}
 
 export default function App() {
-    const [ source, setSource ] = useState(EXAMPLE);
+    const [ source, setSource ] = useState(loadInitialCode);
 
     const resizeHandle = () => (
         <PanelResizeHandle className={styles.resizeHandle} children={<span />} />
