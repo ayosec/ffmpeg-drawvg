@@ -35,7 +35,6 @@
 }
 
 .renderView {
-
     background-attachment: fixed;
     background-color: #f0f0f0;
     background-image: url(./checkerboard.svg);
@@ -51,5 +50,67 @@
 
         overflow: auto;
     }
+}
 
+.warning {
+    margin-top: 3ch;
+    color: #fc7;
+
+    b {
+        display: block;
+    }
+}
+
+.exportProgress {
+    display: grid;
+
+    width: 15rem;
+    height: 15rem;
+
+    span, svg {
+        grid-area: 1 / 1;
+        place-self: center;
+    }
+
+    span {
+        display: block;
+        font-size: 3rem;
+        text-shadow: 0 0 10px white;
+
+        &.processing {
+            font-size: 1rem;
+        }
+    }
+
+    svg {
+        filter: drop-shadow(0 0 5px);
+    }
+
+    circle {
+        transition: stroke-dashoffset 500ms ease-out, r 250ms ease-out;
+    }
+}
+
+.buttonBar {
+    padding: 1ch;
+
+    color: black;
+    background: white;
+    box-shadow: 0 0 10px white;
+
+    a[download] {
+        color: white;
+        font-weight: bold;
+        background: #248;
+    }
+}
+
+.results {
+    padding: 2ch;
+
+    video {
+        max-height: 50vh;
+        max-width: 50vh;
+        box-shadow: 0 0 1ch black;
+    }
 }

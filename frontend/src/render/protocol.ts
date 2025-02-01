@@ -5,6 +5,12 @@ export interface StateChange {
     source?: string;
 }
 
+export interface VideoParams {
+    source: string;
+    frames: number;
+    encoderConfig: VideoEncoderConfig;
+}
+
 export type Action
     = "DumpMemoryStats"
     | "GetLogs"
@@ -19,6 +25,7 @@ export type Request
     | { request: "register", canvas: OffscreenCanvas }
     | { request: "state", change: StateChange }
     | { request: "action", requestId: number, action: Action }
+    | { request: "video", params: VideoParams }
     ;
 
 
@@ -52,4 +59,7 @@ export type Response
     | { requestId: number; failure: string; }
     | { requestId: number; logs: LogsData; }
     | { requestId: number; resourceUsage: ResourceUsage; }
+    | { videoProgress: { frames: number } }
+    | { videoFinish: { buffer: ArrayBuffer } }
+    | { videoError: { error: string } }
     ;

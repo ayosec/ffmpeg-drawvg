@@ -1,8 +1,10 @@
 .modal {
     border: 0;
+    padding: 0;
+    outline: 0;
+
     box-shadow: 0 0 0.5ch var(--icon-button-shadow);
     border-radius: 1ch;
-    padding: 0;
 
     z-index: 1000;
 
@@ -11,14 +13,16 @@
     }
 }
 
-.twoCols {
+.front {
+    color: #fafafa;
+    background: light-dark(#248, #026);
+}
+
+.mainLayout {
     display: flex;
 
-    .description {
+    .front {
         width: min-content;
-
-        color: #fafafa;
-        background: light-dark(#248, #026);
         padding: 2ch;
 
         h1 {
@@ -39,7 +43,7 @@
         padding: 2ch;
 
         color: light-dark(black, white);
-        background: light-dark(#f7f7f7, #111);
+        background: light-dark(#f7f7f7, #333);
     }
 }
 
@@ -47,12 +51,6 @@
     .param {
         margin-bottom: 1ch;
         padding-bottom: 1ch;
-        border-bottom: 1px solid #ccc;
-
-        &:first-child {
-            padding-top: 1ch;
-            border-top: 1px solid #ccc;
-        }
 
         label > span:first-child {
             display: block;
@@ -84,27 +82,37 @@
     .actions {
         margin-top: 4ch;
         padding-top: 1ch;
-        text-align: right;
+    }
+}
 
-        button {
-            appearance: none;
-            border: 0;
-            margin-left: 1ch;
-            padding: 0.5ch 2ch;
-            border-radius: 0.5ch;
-            box-shadow: 0 0 3px light-dark(black, #777);
+.actions {
+    text-align: right;
 
-            font-size: 0.9rem;
+    a, button {
+        appearance: none;
+        border: 0;
+        text-decoration: none;
+        margin-left: 1ch;
+        padding: 0.5ch 2ch;
+        border-radius: 0.5ch;
+        box-shadow: 0 0 3px var(--icon-button-shadow);
 
-            &.close {
-                color: #fafafa;
-                background: light-dark(#700, #300);
-            }
+        font-size: 1rem;
 
-            &.submit {
-                color: #fafafa;
-                background: light-dark(#036, #036);
-            }
+        color: var(--icon-button-fg);
+        background: var(--icon-button-bg);
+
+        &.close {
+            --icon-button-shadow: light-dark(#f00, #400);
+
+            color: white;
+            background: #800;
+        }
+
+        &[disabled] {
+            filter: blur(1px);
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     }
 }

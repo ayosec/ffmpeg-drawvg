@@ -1,7 +1,7 @@
 import { createContext, createElement } from "react";
 
 import RenderWorkerImpl from "./render/worker?worker";
-import { Action, Request, Response } from "./render/protocol";
+import { Action, VideoParams, Request, Response } from "./render/protocol";
 
 type ListenerCallback = (response: Response) => void;
 
@@ -10,9 +10,19 @@ interface Listener {
     callback: ListenerCallback;
 }
 
+interface ExportVideoHandlers {
+    onProgress(frames: number): void;
+    onFinish(objectURL: string): void;
+    onError(error: string): void;
+}
+
+export interface ExportVideoTask {
+    cancel(): void;
+}
+
 const Backend = {
 
-    renderWorker: new RenderWorkerImpl(),
+    renderWorker: new RenderWorkerImpl({ name: "MainRender" }),
 
     pendingCanvas: undefined as HTMLCanvasElement|undefined,
 
@@ -77,6 +87,47 @@ const Backend = {
         }
 
         this._postMessage({ request: "action", requestId, action });
+    },
+
+    exportVideo(params: VideoParams, handlers: ExportVideoHandlers): ExportVideoTask {
+        const exporter = new RenderWorkerImpl({ name: "ExportVideo" });
+
+        exporter.onmessage = (event) => {
+            const response: Response = event.data;
+
+            if ("init" in response && response.init === "ok") {
+                exporter.postMessage(<Request>{ request: "video", params });
+                return;
+            }
+
+            if ("videoProgress" in response) {
+                const vp = response.videoProgress;
+                handlers.onProgress(vp.frames);
+                return;
+            }
+
+            if ("videoFinish" in response) {
+                const buffer = response.videoFinish.buffer;
+                const url = URL.createObjectURL(new Blob([buffer], { type: "video/webm" }));
+                handlers.onFinish(url);
+                exporter.terminate();
+                return;
+            }
+
+            if ("videoError" in response) {
+                handlers.onError(response.videoError.error);
+                exporter.terminate();
+                return;
+            }
+
+            console.warn("Invalid message from worker", response);
+        };
+
+        exporter.postMessage(<Request>{ request: "init" });
+
+        return {
+            cancel() { exporter.terminate(); },
+        };
     },
 
     setVisibility(visibility: boolean) {

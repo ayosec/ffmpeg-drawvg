@@ -9,7 +9,7 @@ import styles from "./output.module.css";
 
 import BackendContext from "../backend";
 import Select from "../Select";
-import VideoExport from "./VideoExport";
+import VideoExport from "./video/VideoExport";
 
 interface Props {
     source: string;

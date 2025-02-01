@@ -1,27 +1,24 @@
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import styles from "../dialog.module.css";
+import outputStyles from "../output.module.css";
+import styles from "../../dialog.module.css";
+import { Configuration } from "./VideoExport";
 
-interface Props {
+interface ConfigureProps {
     size: [ number, number ];
-    source: string;
+    setConfig: (config: Configuration) => void;
     onClose: () => void;
 };
 
-type State
-    = "Config"
-    | "EncoderUnavailable"
-    ;
-
-const InitialState: State = "VideoEncoder" in window ? "Config" : "EncoderUnavailable";
-
-async function submitForm(_: State, data: FormData): Promise<State> {
-    const config = await loadConfiguration(data);
-    console.log({config});
-    return "EncoderUnavailable";
+interface TextInputProps {
+    name: string;
+    placeholder: string;
+    defaultValue: string;
 }
 
-async function loadConfiguration(data: FormData) {
+const HasVideoEncoder = "VideoEncoder" in window;
+
+async function loadConfiguration(data: FormData): Promise<Configuration|null> {
     const form: {[key: string]: string} = {};
     for (const [ field, value ] of data.entries()) {
         form[field] = value.toString();
@@ -89,11 +86,40 @@ async function loadConfiguration(data: FormData) {
     return { encoderConfig, frameCount };
 }
 
-// Bitrates values are taken from https://developers.google.com/media/vp9/settings/vod/
+function Param({ label, children }: { label: string, children: React.ReactNode }) {
+    return (
+        <div className={styles.param}>
+            <label><span>{label}</span>{children}</label>
+        </div>
+    );
+}
 
-export default function VideoExport({ size, source, onClose }: Props) {
-    const [ formState, formAction ] = useActionState(submitForm, InitialState);
+function TextInput({ name, placeholder, defaultValue }: TextInputProps) {
+    return (
+        <input
+            name={name}
+            autoFocus={true}
+            spellCheck={false}
+            style={{width: "10ch"}}
+            placeholder={placeholder}
+            defaultValue={defaultValue}
+        />
+    );
+}
 
+function DurationWarning() {
+    return (
+        <div className={outputStyles.warning}>
+            <b>Warning</b>
+
+            The video will be stored in the memory of the browser.
+            The process to render a long video can consume many
+            hardware resources.
+        </div>
+    );
+}
+
+export default function Configure({ size, setConfig, onClose }: ConfigureProps) {
     const [ showCustomSize, setShowCustomSize ] = useState(false);
 
     const [ showCustomDuration, setShowCustomDuration ] = useState(false);
@@ -134,15 +160,28 @@ export default function VideoExport({ size, source, onClose }: Props) {
         }, 50);
     };
 
+    const startExport = (data: FormData) => {
+        loadConfiguration(data).then(config => {
+            if (config === null) {
+                setFailureMessage("Unable to start the video encoder.");
+            } else {
+                setConfig(config);
+            }
+        });
+    };
+
     useEffect(() => { dialogRef.current?.showModal(); }, []);
 
     useEffect(checkConfiguration, []);
 
-    if (formState === "EncoderUnavailable" && failureMessage === null) {
+    if (!HasVideoEncoder && failureMessage === null) {
         setFailureMessage(<>
-            <a target="_blank" href="https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder/VideoEncoder">
+            <a
+                target="_blank"
+                href="https://developer.mozilla.org/en-US/docs/Web/API/VideoEncoder/VideoEncoder"
+            >
                 <code>VideoEncoder</code>
-            </a> is not available.
+            </a> is not available in this browser.
         </>);
     }
 
@@ -152,8 +191,8 @@ export default function VideoExport({ size, source, onClose }: Props) {
             className={styles.modal}
             onClose={onClose}
         >
-            <div className={styles.twoCols}>
-                <div className={styles.description}>
+            <div className={styles.mainLayout}>
+                <div className={styles.front}>
                     <h1>Export to Video</h1>
 
                     <div className={styles.details}>
@@ -163,24 +202,25 @@ export default function VideoExport({ size, source, onClose }: Props) {
                     </div>
 
                     { failureMessage && <div className={styles.errors}>{failureMessage}</div> }
+
+                    { computedDuration > 10 && <DurationWarning /> }
                 </div>
 
                 <form
                     ref={formRef}
-                    action={formAction}
+                    action={startExport}
                     className={styles.content + " " + styles.verticalForm}
+                    onChange={checkConfiguration}
                 >
-                    <Param label="Number of frames">
+                    <Param label="Number of Frames">
                         <select
                             name="frameCount"
-                            defaultValue="300"
+                            defaultValue="600"
                             onChange={e => {
                                 setShowCustomDuration(e.target.value === "custom");
-                                checkConfiguration();
                             }}
                         >
                             <option value="custom">Custom</option>
-                            <option>60</option>
                             <option>300</option>
                             <option>600</option>
                             <option>1200</option>
@@ -189,19 +229,10 @@ export default function VideoExport({ size, source, onClose }: Props) {
 
                         {
                             showCustomDuration &&
-                                <input
+                                <TextInput
                                     name="customDuration"
-                                    ref={e => {
-                                        if (e !== null && document.activeElement !== e) {
-                                            e.focus();
-                                            e.select();
-                                        }
-                                    }}
-                                    spellCheck={false}
-                                    style={{width: "10ch"}}
-                                    placeholder="Frames"
                                     defaultValue="60"
-                                    onChange={checkConfiguration}
+                                    placeholder="Frames"
                                 />
                         }
                     </Param>
@@ -212,7 +243,6 @@ export default function VideoExport({ size, source, onClose }: Props) {
                             defaultValue="1024x768"
                             onChange={e => {
                                 setShowCustomSize(e.target.value === "custom");
-                                checkConfiguration();
                             }}
                         >
                             <option value="custom">Custom</option>
@@ -225,29 +255,16 @@ export default function VideoExport({ size, source, onClose }: Props) {
 
                         {
                             showCustomSize &&
-                                <input
+                                <TextInput
                                     name="customSize"
-                                    ref={e => {
-                                        if (e !== null && document.activeElement !== e) {
-                                            e.focus();
-                                            e.select();
-                                        }
-                                    }}
-                                    spellCheck={false}
-                                    style={{width: "10ch"}}
-                                    placeholder="WIDTHxHEIGHT"
                                     defaultValue={size.join("x")}
-                                    onChange={checkConfiguration}
+                                    placeholder="WxH"
                                 />
                         }
                     </Param>
 
                     <Param label="Framerate">
-                        <select
-                            defaultValue="60"
-                            name="framerate"
-                            onChange={checkConfiguration}
-                        >
+                        <select defaultValue="60" name="framerate">
                             <option value="12">12 FPS</option>
                             <option value="24">24 FPS</option>
                             <option value="30">30 FPS</option>
@@ -257,35 +274,21 @@ export default function VideoExport({ size, source, onClose }: Props) {
                     </Param>
 
                     <Param label="Bitrate">
-                        <select
-                            name="bitrate"
-                            defaultValue="3000"
-                            onChange={checkConfiguration}
-                        >
+                        <select name="bitrate" defaultValue="6000000">
                             <option value="1000000">1000 kbps</option>
-                            <option value="1800000">1800 kbps</option>
                             <option value="3000000">3000 kbps</option>
                             <option value="6000000">6000 kbps</option>
                             <option value="9000000">9000 kbps</option>
                         </select>
 
-                        <select
-                            name="bitrateMode"
-                            defaultValue="variable"
-                            onChange={checkConfiguration}
-                        >
+                        <select name="bitrateMode" defaultValue="variable">
                             <option value="constant">Constant</option>
-                            <option value="quantizer">Quantizer</option>
                             <option value="variable">Variable</option>
                         </select>
                     </Param>
 
                     <Param label="Codec">
-                        <select
-                            defaultValue="av1"
-                            name="codec"
-                            onChange={checkConfiguration}
-                        >
+                        <select defaultValue="vp08" name="codec">
                             <option value="av01">AV1</option>
                             <option value="vp08">VP8</option>
                             <option value="vp09">VP9</option>
@@ -293,11 +296,7 @@ export default function VideoExport({ size, source, onClose }: Props) {
                     </Param>
 
                     <Param label="Chroma Subsampling">
-                        <select
-                            name="colorFormat"
-                            defaultValue="yuv420"
-                            onChange={checkConfiguration}
-                        >
+                        <select name="colorFormat" defaultValue="yuv420">
                             <option value="yuv420">YUV 4:2:0</option>
                             <option value="yuv444">YUV 4:4:4</option>
                         </select>
@@ -305,21 +304,13 @@ export default function VideoExport({ size, source, onClose }: Props) {
 
                     <div className={styles.actions}>
                         <button className={styles.close} formAction={onClose}>Close</button>
-                        {
-                            failureMessage === null &&
-                                <button className={styles.submit}>Export</button>
-                        }
+
+                        <button className={styles.submit} disabled={failureMessage !== null}>
+                            Export
+                        </button>
                     </div>
                 </form>
             </div>
         </dialog>
-    );
-}
-
-function Param({ label, children }: { label: string, children: React.ReactNode }) {
-    return (
-        <div className={styles.param}>
-            <label><span>{label}</span>{children}</label>
-        </div>
     );
 }

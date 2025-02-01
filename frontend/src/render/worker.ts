@@ -2,6 +2,7 @@ import * as protocol from "./protocol";
 import * as shaders from "./graphics";
 import SerialNumber from "../serial";
 import createMachine, { Machine, Program } from "./machine";
+import exportVideo from "./exportVideo";
 
 class DrawContext {
     #playing = false;
@@ -36,19 +37,25 @@ class DrawContext {
         const now = timestamp ?? performance.now();
 
         if (playing && !this.#playing) {
+
             // Play.
             //
             // Initialize the value of `playStart` so it will
             // continue with the time before pausing.
+
             this.#lastRenderTime = now - this.#lastDuration;
             this.#playStart = now - this.#playFixedTime;
             this.#playing = true;
+
         } else if (!playing && this.#playing) {
+
             // Pause.
             //
             // Store the play time to reuse it in next renders.
+
             this.#playFixedTime = now - this.#playStart;
             this.#playing = false;
+
         }
     }
 
@@ -139,6 +146,16 @@ interface State {
 
 const STATE: State = {};
 
+setTimeout(
+    () => {
+        if (STATE.machine === undefined) {
+            console.error("Timeout waiting to initialize worker");
+            self.close();
+        }
+    },
+    60_000
+);
+
 self.onmessage = event => {
     const message: protocol.Request = event.data;
 
@@ -166,6 +183,12 @@ self.onmessage = event => {
 
         case "action":
             handleAction(message.requestId, message.action);
+            break;
+
+        case "video":
+            if (STATE.machine)
+                exportVideo(STATE.machine, message.params);
+
             break;
 
         default:
