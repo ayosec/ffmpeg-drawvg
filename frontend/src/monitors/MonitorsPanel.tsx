@@ -242,7 +242,7 @@ export default function MonitorsPanel() {
             <div className={styles.toolbar}>
                 <div role="tablist" className={styles.tabs}>
                     <ButtonTab tab={Tab.Logs}>
-                        <IconLogs /> Logs
+                        <IconLogs /> Console
                     </ButtonTab>
 
                     <ButtonTab tab={Tab.RenderTime}>

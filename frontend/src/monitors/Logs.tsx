@@ -28,7 +28,7 @@ function makeLogEvent(key: number, logEvent: LogEvent) {
 
     const showVar = (varName: string, label: string, value: number, fixed?: number) => (
         isFinite(value) && <>
-            <span data-field="variable" title={label} data-name={varName}>
+            <span data-field="variable" aria-label={label} data-name={varName}>
                 {fixed ? value.toFixed(fixed) : value}
             </span>
         </>
@@ -51,7 +51,7 @@ function makeLogEvent(key: number, logEvent: LogEvent) {
 
             { showVar("n", "Frame number (n)", logEvent.varN) }
 
-            { showVar("t", `Timestamp (t = ${logEvent.varT.toFixed(4)})`, logEvent.varT, 2) }
+            { showVar("t", `Timestamp\nt = ${logEvent.varT.toFixed(4)}`, logEvent.varT, 2) }
         </div>
     );
 }
