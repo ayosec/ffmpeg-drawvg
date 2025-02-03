@@ -5,23 +5,30 @@ import createMachine, { Machine, Program } from "./machine";
 import exportVideo from "./exportVideo";
 
 class DrawContext {
-    #playing = false;
-    #frameCount: number = 0;
-    #playFixedTime: number = 0;
+    visible = true;
 
-    #visibility = true;
-
-    #playStart: number;
-    #lastRenderTime: number;
-
-    #lastDuration: number = 1 / 60;
+    timeline: Timeline;
 
     constructor(
         readonly canvas: OffscreenCanvas,
         readonly gl: WebGLRenderingContext,
         readonly verticesCount: number
     ) {
-        this.#playStart = performance.now();
+        this.timeline = new Timeline();
+    }
+}
+
+class Timeline {
+    #playing = false;
+    #speed = 1;
+
+    #frameCount: number = 0;
+    #playTime: number = 0;
+
+    #lastRenderTime: number;
+    #lastDuration: number = 1 / 60;
+
+    constructor() {
         this.#lastRenderTime = performance.now();
     }
 
@@ -29,38 +36,39 @@ class DrawContext {
         return this.#playing;
     }
 
-    isVisible(): boolean {
-        return this.#visibility;
-    }
-
     setPlaying(playing: boolean, timestamp?: number) {
-        const now = timestamp ?? performance.now();
-
         if (playing && !this.#playing) {
-
             // Play.
-            //
-            // Initialize the value of `playStart` so it will
-            // continue with the time before pausing.
-
-            this.#lastRenderTime = now - this.#lastDuration;
-            this.#playStart = now - this.#playFixedTime;
+            this.#lastRenderTime = (timestamp ?? performance.now()) - this.#lastDuration * 1000;
             this.#playing = true;
 
         } else if (!playing && this.#playing) {
-
             // Pause.
-            //
-            // Store the play time to reuse it in next renders.
-
-            this.#playFixedTime = now - this.#playStart;
             this.#playing = false;
-
         }
     }
 
-    setVisibility(visibility: boolean) {
-        this.#visibility = visibility;
+    #roundFrame() {
+        const frac = this.#frameCount % 1;
+        if (frac === 0)
+            return;
+
+        if (frac < 0.5) {
+            // Reset current frame.
+            this.#frameCount = Math.floor(this.#frameCount);
+            this.#playTime -= this.#lastDuration * frac;
+        } else {
+            // Jump to next frame.
+            this.#frameCount = Math.ceil(this.#frameCount);
+            this.#playTime += this.#lastDuration * (1 - frac);
+        }
+    }
+
+    setSpeed(speed: number) {
+        if (speed % 1 === 0)
+            this.#roundFrame();
+
+        this.#speed = speed;
     }
 
     playbackReset() {
@@ -68,8 +76,7 @@ class DrawContext {
 
         this.#frameCount = 0;
         this.#lastDuration = 1 / 60;
-        this.#playFixedTime = 0;
-        this.#playStart = now;
+        this.#playTime = 0;
         this.#lastRenderTime = now - this.#lastDuration;
     }
 
@@ -77,16 +84,20 @@ class DrawContext {
         if (this.#playing)
             return;
 
+        this.#roundFrame();
+
         this.#frameCount++;
-        this.#playFixedTime += this.#lastDuration * 1000;
+        this.#playTime += this.#lastDuration;
     }
 
     playbackPreviousFrame() {
         if (this.#playing)
             return;
 
+        this.#roundFrame();
+
         this.#frameCount--;
-        this.#playFixedTime -= this.#lastDuration * 1000;
+        this.#playTime -= this.#lastDuration;
     }
 
     nextFrameVars(timestamp?: number): { D: number; N: number; T: number } {
@@ -100,16 +111,23 @@ class DrawContext {
             this.#lastRenderTime = now;
             this.#lastDuration = duration;
 
-            return {
-                D: duration,
-                N: this.#frameCount++,
-                T: (now - this.#playStart) / 1000,
-            };
+            const N = this.#frameCount;
+            const T = this.#playTime;
+
+            this.#frameCount += this.#speed;
+            this.#playTime += elapsed * this.#speed;
+
+            if (this.#frameCount < 0 || this.#playTime < 0) {
+                this.#playTime = 60 * 60 * duration;
+                this.#frameCount = 60 * 60;
+            }
+
+            return { D: duration, N, T };
         } else {
             return {
                 D: this.#lastDuration,
                 N: this.#frameCount,
-                T: this.#playFixedTime / 1000,
+                T: this.#playTime,
             };
         }
     }
@@ -196,7 +214,7 @@ self.onmessage = event => {
     }
 };
 
-function configureGraphicsContext(canvas: OffscreenCanvas) {
+function createDrawContext(canvas: OffscreenCanvas) {
     const gl = canvas.getContext("webgl", {
         alpha: false,
         antialias: false,
@@ -228,7 +246,7 @@ function configureGraphicsContext(canvas: OffscreenCanvas) {
 }
 
 function register(canvas: OffscreenCanvas) {
-    STATE.drawContext = configureGraphicsContext(canvas);
+    STATE.drawContext = createDrawContext(canvas);
 
     if (STATE.pendingDrawId === undefined)
         draw();
@@ -255,12 +273,12 @@ function draw(timestamp?: number) {
 
     const { canvas, gl, verticesCount } = drawContext;
 
-    const frameVars = drawContext.nextFrameVars(timestamp);
+    const frameVars = drawContext.timeline.nextFrameVars(timestamp);
 
     // If the page is not visible, skip the render after updating
     // the frame variables.
-    if (!drawContext.isVisible()) {
-        if (drawContext.isPlaying())
+    if (!drawContext.visible) {
+        if (drawContext.timeline.isPlaying())
             requestRedraw();
 
         return;
@@ -306,7 +324,7 @@ function draw(timestamp?: number) {
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, verticesCount);
 
-    if (drawContext.isPlaying()) {
+    if (drawContext.timeline.isPlaying()) {
         requestRedraw();
     }
 
@@ -331,17 +349,17 @@ function applyStateChanges(timestamp?: number) {
             }
         }
 
-        if (change.size) {
+        if (change.size)
             STATE.resizeRequest = change.size;
-        }
 
-        if (change.playing !== undefined) {
-            drawContext.setPlaying(change.playing, timestamp);
-        }
+        if (change.playing !== undefined)
+            drawContext.timeline.setPlaying(change.playing, timestamp);
 
-        if (change.visibility !== undefined) {
-            drawContext.setVisibility(change.visibility);
-        }
+        if (change.speed !== undefined)
+            drawContext.timeline.setSpeed(change.speed);
+
+        if (change.visibility !== undefined)
+            drawContext.visible = change.visibility;
 
     }
 
@@ -370,17 +388,17 @@ function handleAction(requestId: number, action: protocol.Action) {
             break;
 
         case "NextFrame":
-            drawContext.playbackNextFrame();
+            drawContext.timeline.playbackNextFrame();
             requestRedraw();
             break;
 
         case "PreviousFrame":
-            drawContext.playbackPreviousFrame();
+            drawContext.timeline.playbackPreviousFrame();
             requestRedraw();
             break;
 
         case "ResetPlayback":
-            drawContext.playbackReset();
+            drawContext.timeline.playbackReset();
             requestRedraw();
             break;
 

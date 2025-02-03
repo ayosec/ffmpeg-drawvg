@@ -15,11 +15,20 @@ interface Props {
     source: string;
 }
 
+enum PlaybackStatus {
+    Pause,
+    Forward,
+    Backwards,
+}
+
 const CANVAS_FIXED_SIZES: [ number, number][] = [
     [ 1024, 768 ],
     [ 640, 480 ],
     [ 200, 200 ],
 ];
+
+const PLAYBACK_SPEEDS: [ number, string ][] =
+    [ 0.1, 0.25, 0.5, 1, 1.25, 1.5, 2, 4 ].map(x => [ x, `${x}` ]);
 
 export default function OutputPanel({ source }: Props) {
     const backend = useContext(BackendContext);
@@ -30,8 +39,9 @@ export default function OutputPanel({ source }: Props) {
 
     const [ fitRenderView, setFitRenderView ] = useState(true);
 
-    // TODO: play backwards
-    const [ playing, setPlaying ] = useState(false);
+    const [ playbackSpeed, setPlaybackSpeed ] = useState(1);
+
+    const [ playing, setPlaying ] = useState(PlaybackStatus.Pause);
 
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -57,8 +67,11 @@ export default function OutputPanel({ source }: Props) {
     }, [ fitRenderView, resizeHandler ]);
 
     useEffect(
-        () => backend.setPlaying(playing),
-        [ backend, playing ],
+        () => {
+            const factor = playing === PlaybackStatus.Backwards ? -1 : 1;
+            backend.setPlaying(playing !== PlaybackStatus.Pause, playbackSpeed * factor);
+        },
+        [ backend, playing, playbackSpeed ],
     );
 
     const configureCanvasSize = ([fit, cs]: [boolean, [number, number]]) => {
@@ -107,33 +120,56 @@ export default function OutputPanel({ source }: Props) {
 
                     <IconButton
                         icon={IoPlaySkipBack}
-                        label="Next frame"
+                        label="Previous frame"
                         onClick={() => {
-                            setPlaying(false);
+                            setPlaying(PlaybackStatus.Pause);
                             backend.sendAction("PreviousFrame");
                         }}
                     />
 
-                    { playing
+                    { playing === PlaybackStatus.Backwards
                         ?
                             <IconButton
                                 icon={IoPause}
                                 label="Pause animation"
-                                onClick={() => setPlaying(!playing)}
+                                onClick={() => setPlaying(PlaybackStatus.Pause)}
                             />
                         :
                             <IconButton
                                 icon={IoPlay}
-                                label="Play forward"
-                                onClick={() => setPlaying(!playing)}
+                                iconStyle={{transform: "scaleX(-1)"}}
+                                label="Play Backwards"
+                                onClick={() => setPlaying(PlaybackStatus.Backwards)}
+                            />
+                    }
+
+                    <Select
+                        value={playbackSpeed}
+                        valueLabel={playbackSpeed + "x"}
+                        onChange={setPlaybackSpeed}
+                        options={PLAYBACK_SPEEDS}
+                    />
+
+                    { playing === PlaybackStatus.Forward
+                        ?
+                            <IconButton
+                                icon={IoPause}
+                                label="Pause animation"
+                                onClick={() => setPlaying(PlaybackStatus.Pause)}
+                            />
+                        :
+                            <IconButton
+                                icon={IoPlay}
+                                label="Play Forwards"
+                                onClick={() => setPlaying(PlaybackStatus.Forward)}
                             />
                     }
 
                     <IconButton
                         icon={IoPlaySkipForward}
-                        label="Previous frame"
+                        label="Next frame"
                         onClick={() => {
-                            setPlaying(false);
+                            setPlaying(PlaybackStatus.Pause);
                             backend.sendAction("NextFrame");
                         }}
                     />

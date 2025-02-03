@@ -1,5 +1,6 @@
 export interface StateChange {
     playing?: boolean;
+    speed?: number;
     visibility?: boolean;
     size?: [number, number];
     source?: string;

@@ -49,7 +49,7 @@ function makeLogEvent(key: number, logEvent: LogEvent) {
 
             <span data-field="message">{logEvent.message}</span>
 
-            { showVar("n", "Frame number (n)", logEvent.varN) }
+            { showVar("n", "Frame number (n)", logEvent.varN, logEvent.varN % 1 === 0 ? undefined : 1) }
 
             { showVar("t", `Timestamp\nt = ${logEvent.varT.toFixed(4)}`, logEvent.varT, 2) }
         </div>

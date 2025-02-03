@@ -138,8 +138,8 @@ const Backend = {
         this._postMessage({ request: "state", change: { visibility } });
     },
 
-    setPlaying(playing: boolean) {
-        this._postMessage({ request: "state", change: { playing } });
+    setPlaying(playing: boolean, speed: number) {
+        this._postMessage({ request: "state", change: { playing, speed } });
     },
 
     setSize(size: [number, number]) {
