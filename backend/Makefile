@@ -5,7 +5,7 @@ FFMPEG_ROOT ?= ../FFmpeg
 AVUTIL_SOURCES = avstring.c eval.c mathematics.c mem.c parseutils.c reverse.c time.c
 PLAY_SOURCES = interpreter.c logs.c math.c
 
-DEPENDENCIES = cairo zlib
+DEPENDENCIES = cairo
 
 NODEJS = node
 CC = emcc
@@ -48,9 +48,9 @@ endif
 
 TARGET ?= target
 
-export EM_CACHE = $(TARGET)/em-cache
+export EM_CACHE = $(abspath $(TARGET)/em-cache)
 
-export EM_CONFIG = $(TARGET)/em-config
+export EM_CONFIG = $(abspath $(TARGET)/em-config)
 
 
 OUTPUT = $(TARGET)/build/play.mjs

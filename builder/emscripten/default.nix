@@ -1,11 +1,9 @@
 { pkgs ? import <nixpkgs> { } }:
 let
-  # Install 3.1.74 from tarball because the package in Nix
-  # requires openjdk21, which has a lot of dependencies.
   emscripten = builtins.fetchTarball {
     url =
-      "https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/c2655005234810c7c42e02a18e4696554abe0352/wasm-binaries.tar.xz";
-    sha256 = "0yvpb333mf01x3kr2k2aay070cj10dxzi1ds13gfqmzm5vr1m0fj";
+      "https://storage.googleapis.com/webassembly/emscripten-releases-builds/linux/cc8eba40de8235f9c33d92463018f87b3edaa09e/wasm-binaries.tar.xz";
+    sha256 = "0s1mh3j3l6cdd98hh6vk1q1x9pdrkjsnxqy5mqjcalac6i92fw3d";
   };
 in pkgs.stdenv.mkDerivation {
   name = "emcc-wrapped";
