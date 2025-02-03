@@ -10,6 +10,15 @@ interface Props {
 }
 
 function makeHash(source: string) {
+    // The source is compressed with zlib, and encoded as base64.
+    //
+    // The original source can be obtained from the URL with:
+    //
+    //  $ echo "$URL" \
+    //      | perl -pe 's/.*zip=//; s/%(..)/chr(hex($1))/ge' \
+    //      | base64 -d \
+    //      | pigz -zdc
+
     const zip = deflate(source, { level: 9 });
     if ((zip as any).toBase64) {
         return (zip as any).toBase64();
