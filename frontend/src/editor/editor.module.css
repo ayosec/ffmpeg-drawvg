@@ -1,11 +1,8 @@
 .editor {
     grid-template-rows: auto 1fr;
+    border-radius: var(--border-radius) 0 0 var(--border-radius);
 
     composes: panel from "../widgets.module.css";
-}
-
-.editor, .toolbar {
-    border-radius: var(--border-radius) 0 0 0;
 }
 
 .code {
@@ -71,6 +68,8 @@
 .toolbar {
     composes: toolbar from "../widgets.module.css";
     composes: topToolbar from "../widgets.module.css";
+
+    border-radius: var(--border-radius) 0 0 0;
 }
 
 .shareWidget {
