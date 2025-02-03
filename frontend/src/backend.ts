@@ -12,8 +12,8 @@ interface Listener {
 
 interface ExportVideoHandlers {
     onProgress(frames: number): void;
-    onFinish(objectURL: string): void;
     onError(error: string): void;
+    onFinish(objectURL: string, size: number, duration: number): void;
 }
 
 export interface ExportVideoTask {
@@ -92,10 +92,13 @@ const Backend = {
     exportVideo(params: VideoParams, handlers: ExportVideoHandlers): ExportVideoTask {
         const exporter = new RenderWorkerImpl({ name: "ExportVideo" });
 
+        let start = NaN;
+
         exporter.onmessage = (event) => {
             const response: Response = event.data;
 
             if ("init" in response && response.init === "ok") {
+                start = performance.now();
                 exporter.postMessage(<Request>{ request: "video", params });
                 return;
             }
@@ -107,9 +110,10 @@ const Backend = {
             }
 
             if ("videoFinish" in response) {
+                const duration = performance.now() - start;
                 const buffer = response.videoFinish.buffer;
                 const url = URL.createObjectURL(new Blob([buffer], { type: "video/webm" }));
-                handlers.onFinish(url);
+                handlers.onFinish(url, buffer.byteLength, duration);
                 exporter.terminate();
                 return;
             }

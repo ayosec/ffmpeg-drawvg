@@ -289,9 +289,9 @@ export default function Configure({ size, setConfig, onClose }: ConfigureProps) 
 
                     <Param label="Codec">
                         <select defaultValue="vp08" name="codec">
-                            <option value="av01">AV1</option>
                             <option value="vp08">VP8</option>
                             <option value="vp09">VP9</option>
+                            <option value="av01">AV1</option>
                         </select>
                     </Param>
 

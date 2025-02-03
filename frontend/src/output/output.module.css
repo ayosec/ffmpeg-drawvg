@@ -80,6 +80,10 @@
 }
 
 .buttonBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
     padding: 1ch;
 
     color: black;
@@ -90,6 +94,10 @@
         color: white;
         font-weight: bold;
         background: #248;
+    }
+
+    .summary {
+        font-size: 0.8rem;
     }
 }
 

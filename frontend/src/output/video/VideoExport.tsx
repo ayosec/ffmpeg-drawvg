@@ -55,6 +55,8 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
 
     const [ progress, setProgress ] = useState(0);
 
+    const [ summary, setSummary ] = useState(<></>);
+
     const [ failure, setFailure ] = useState<string|null>(null);
 
     const [ objectURL, setObjectURL ] = useState<string|null>(null);
@@ -70,8 +72,20 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
             },
             {
                 onError: setFailure,
-                onFinish: setObjectURL,
                 onProgress: setProgress,
+                onFinish(objectURL: string, size: number, duration: number) {
+                    setObjectURL(objectURL);
+
+                    const time = duration > 180_000
+                        ? `${Math.round(duration / 60_000)} minutes`
+                        : `${Math.round(duration / 1000)} seconds`;
+
+                    const fmtSize = size > (4 << 20)
+                        ? `${Math.round(size / (1 << 20))} MiB`
+                        : `${Math.round(size / (1 << 10))} KiB`;
+
+                    setSummary(<><b>{fmtSize}</b> in <b>{time}</b></>);
+                }
             }
         );
 
@@ -144,14 +158,20 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
             <div className={styles.front}>
                 { content }
 
-                <div className={styles.actions + " " + outputStyles.buttonBar}>
-                    <button className={styles.close} onClick={onClose}>
-                        { objectURL ? "Close" : "Cancel" }
-                    </button>
-                    {
-                        objectURL &&
-                            <a download="drawvg.webm" href={objectURL}>Download</a>
-                    }
+                <div className={outputStyles.buttonBar}>
+                    <div className={outputStyles.summary}>
+                        { summary }
+                    </div>
+
+                    <div className={styles.actions}>
+                        <button className={styles.close} onClick={onClose}>
+                            { objectURL ? "Close" : "Cancel" }
+                        </button>
+                        {
+                            objectURL &&
+                                <a download="drawvg.webm" href={objectURL}>Download</a>
+                        }
+                    </div>
                 </div>
             </div>
         </dialog>
