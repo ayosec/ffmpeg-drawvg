@@ -91,16 +91,19 @@
     a, button {
         appearance: none;
         border: 0;
+        outline: 0;
         text-decoration: none;
+
         margin-left: 1ch;
         padding: 0.5ch 2ch;
         border-radius: 0.5ch;
-        box-shadow: 0 0 3px var(--icon-button-shadow);
 
         font-size: 1rem;
 
         color: var(--icon-button-fg);
         background: var(--icon-button-bg);
+
+        box-shadow: 0 0 3px var(--icon-button-shadow);
 
         &.close {
             --icon-button-shadow: light-dark(#f00, #400);
@@ -113,6 +116,10 @@
             filter: blur(1px);
             opacity: 0.5;
             cursor: not-allowed;
+        }
+
+        &:focus {
+            box-shadow: 0 0 5px var(--icon-button-shadow-focus);
         }
     }
 }

@@ -21,6 +21,8 @@ function makeHash(source: string) {
 export default function Share({ source, onClose }: Props) {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
+    const inputRef = useRef<HTMLInputElement>(null);
+
     const [ copyFinished, setCopyFinished ]  = useState(false);
 
     const shareURL = useMemo(() => {
@@ -29,7 +31,14 @@ export default function Share({ source, onClose }: Props) {
         return url.toString();
     }, [ source ]);
 
-    useEffect(() => { dialogRef.current?.showModal(); }, []);
+    useEffect(() => {
+        const dialog = dialogRef.current;
+        if (dialog === null)
+            return;
+
+        dialog.showModal();
+        (dialog.querySelector("button:last-child") as HTMLButtonElement)?.focus();
+    }, []);
 
     useEffect(() => {
         if (copyFinished)
@@ -39,6 +48,17 @@ export default function Share({ source, onClose }: Props) {
     const copyHandler = useCallback(() => {
         if (copyFinished)
             return;
+
+        inputRef.current?.animate(
+            [
+                {},
+                { boxShadow: "0 0 20px" },
+                {},
+            ], {
+                duration: 500,
+                easing: "ease-out",
+                iterations: 1,
+            });
 
         navigator.clipboard
             .writeText(shareURL)
@@ -60,6 +80,7 @@ export default function Share({ source, onClose }: Props) {
                     Use this URL to share the current script:
 
                     <input
+                        ref={inputRef}
                         className={editorStyles.shareWidget}
                         readOnly={true}
                         defaultValue={shareURL}
