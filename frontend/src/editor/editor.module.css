@@ -9,6 +9,7 @@
     --line-numbers-width: 4ch;
 
     display: grid;
+    position: relative;
 
     height: 100%;
     width: 100%;
@@ -38,9 +39,42 @@
 
     pre {
         [data-kind="comment"] { color: light-dark(#444, #CCC); font-style: italic; }
-        [data-kind="keyword"] { color: light-dark(#900, #F77); }
-        [data-kind="number"] { color: light-dark(#074, #7FA); }
+        [data-kind="keyword"] { color: light-dark(#519, #DAF); }
+        [data-kind="number"] { color: light-dark(#063, #7FA); }
         [data-kind="expr"] { color: light-dark(#04A, #ACF); }
+
+        [data-kind="_invalid"] {
+            color: light-dark(#A00, #F55);
+            text-decoration: underline;
+            text-decoration-style: wavy;
+        }
+
+        .errorMessage {
+            position: absolute;
+            padding: 0.5ch 1ch;
+
+            font-size: 0.75rem;
+            transform: translateY(calc(100% + 0.5ch));
+
+            &, &::before {
+                color: black;
+                background: #FCC;
+                border: 1px solid #700;
+            }
+
+            &::before {
+                content: "";
+
+                position: absolute;
+                display: inline-block;
+
+                transform: translateY(-100%) rotate(-45deg);
+                height: 1ch;
+                width: 1ch;
+
+                border-width: 1px 1px 0 0;
+            }
+        }
     }
 
     textarea {

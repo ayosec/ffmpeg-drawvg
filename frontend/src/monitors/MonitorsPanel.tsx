@@ -9,12 +9,18 @@ import Logs from "./Logs";
 import RenderTimeChart from "./RenderTimeChart";
 import Select from "../Select";
 import SerialNumber from "../serial";
+import CompilerError from "../vgs/CompilerError";
 
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoTimerOutline } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 
 import styles from "./monitors.module.css";
+
+interface Props {
+    programId: number;
+    setCompilerError(compilerError: CompilerError|null): void;
+}
 
 const GET_LOGS_FREQ = 1000 / 2;
 
@@ -143,7 +149,7 @@ const RENDER_TIME_LIMIT_OPTIONS: [number, string][] =
 const IconLogs = memo(LuLogs);
 const IconTimer = memo(IoTimerOutline);
 
-export default function MonitorsPanel() {
+export default function MonitorsPanel({ programId, setCompilerError }: Props) {
 
     const pageVisible = usePageVisible();
 
@@ -173,17 +179,39 @@ export default function MonitorsPanel() {
             if (lostEvents > 0)
                 addRows.push({ key: SerialNumber.next(), lostEvents });
 
-            if (addRows.length > 0)
+            if (addRows.length > 0) {
                 updateContent({ addRows });
 
-            // TODO: notify syntax errors if `Invalid token` is found.
+                // Detect compiler messages
+                let compilerError: CompilerError|undefined = undefined;
+
+                for (const row of addRows) {
+                    if ("logEvent" in row) {
+                        const msg = /^Invalid token '(.+)' at line (\d+), column (\d+): (.*)/
+                            .exec(row.logEvent.message);
+
+                        if (msg !== null) {
+                            compilerError = {
+                                programId: row.logEvent.programId,
+                                token: msg[1],
+                                line: parseFloat(msg[2]),
+                                column: parseFloat(msg[3]),
+                                message: msg[4],
+                            };
+                        }
+                    }
+                }
+
+                if (compilerError && compilerError.programId === programId)
+                    setCompilerError(compilerError);
+            }
         });
 
         backend.sendAction("GetResourceUsage", (response) => {
             if ("resourceUsage" in response)
                 updateContent({ resourceUsage: response.resourceUsage });
         });
-    }, [ backend ]);
+    }, [ backend, programId ]);
 
     useEffect(() => {
         if (!pageVisible)

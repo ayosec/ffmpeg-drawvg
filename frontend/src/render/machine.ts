@@ -10,7 +10,7 @@ interface FFI {
 
     memstats(): number;
 
-    programNew(source: string): number;
+    programNew(programId: number, source: string): number;
 
     programFree(id: number): null;
 
@@ -90,7 +90,7 @@ export class Machine {
         this.ffi = {
             logsSend: wasmInstance.cwrap("backend_logs_send", null, [N]),
             memstats: wasmInstance.cwrap("backend_memstats", N, []),
-            programNew: wasmInstance.cwrap("backend_program_new", N, ["string"]),
+            programNew: wasmInstance.cwrap("backend_program_new", N, [N, "string"]),
             programFree: wasmInstance.cwrap("backend_program_free", null, [N]),
             programRun: wasmInstance.cwrap("backend_program_run", N, Array(6).fill(N)),
         };
@@ -104,8 +104,8 @@ export class Machine {
         return new Uint8Array(this.wasmInstance["HEAPU8"].buffer, offset, length);
     }
 
-    compile(source: string): Program | null {
-        const id = this.ffi.programNew(source);
+    compile(programId: number, source: string): Program | null {
+        const id = this.ffi.programNew(programId, source);
 
         if (id === 0)
             return null;
@@ -135,6 +135,7 @@ export class Machine {
         for (let index = 0; index < eventsCount; index++) {
             const event = deserializeLogEvent(heap, eventsOffset, index);
             events.push({
+                programId: event.program_id,
                 repeat: event.repeat,
                 level: event.level,
                 className: getString(event.class_name),

@@ -5,6 +5,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 import styles from "./app.module.css";
 
+import CompilerError from "./vgs/CompilerError";
 import Editor from "./editor/Editor";
 import Header from "./Header";
 import MonitorsPanel from "./monitors/MonitorsPanel";
@@ -59,7 +60,9 @@ repeat count {
 }
 
 export default function App() {
-    const [ source, setSource ] = useState(loadInitialCode);
+    const [ program, setProgram ] = useState(() => ({ id: 0, source: loadInitialCode() }));
+
+    const [ compilerError, setCompilerError ] = useState<CompilerError|null>(null);
 
     const resizeHandle = () => (
         <PanelResizeHandle className={styles.resizeHandle} children={<span />} />
@@ -70,7 +73,15 @@ export default function App() {
             <Header />
             <PanelGroup direction="horizontal">
                 <Panel>
-                    <Editor autoFocus={true} source={source} setSource={setSource} />
+                    <Editor
+                        autoFocus={true}
+                        program={program}
+                        compilerError={compilerError}
+                        setSource={source => {
+                            setProgram({ id: program.id + 1, source });
+                            setCompilerError(null);
+                        }}
+                    />
                 </Panel>
 
                 { resizeHandle() }
@@ -78,13 +89,16 @@ export default function App() {
                 <Panel>
                     <PanelGroup direction="vertical">
                         <Panel>
-                            <OutputPanel source={source} />
+                            <OutputPanel program={program} />
                         </Panel>
 
                         { resizeHandle() }
 
                         <Panel defaultSize={25}>
-                            <MonitorsPanel />
+                            <MonitorsPanel
+                                programId={program.id}
+                                setCompilerError={setCompilerError}
+                            />
                         </Panel>
                     </PanelGroup>
                 </Panel>

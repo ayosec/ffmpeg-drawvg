@@ -1,13 +1,14 @@
 import { useContext, useEffect, useRef } from "react";
 
 import BackendContext from "../backend";
+import { Program } from "../render/protocol";
 
 interface Props {
-    source: string;
+    program: Program;
     size: [number, number];
 };
 
-export default function RenderView({ source, size }: Props) {
+export default function RenderView({ program, size }: Props) {
 
     const backend = useContext(BackendContext);
 
@@ -15,16 +16,16 @@ export default function RenderView({ source, size }: Props) {
 
     // Debounce updates.
     useEffect(() => {
-        const update = setTimeout(() => backend.setSource(source), 100);
+        const update = setTimeout(() => backend.setProgram(program.id, program.source), 200);
         return () => clearTimeout(update);
-    }, [ backend, source ]);
+    }, [ backend, program ]);
 
     const setCanvas = (canvas: HTMLCanvasElement | null) => {
         if (canvas === null || Object.is(canvas, canvasRef.current))
             return;
 
         backend.init(canvas);
-        backend.setSource(source);
+        backend.setProgram(program.id, program.source);
         canvasRef.current = canvas;
     };
 

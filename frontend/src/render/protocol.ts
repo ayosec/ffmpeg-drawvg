@@ -3,7 +3,12 @@ export interface StateChange {
     speed?: number;
     visibility?: boolean;
     size?: [number, number];
-    source?: string;
+    program?: Program;
+}
+
+export interface Program {
+    id: number;
+    source: string;
 }
 
 export interface VideoParams {
@@ -31,6 +36,7 @@ export type Request
 
 
 export interface LogEvent {
+    programId: number;
     repeat: number;
     level: number;
     className: string;

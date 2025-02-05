@@ -15,7 +15,7 @@ function mkCodec(codec: string) {
 }
 
 export default async function exportVideo(machine: Machine, params: VideoParams) {
-    const vgsProgram = machine.compile(params.source);
+    const vgsProgram = machine.compile(0, params.source);
     if (vgsProgram === null) {
         self.postMessage(<Response>{ videoError: {error: "Compilation failed." } });
         return;

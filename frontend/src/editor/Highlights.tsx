@@ -1,9 +1,13 @@
-import styles from "./editor.module.css";
-import tokenize from "./tokenizer";
+import CompilerError from "../vgs/CompilerError";
+import tokenize from "../vgs/tokenizer";
 import { Colors } from "@backend/syntax";
+import { Program } from "../render/protocol";
+
+import styles from "./editor.module.css";
 
 interface Props {
-    source: string;
+    program: Program;
+    compilerError: CompilerError|null;
 }
 
 interface KnownColor {
@@ -68,14 +72,14 @@ function getColor(colorExpr: string): KnownColor | undefined {
     };
 }
 
-export default function Highlights({ source }: Props) {
+export default function Highlights({ program, compilerError }: Props) {
     const spans = [];
     let index = 0;
 
     let needNewLine = true;
     let lineNumber = 0;
 
-    for (const token of tokenize(source)) {
+    for (const token of tokenize(program.source)) {
         const style: React.CSSProperties = {};
 
         if (token.kind == "word" || token.kind == "color") {
@@ -87,9 +91,26 @@ export default function Highlights({ source }: Props) {
         }
 
         let lexeme = token.lexeme;
+        let kind = token.kind;
+
+        if (compilerError
+            && compilerError.line === token.line
+            && compilerError.column === token.column
+        ) {
+            kind = "_invalid";
+
+            spans.push(
+                <span
+                    key={"errmsg-" + hashString(lineNumber, compilerError.message)}
+                    className={styles.errorMessage}
+                >
+                    {compilerError.message}
+                </span>
+            );
+        }
 
         while (lexeme !== "") {
-            const key = hashString(++index, token.kind, token.lexeme);
+            const key = hashString(++index, kind, token.lexeme);
 
             if (needNewLine) {
                 needNewLine = false;
@@ -120,7 +141,7 @@ export default function Highlights({ source }: Props) {
                     <span
                         key={key}
                         style={style}
-                        data-kind={token.kind}
+                        data-kind={kind}
                     >
                         {current}
                     </span>

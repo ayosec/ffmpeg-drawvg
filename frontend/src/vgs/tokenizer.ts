@@ -14,6 +14,8 @@ type Kind
 
 interface Token {
     kind: Kind
+    line: number;
+    column: number;
     lexeme: string;
 }
 
@@ -33,11 +35,16 @@ export default function* tokenize(code: string) {
         { pattern: /\/\/.*/g, kind: "comment" }
     ];
 
+    let line = 1;
+    let column = 1;
+
     let cursor = 0;
     const codeLen = code.length;
     while (cursor < codeLen) {
         const token: Token = {
             kind: "unknown",
+            line,
+            column,
             lexeme: "",
         };
 
@@ -49,8 +56,9 @@ export default function* tokenize(code: string) {
             while (level > 0) {
                 const m = parenthesis.exec(code);
                 if (m === null) {
-                    // Unmatched parenthesis.
-                    parenthesis.lastIndex = codeLen;
+                    // Unmatched parenthesis. Assume it is only one line.
+                    const eol = code.indexOf("\n", cursor);
+                    parenthesis.lastIndex = eol === -1 ? codeLen : eol;
                     level = 0;
                 } else if (m[0] == "(") {
                     level++;
@@ -87,7 +95,22 @@ export default function* tokenize(code: string) {
 
         cursor += token.lexeme.length;
         yield token;
+
+        // Update span.
+        let offset = 0;
+        for (;;) {
+            const i = token.lexeme.indexOf("\n", offset);
+            if (i === -1)
+                break;
+
+            offset = i + 1;
+
+            line++;
+            column = 1;
+        }
+
+        column += token.lexeme.length - offset;
     }
 
-    yield { kind: "whitespace", lexeme: "\n" };
+    yield { line, column, kind: "whitespace", lexeme: "\n" };
 }

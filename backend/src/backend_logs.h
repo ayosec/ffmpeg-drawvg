@@ -8,6 +8,7 @@ struct LogString {
 struct LogEvent {
     int repeat;
     int level;
+    double program_id;
     double var_t;
     double var_n;
     struct LogString class_name;
@@ -15,6 +16,7 @@ struct LogEvent {
 };
 
 struct FrameVariables {
+    double program_id;
     double t;
     double n;
 };

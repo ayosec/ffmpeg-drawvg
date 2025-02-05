@@ -341,8 +341,8 @@ function applyStateChanges(timestamp?: number) {
 
     for (const change of stateChanges) {
 
-        if (change.source) {
-            const vgsProgram = machine.compile(change.source);
+        if (change.program) {
+            const vgsProgram = machine.compile(change.program.id, change.program.source);
             if (vgsProgram !== null) {
                 STATE.program?.free();
                 STATE.program = vgsProgram;

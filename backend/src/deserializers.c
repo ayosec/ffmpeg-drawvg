@@ -82,6 +82,7 @@ int main() {
     SER_INIT(LogEvent);
     SER_FIELD(LogEvent, repeat);
     SER_FIELD(LogEvent, level);
+    SER_FIELD(LogEvent, program_id);
     SER_FIELD(LogEvent, var_t);
     SER_FIELD(LogEvent, var_n);
     SER_FIELD(LogEvent, class_name);

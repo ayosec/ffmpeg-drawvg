@@ -37,12 +37,14 @@ int *backend_memstats() {
 //
 // Return `NULL` on error.
 EMSCRIPTEN_KEEPALIVE
-struct VGSProgram* backend_program_new(const char *source) {
+struct VGSProgram* backend_program_new(double program_id, const char *source) {
     int ret;
     struct VGSProgram *program;
     struct VGSParser parser;
 
     program = calloc(1, sizeof(struct VGSProgram));
+
+    CurrentFrameVariables.program_id = program_id;
 
     vgs_parser_init(&parser, source);
     ret = vgs_parse(log_ctx(), &parser, program, 0);

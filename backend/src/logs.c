@@ -114,6 +114,7 @@ void av_log(void* avcl, int level, const char *fmt, ...)
 
     event->repeat = 1;
     event->level = level;
+    event->program_id = CurrentFrameVariables.program_id;
     event->var_n = CurrentFrameVariables.n;
     event->var_t = CurrentFrameVariables.t;
 

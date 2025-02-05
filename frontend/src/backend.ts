@@ -146,8 +146,8 @@ const Backend = {
         this._postMessage({ request: "state", change: { size } });
     },
 
-    setSource(source: string) {
-        this._postMessage({ request: "state", change: { source } });
+    setProgram(id: number, source: string) {
+        this._postMessage({ request: "state", change: { program: { id, source } } });
     },
 
     _postMessage(message: Request) {
