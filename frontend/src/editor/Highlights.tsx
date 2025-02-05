@@ -6,6 +6,7 @@ import { Program } from "../render/protocol";
 import styles from "./editor.module.css";
 
 interface Props {
+    ref?: React.RefObject<HTMLPreElement|null>;
     program: Program;
     compilerError: CompilerError|null;
 }
@@ -72,7 +73,7 @@ function getColor(colorExpr: string): KnownColor | undefined {
     };
 }
 
-export default function Highlights({ program, compilerError }: Props) {
+export default function Highlights({ ref, program, compilerError }: Props) {
     const spans = [];
     let index = 0;
 
@@ -102,6 +103,7 @@ export default function Highlights({ program, compilerError }: Props) {
             spans.push(
                 <span
                     key={"errmsg-" + hashString(lineNumber, compilerError.message)}
+                    role="alert"
                     className={styles.errorMessage}
                 >
                     {compilerError.message}
@@ -155,5 +157,5 @@ export default function Highlights({ program, compilerError }: Props) {
         }
     }
 
-    return <pre aria-hidden={true}>{spans}</pre>;
+    return <pre ref={ref} aria-hidden={true}>{spans}</pre>;
 }

@@ -211,7 +211,7 @@ export default function MonitorsPanel({ programId, setCompilerError }: Props) {
             if ("resourceUsage" in response)
                 updateContent({ resourceUsage: response.resourceUsage });
         });
-    }, [ backend, programId ]);
+    }, [ backend, programId, setCompilerError ]);
 
     useEffect(() => {
         if (!pageVisible)
