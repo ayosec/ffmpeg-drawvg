@@ -108,6 +108,7 @@ export default function OutputPanel({ source }: Props) {
                         valueLabel={canvasSize.join("×")}
                         onChange={configureCanvasSize}
                         options={canvasSizeOptions}
+                        optionsAlign="left"
                     />
                 </div>
 

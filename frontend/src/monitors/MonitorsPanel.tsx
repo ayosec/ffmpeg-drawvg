@@ -214,6 +214,7 @@ export default function MonitorsPanel() {
             limitSetting = (
                 <Select
                     key="setLogsLimit"
+                    optionsAlign="right"
                     value={content.logsLimit}
                     valueLabel={content.logsLimit}
                     onChange={n => updateContent({ setLogsLimit: n })}
@@ -228,6 +229,7 @@ export default function MonitorsPanel() {
             limitSetting = (
                 <Select
                     key="setRenderTimeLimit"
+                    optionsAlign="right"
                     value={content.renderTimeLimit}
                     valueLabel={content.renderTimeLimit}
                     onChange={n => updateContent({ setRenderTimeLimit: n })}

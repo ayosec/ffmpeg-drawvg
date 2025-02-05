@@ -28,8 +28,6 @@ type Process
     | { state: "export", config: Configuration }
     ;
 
-// Bitrates values are taken from https://developers.google.com/media/vp9/settings/vod/
-
 export default function VideoExport({ size, source, onClose }: Props) {
     const [ process, setProcess ] = useState<Process>({ state: "config" });
 

@@ -18,6 +18,8 @@ interface TextInputProps {
 
 const HasVideoEncoder = "VideoEncoder" in window;
 
+// Bitrates values are taken from https://developers.google.com/media/vp9/settings/vod/
+
 async function loadConfiguration(data: FormData): Promise<Configuration|null> {
     const form: {[key: string]: string} = {};
     for (const [ field, value ] of data.entries()) {

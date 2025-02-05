@@ -38,27 +38,6 @@
     }
 }
 
-.floatingSelect {
-    appearance: none;
-
-    position: absolute;
-    overflow: auto;
-    scrollbar-width: none;
-
-    padding: 2px;
-    font-size: 0.8rem;
-
-    border: 0;
-    outline: none;
-    padding: 0.5ch;
-
-    color: var(--icon-button-fg);
-    background: var(--icon-button-bg);
-
-    &[data-align="to-right"] { border-radius: 0 1ch 1ch 1ch; }
-    &[data-align="to-left"] { border-radius: 1ch 0 1ch 1ch; }
-}
-
 .button {
     display: inline-flex;
     justify-content: center;
@@ -77,9 +56,7 @@
     outline: none;
 
     &:hover, &:focus {
-        &, & + .floatingSelect {
-            box-shadow: 0 0 5px var(--icon-button-shadow-focus);
-        }
+        box-shadow: 0 0 5px var(--icon-button-shadow-focus);
     }
 
     &:not(:last-child) {
@@ -92,7 +69,7 @@
     }
 }
 
-.button, .floatingSelect {
+.button, .selectOptions {
     transition: box-shadow 200ms ease-out;
     box-shadow: 0 0 3px var(--icon-button-shadow);
 }
@@ -113,33 +90,53 @@
     transform: translateY(-25%) rotate(45deg);
 }
 
-/*
- * Join <button> and <select> elements. Use `clip-path` to prevent
- * <button>'s box-shadow to overlap <select>.
- */
-.button:has(+ select[data-align]) {
-    z-index: 1000;
-    border-radius: 1ch 1ch 0 0;
+.dropdownArrow:has(+ .selectOptions)::after {
+    transform: translateY(25%) rotate(225deg);
 }
 
-.button:has(+ select[data-align="to-right"]) {
-    clip-path: polygon(
-        -10px -10px,
-        calc(100% + 10px) -10px,
-        calc(100% + 10px) 100%,
-        0 100%,
-        0 calc(100% + 10px),
-        -10px calc(100% + 10px)
-    );
+.selectOptions {
+    display: flex;
+    flex-direction: column;
+
+    position: fixed;
+    z-index: 2001;
+
+    border: 0;
+    outline: none;
+    padding: 0;
+    border-radius: 1ch;
+    overflow: hidden;
+
+    color: var(--icon-button-fg);
+    background: var(--icon-button-bg);
+
+    & > button {
+        display: block;
+
+        appearance: none;
+        border: 0;
+        outline: none;
+        background: none;
+        user-select: none;
+
+        font-size: 0.8rem;
+        padding: 0.75ch 1ch;
+
+        cursor: pointer;
+
+        &.selected, &:hover, &:focus {
+            color: var(--tab-selected-fg);
+            background: var(--tab-selected-bg);
+        }
+    }
 }
 
-.button:has(+ select[data-align="to-left"]) {
-    clip-path: polygon(
-        -10px -10px,
-        calc(100% + 10px) -10px,
-        calc(100% + 10px) calc(100% + 10px),
-        calc(100%) calc(100% + 10px),
-        calc(100%) calc(100%),
-        -10px 100%
-    );
+.selectBackdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vw;
+
+    z-index: 2000;
 }
