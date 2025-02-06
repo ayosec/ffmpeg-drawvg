@@ -102,7 +102,7 @@ export default function OutputPanel({ program }: Props) {
 
     return (
         <div className={styles.output}>
-            <div className={styles.toolbar}>
+            <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <Select
                         value={[fitRenderView, canvasSize]}

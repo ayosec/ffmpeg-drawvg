@@ -60,7 +60,7 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
     return (
         <div className={styles.editor}>
-            <div className={styles.toolbar}>
+            <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <IconButton
                         icon={IoShareSocial}
@@ -113,7 +113,7 @@ function getCaretPosition(source: string, position: number) {
 
 function findHighlightedSpan(highlights: HTMLElement, line: number, column: number) {
     let lastSpan;
-    for (const span of document.querySelectorAll<HTMLElement>(`[data-line="${line}"]`)) {
+    for (const span of highlights.querySelectorAll<HTMLElement>(`[data-line="${line}"]`)) {
         const spanColumn = span.dataset.column;
         if (spanColumn && parseFloat(spanColumn) > column)
             break;

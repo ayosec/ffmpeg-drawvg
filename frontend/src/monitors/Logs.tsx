@@ -93,7 +93,7 @@ export default function Logs({ rows }: Props) {
     }, [ rows, needScrollToBottom ]);
 
     return (
-        <div ref={container} className={styles.logs}>
+        <div ref={container} role="log" className={styles.logs}>
             {rows.map(makeRow)}
         </div>
     );

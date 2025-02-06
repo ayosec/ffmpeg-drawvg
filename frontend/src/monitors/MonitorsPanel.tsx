@@ -287,7 +287,7 @@ export default function MonitorsPanel({ programId, setCompilerError }: Props) {
                 </div>
             </div>
 
-            <div className={styles.content}>
+            <div role="tabpanel" className={styles.content}>
                 {currentTab}
             </div>
         </div>

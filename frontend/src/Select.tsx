@@ -112,11 +112,12 @@ function Options<T>({ value, options, optionsAlign, onClose, onChange }: Options
     const style: React.CSSProperties = { textAlign: optionsAlign };
 
     return <>
-        <div ref={containerRef} className={widgets.selectOptions}>
+        <div ref={containerRef} role="listbox" className={widgets.selectOptions}>
             {
                 options.map((option, i) =>
                     <button
                         key={i}
+                        role="option"
                         style={style}
                         onKeyDown={e => onKey(selected, option[0], e.nativeEvent)}
                         className={selected === i ? widgets.selected : undefined}
@@ -130,7 +131,7 @@ function Options<T>({ value, options, optionsAlign, onClose, onChange }: Options
             }
         </div>
 
-        <div className={widgets.selectBackdrop} onClick={onClose}></div>
+        <div aria-hidden="true" className={widgets.selectBackdrop} onClick={onClose} />
     </>;
 }
 
@@ -144,6 +145,7 @@ export default function Select<T>(
     return <>
         <button
             ref={selectRef}
+            role="select"
             aria-label={title}
             className={widgets.button + " " + widgets.dropdownArrow}
             onClick={() => setOpen(!open)}

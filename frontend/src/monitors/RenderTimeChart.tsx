@@ -234,7 +234,7 @@ export default function RenderTimeChart({ chunks }: Props) {
     });
 
     return (
-        <div ref={setContainerRef} className={styles.renderTime}>
+        <div ref={setContainerRef} aria-live="off" className={styles.renderTime}>
             <table className={styles.dataRows}>
                 <thead>
                     <tr>

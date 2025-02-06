@@ -119,15 +119,20 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
         );
     } else {
         const percent = progress / config.frameCount;
+        const percentInt = Math.round(100 * percent);
 
         const R = 40;
         const circumference = 2 * Math.PI * R;
 
         content = (
-            <div className={outputStyles.exportProgress}>
+            <div
+                role="progressbar"
+                aria-valuenow={percentInt}
+                className={outputStyles.exportProgress}
+            >
                 {
                     percent < 1
-                        ? <span>{Math.round(100 * percent)}%</span>
+                        ? <span>{percentInt}%</span>
                         : <span className={outputStyles.processing}>Processing ...</span>
                 }
 
