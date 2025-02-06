@@ -22,9 +22,11 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
     const highlightsRef = useRef<HTMLPreElement>(null);
 
+    const lastHighlightedSpan = useRef<HTMLElement>(null);
+
     const [ share, setShare ] = useState(false);
 
-    const handleSelection = useCallback(() => {
+    const onSelect = useCallback(() => {
         const textArea = textAreaRef.current;
         const highlights = highlightsRef.current;
 
@@ -46,6 +48,13 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
                 highlights.dataset.alertsLastVisibility = visibility;
             }
+        }
+
+        // Set caret color to the foreground of the highlight.
+        const highlightedSpan = findHighlightedSpan(highlights, caret.line, caret.column);
+        if (highlightedSpan && lastHighlightedSpan.current !== highlightedSpan) {
+            lastHighlightedSpan.current = highlightedSpan;
+            textArea.style.caretColor = getComputedStyle(highlightedSpan).color;
         }
     }, [ compilerError, program.source ]);
 
@@ -78,7 +87,7 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                     autoCapitalize="off"
                     autoComplete="off"
                     autoCorrect="off"
-                    onSelect={handleSelection}
+                    onSelect={onSelect}
                     onChange={e => setSource(e.target.value)}
                 />
             </div>
@@ -100,4 +109,17 @@ function getCaretPosition(source: string, position: number) {
     }
 
     return { line, column: position - bol + 1 };
+}
+
+function findHighlightedSpan(highlights: HTMLElement, line: number, column: number) {
+    let lastSpan;
+    for (const span of document.querySelectorAll<HTMLElement>(`[data-line="${line}"]`)) {
+        const spanColumn = span.dataset.column;
+        if (spanColumn && parseFloat(spanColumn) > column)
+            break;
+
+        lastSpan = span;
+    }
+
+    return lastSpan;
 }

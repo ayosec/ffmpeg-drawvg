@@ -144,6 +144,8 @@ export default function Highlights({ ref, program, compilerError }: Props) {
                         key={key}
                         style={style}
                         data-kind={kind}
+                        data-line={token.line}
+                        data-column={token.column}
                     >
                         {current}
                     </span>
