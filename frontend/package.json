@@ -5,11 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host=0.0.0.0 --clearScreen=false",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --base /playground/ --outDir node_modules/.dist/playground",
     "build-backend": "make -C ../backend -j all",
-    "build-backend-release": "make -C ../backend -j all",
     "lint": "eslint .",
-    "preview": "vite preview",
     "test": "vitest --clearScreen=false"
   },
   "dependencies": {
