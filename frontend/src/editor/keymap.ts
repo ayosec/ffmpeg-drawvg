@@ -94,7 +94,7 @@ export default function keyMapHandler(event: React.KeyboardEvent<HTMLTextAreaEle
 
                 const fullLines = textarea.value.slice(bol, eol);
                 const updated = event.shiftKey
-                    ? fullLines.replace(/^[\t ]/mg, "")
+                    ? fullLines.replace(/^[\t ]/gm, "")
                     : fullLines.replace(/^[\t ]*\S+/gm, "\t$&");
 
                 textarea.setSelectionRange(bol, eol);
@@ -107,8 +107,10 @@ export default function keyMapHandler(event: React.KeyboardEvent<HTMLTextAreaEle
             case "/":
                 insertText(
                     selectedText().replace(
-                        /(^\s*)(\/\/\s?)?/mg,
-                        (_, indent, cmt) => indent + (cmt ? "" : "// "),
+                        /(^[\t ]*)(\/\/\s?)?(.*)/gm,
+                        (_, indent, c, s) => (
+                            indent + (c || !s.length ? "" : "// ") + s
+                        ),
                     ),
                 );
                 break;
