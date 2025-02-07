@@ -123,6 +123,7 @@ export default function OutputPanel({ program }: Props) {
                     <IconButton
                         icon={IoPlaySkipBack}
                         label="Previous frame"
+                        shortcut="ctrl-,"
                         onClick={() => {
                             setPlaying(PlaybackStatus.Pause);
                             backend.sendAction("PreviousFrame");
@@ -134,6 +135,7 @@ export default function OutputPanel({ program }: Props) {
                             <IconButton
                                 icon={IoPause}
                                 label="Pause animation"
+                                shortcut="ctrl-shift-p"
                                 onClick={() => setPlaying(PlaybackStatus.Pause)}
                             />
                         :
@@ -141,6 +143,7 @@ export default function OutputPanel({ program }: Props) {
                                 icon={IoPlay}
                                 iconStyle={{transform: "scaleX(-1)"}}
                                 label="Play Backwards"
+                                shortcut="ctrl-shift-p"
                                 onClick={() => setPlaying(PlaybackStatus.Backwards)}
                             />
                     }
@@ -157,12 +160,14 @@ export default function OutputPanel({ program }: Props) {
                             <IconButton
                                 icon={IoPause}
                                 label="Pause animation"
+                                shortcut="ctrl-p"
                                 onClick={() => setPlaying(PlaybackStatus.Pause)}
                             />
                         :
                             <IconButton
                                 icon={IoPlay}
                                 label="Play Forwards"
+                                shortcut="ctrl-p"
                                 onClick={() => setPlaying(PlaybackStatus.Forward)}
                             />
                     }
@@ -170,6 +175,7 @@ export default function OutputPanel({ program }: Props) {
                     <IconButton
                         icon={IoPlaySkipForward}
                         label="Next frame"
+                        shortcut="ctrl-."
                         onClick={() => {
                             setPlaying(PlaybackStatus.Pause);
                             backend.sendAction("NextFrame");

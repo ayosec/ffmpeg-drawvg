@@ -1,3 +1,9 @@
+// Replace some hard-to-see keys with the full name.
+const KEY_NAMES: {[key:string]: string} = {
+    ",": "comma",
+    ".": "period",
+};
+
 function makeFloatingBox(parent: HTMLElement) {
     const ID = "tooltip-floating-box";
     let node = <HTMLSpanElement|null>parent.querySelector("span#" + ID);
@@ -17,6 +23,21 @@ function configureTooltop(tooltipBox: HTMLElement, target: HTMLElement) {
         return;
 
     tooltipBox.innerText = label;
+
+    const shortcut = target.dataset.shortcut;
+    if (shortcut) {
+        const el = document.createElement("div");
+        el.classList.add("kb-shortcut");
+
+        for (const key of shortcut.split("-")) {
+            const kel = document.createElement("span");
+            kel.innerText = KEY_NAMES[key] ?? key;
+            el.append(kel);
+            el.append(" ");
+        }
+
+        tooltipBox.append(el);
+    }
 
     const clientWidth = window.innerWidth - 10;
     const clientHeight = window.innerHeight - 10;

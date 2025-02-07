@@ -21,6 +21,7 @@ html, body, #root {
     pointer-events: none;
 
     white-space: pre-wrap;
+    text-align: center;
 
     font-size: 1rem;
     padding: 0.5ch 1ch;
@@ -59,6 +60,26 @@ html, body, #root {
 
         &::before {
             top: -0.5ch;
+        }
+    }
+
+    .kb-shortcut {
+        text-align: center;
+        padding: 1ch 0;
+
+        span {
+            color: black;
+            background: #fafafa;
+
+            text-transform: capitalize;
+
+            padding: 0.25ch 1ch;
+            font-size: 0.7rem;
+            margin: 0.2ch;
+
+            border-radius: 0.5ch;
+            border: solid #ddd;
+            border-width: 1px 1px 3px
         }
     }
 }
