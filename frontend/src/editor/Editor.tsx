@@ -6,6 +6,7 @@ import CompilerError from "../vgs/CompilerError";
 import Highlights from "./Highlights";
 import IconButton from "../IconButton";
 import Share from "./Share";
+import keyMapHandler from "./keymap";
 import { Program } from "../render/protocol";
 
 import styles from "./editor.module.css";
@@ -88,6 +89,7 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                     autoComplete="off"
                     autoCorrect="off"
                     onSelect={onSelect}
+                    onKeyDown={keyMapHandler}
                     onChange={e => setSource(e.target.value)}
                 />
             </div>
