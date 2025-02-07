@@ -237,7 +237,7 @@ export default function MonitorsPanel({ programId, setCompilerError }: Props) {
     let currentTab, limitSetting;
     switch (selectedTab) {
         case Tab.Logs:
-            currentTab = <Logs rows={content.logs} />;
+            currentTab = <Logs rows={content.logs} lastProgramId={programId} />;
 
             limitSetting = (
                 <Select

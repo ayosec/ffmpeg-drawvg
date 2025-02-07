@@ -7,6 +7,7 @@ import styles from "./logs.module.css";
 
 interface Props {
     rows: LogRow[];
+    lastProgramId: number;
 }
 
 const LevelNames = new Map([
@@ -21,10 +22,8 @@ const LevelNames = new Map([
     [ 56, "Trace" ],
 ]);
 
-function makeLogEvent(key: number, logEvent: LogEvent) {
+function makeLogEvent(key: number, logEvent: LogEvent, lastProgramId: number) {
     const levelName = LevelNames.get(logEvent.level) ?? logEvent.level.toString();
-
-    const className = logEvent.level < 32 ? styles.error : styles.info;
 
     const showVar = (varName: string, label: string, value: number, fixed?: number) => (
         isFinite(value) && <>
@@ -33,6 +32,11 @@ function makeLogEvent(key: number, logEvent: LogEvent) {
             </span>
         </>
     );
+
+    let className = logEvent.level < 32 ? styles.error : styles.info;
+
+    if (lastProgramId !== logEvent.programId)
+        className += " " + styles.outdated;
 
     return (
         <div key={key} className={`${styles.event} ${className}`}>
@@ -64,14 +68,7 @@ function makeLostEvents(key: number, lostEvents: number) {
     );
 }
 
-function makeRow(row: LogRow) {
-    if ("logEvent" in row)
-        return makeLogEvent(row.key, row.logEvent);
-    else if ("lostEvents" in row)
-        return makeLostEvents(row.key, row.lostEvents);
-}
-
-export default function Logs({ rows }: Props) {
+export default function Logs({ rows, lastProgramId }: Props) {
     const container = useRef<HTMLDivElement>(null);
 
     // When `rows` is updated, and the scroll is close to the
@@ -91,6 +88,13 @@ export default function Logs({ rows }: Props) {
         }
 
     }, [ rows, needScrollToBottom ]);
+
+    const makeRow = (row: LogRow) => {
+        if ("logEvent" in row)
+            return makeLogEvent(row.key, row.logEvent, lastProgramId);
+        else if ("lostEvents" in row)
+            return makeLostEvents(row.key, row.lostEvents);
+    };
 
     return (
         <div ref={container} role="log" className={styles.logs}>

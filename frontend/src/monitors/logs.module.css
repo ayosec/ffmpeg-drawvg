@@ -10,6 +10,10 @@
         align-items: flex-start;
         padding: 0.3ch 0.5ch;
         gap: 0.5ch;
+
+        &.outdated {
+            color: #777;
+        }
     }
 
     .info { --level-bg: light-dark(#def0fa, #305070); }
