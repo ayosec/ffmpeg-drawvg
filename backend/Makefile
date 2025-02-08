@@ -99,7 +99,7 @@ $(TARGET)/play/%.o: src/%.c | $(EM_CONFIG)
 	$(CC) $(CFLAGS) -MJ $@.mj -c -o $@ $^
 
 
-$(SYNTAX_INFO): src/syntax-info/gentables.sh src/syntax-info/extract_colors.jq
+$(SYNTAX_INFO): src/syntax-info/gentables.sh src/syntax-info/*.jq
 	$< $(FFMPEG_ROOT) $@
 
 $(DESERIALIZERS): GENERATOR = $(TARGET)/deserializers-generator.js
