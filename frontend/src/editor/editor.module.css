@@ -53,6 +53,8 @@
             position: absolute;
             padding: 0.5ch 1ch;
 
+            white-space: nowrap;
+
             font-size: 0.75rem;
             transform: translateY(calc(100% + 0.5ch));
 
@@ -143,6 +145,10 @@
     box-shadow: 0 0 3px var(--icon-button-shadow);
 
     div {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+
         cursor: pointer;
         font-family: var(--monospace-font, monospace), monospace;
         font-size: 0.8rem;
@@ -154,5 +160,35 @@
             color: var(--tab-selected-fg);
             background: var(--tab-selected-bg);
         }
+
+        .params {
+            color: #777;
+            margin-left: 5ch;
+        }
+
+        .color {
+            display: block;
+            border-radius: 50%;
+            width: 1lh;
+            margin-left: 3ch;
+        }
+    }
+}
+
+.hoverInfo {
+    position: fixed;
+
+    margin-top: 1ch;
+    padding: 0.5ch 1ch;
+
+    color: var(--icon-button-fg);
+    background: var(--icon-button-bg);
+    box-shadow: 0 0 3px var(--icon-button-shadow);
+
+    font-family: var(--monospace-font, monospace), monospace;
+
+    .hoverParam {
+        font-weight: bold;
+        font-style: italic;
     }
 }

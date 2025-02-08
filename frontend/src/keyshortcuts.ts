@@ -6,7 +6,7 @@ export default function initKeyboardShortcuts(parent: HTMLElement) {
 
         const seq = `ctrl${event.shiftKey ? "-shift" : ""}-${event.key}`;
 
-        const button = parent.querySelector<HTMLButtonElement>(`button[data-shortcut="${seq}" i]`)
+        const button = parent.querySelector<HTMLButtonElement>(`button[data-shortcut="${seq}" i]`);
         if (button) {
             event.preventDefault();
             button.click();

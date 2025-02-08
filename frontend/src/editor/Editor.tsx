@@ -2,14 +2,15 @@ import { useRef, useState } from "react";
 
 import { IoShareSocial } from "react-icons/io5";
 
-import * as Completion from "./Completion";
-
+import * as CompImpl from "./completion.impl";
 import CompilerError from "../vgs/CompilerError";
+import Completion from "./Completion";
 import Highlights from "./Highlights";
 import IconButton from "../IconButton";
 import Share from "./Share";
 import keyMapHandler from "./keymap";
 import { Program } from "../render/protocol";
+import { getParameters } from "../vgs/decls";
 
 import styles from "./editor.module.css";
 
@@ -20,6 +21,14 @@ interface Props {
     setSource(source: string): void;
 }
 
+interface HoverInfo {
+    clientX: number;
+    clientY: number;
+    inst: string;
+    params: readonly string[]|undefined;
+    paramsPosition: number;
+}
+
 export default function Editor({ autoFocus, program, compilerError, setSource }: Props) {
     const highlightsRef = useRef<HTMLPreElement>(null);
 
@@ -27,7 +36,11 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
     const [ share, setShare ] = useState(false);
 
-    const [ completion, setCompletion ] = useState<Completion.Props|null>();
+    const [ completion, setCompletion ] = useState<CompImpl.Props|null>();
+
+    const debounceHover = useRef<ReturnType<typeof setTimeout>>(null);
+
+    const [ hoverInfo, setHoverInfo ] = useState<HoverInfo|null>(null);
 
     const onSelect = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         const textArea = event.currentTarget;
@@ -68,6 +81,24 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
         ) {
             setCompletion(null);
         }
+
+        if (hoverInfo)
+            setHoverInfo(null);
+    };
+
+    const onMouseMove = (event: React.MouseEvent) => {
+        if (debounceHover.current !== null)
+            clearTimeout(debounceHover.current);
+
+        debounceHover.current = setTimeout(() => {
+            debounceHover.current = null;
+
+            if (highlightsRef.current === null)
+                return;
+
+            const hover = findHoverInfo(highlightsRef.current, event.clientX, event.clientY);
+            setHoverInfo(hover);
+        }, 250);
     };
 
     return (
@@ -99,9 +130,12 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                     autoComplete="off"
                     autoCorrect="off"
                     onSelect={onSelect}
+                    onMouseMove={onMouseMove}
+                    onBlur={() => setCompletion(null)}
+                    onMouseLeave={() => setHoverInfo(null)}
                     onKeyDown={e => {
                         if (completion) {
-                            const [ captured, nextState ] = Completion.onKeyDown(e, completion);
+                            const [ captured, nextState ] = CompImpl.onKeyDown(e, completion);
                             if (captured) {
                                 setCompletion(nextState);
                                 e.preventDefault();
@@ -111,17 +145,39 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
                         keyMapHandler(e);
                     }}
-                    onBlur={() => setCompletion(null)}
                     onChange={e => {
                         setSource(e.currentTarget.value);
-                        setCompletion(Completion.configure(e.currentTarget));
+                        setCompletion(CompImpl.configure(e.currentTarget));
                     }}
                 />
 
-                {
-                    completion && <Completion.Suggestions {...completion} />
-                }
+                { completion && <Completion {...completion} /> }
+
+                { !completion && hoverInfo && <HoverInfo {...hoverInfo} /> }
             </div>
+        </div>
+    );
+}
+
+function HoverInfo({ clientX, clientY, inst, params, paramsPosition }: HoverInfo) {
+    return (
+        <div
+            style={{ top: clientY + "px", left: clientX + "px" }}
+            className={styles.hoverInfo}
+        >
+            <span
+                className={styles.inst + " " + (paramsPosition === -1 ? styles.hoverParam : "")}
+            >{inst}</span>
+            {
+                params?.map((p, i) =>
+                    <span
+                        key={i}
+                        className={i === paramsPosition ? styles.hoverParam : undefined}
+                    >
+                        {" "}{p}
+                    </span>
+                )
+            }
         </div>
     );
 }
@@ -153,4 +209,58 @@ function findHighlightedSpan(highlights: HTMLElement, line: number, column: numb
     }
 
     return lastSpan;
+}
+
+function findHoverInfo(highlights: HTMLElement, clientX: number, clientY: number): HoverInfo|null {
+    const spans = highlights.querySelectorAll<HTMLElement>("span[data-kind]");
+
+    let start = 0;
+    let end = spans.length - 1;
+
+    let target: HTMLElement|undefined;
+
+    while (start <= end) {
+        const middle = Math.floor((start + end) / 2);
+
+        const span = spans[middle];
+        const rect = span.getBoundingClientRect();
+
+        let relative = 0;
+
+        if (rect.top > clientY)
+            relative = -1;
+        else if (rect.top + rect.height < clientY)
+            relative = 1;
+        else if (rect.left > clientX)
+            relative = -1;
+        else if (rect.left + rect.width < clientX)
+            relative = 1;
+        else {
+            target = span;
+            break;
+        }
+
+        if (relative < 0)
+            end = middle - 1;
+        else
+            start = middle + 1;
+    }
+
+    if (target === undefined)
+        return null;
+
+    let inst = target.dataset.paramInst;
+    let paramsPosition = parseFloat(target.dataset.paramPos ?? "0");
+
+    if (inst === undefined && target.dataset.kind === "keyword") {
+        inst = target.innerText;
+        paramsPosition = -1;
+    }
+
+    const params = getParameters(inst ?? "");
+
+    if (inst === undefined || params === undefined)
+        return null;
+
+    return { clientX, clientY, inst, params, paramsPosition };
 }

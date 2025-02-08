@@ -147,6 +147,8 @@ export default function Highlights({ ref, program, compilerError }: Props) {
                         data-offset={token.offset}
                         data-line={token.line}
                         data-column={token.column}
+                        data-param-inst={token.param?.inst}
+                        data-param-pos={token.param?.pos}
                     >
                         {current}
                     </span>
