@@ -16,6 +16,7 @@ interface Token {
     kind: Kind
     line: number;
     column: number;
+    offset: number;
     lexeme: string;
 }
 
@@ -45,6 +46,7 @@ export default function* tokenize(code: string) {
             kind: "unknown",
             line,
             column,
+            offset: cursor,
             lexeme: "",
         };
 
@@ -112,5 +114,5 @@ export default function* tokenize(code: string) {
         column += token.lexeme.length - offset;
     }
 
-    yield { line, column, kind: "whitespace", lexeme: "\n" };
+    yield { line, column, offset: cursor, kind: "whitespace", lexeme: "\n" };
 }
