@@ -122,3 +122,37 @@
     border-radius: 1ch;
     box-shadow: 0 0 3px var(--icon-button-shadow);
 }
+
+.suggestions {
+    display: flex;
+    flex-direction: column;
+
+    position: fixed;
+    z-index: 1000;
+
+    max-height: 50vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    box-sizing: border-box;
+    scrollbar-width: thin;
+
+    color: var(--icon-button-fg);
+    background: var(--icon-button-bg);
+
+    box-shadow: 0 0 3px var(--icon-button-shadow);
+
+    div {
+        cursor: pointer;
+        font-family: var(--monospace-font, monospace), monospace;
+        font-size: 0.8rem;
+
+        user-select: none;
+        padding: 0.25ch 0.5ch;
+
+        &.selected, &:hover, &:focus {
+            color: var(--tab-selected-fg);
+            background: var(--tab-selected-bg);
+        }
+    }
+}

@@ -115,11 +115,8 @@ function useTableRects() {
     return [ sizes, setContainerRef ] as const;
 }
 
-function onMouseEnterTimeRange(event: React.MouseEvent) {
-    const dataRef = event.target;
-
-    if (!(dataRef instanceof HTMLSpanElement))
-        return;
+function onMouseEnterTimeRange(event: React.MouseEvent<HTMLSpanElement>) {
+    const dataRef = event.currentTarget;
 
     const info = dataRef.closest("table")?.querySelector(`div.${styles.activeColumn}`);
 

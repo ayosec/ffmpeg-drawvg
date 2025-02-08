@@ -50,7 +50,7 @@ export default function* tokenize(code: string) {
             lexeme: "",
         };
 
-        if (code[cursor] == "(") {
+        if (code[cursor] === "(") {
             let level = 1;
             const parenthesis = /[()]/g;
 
@@ -62,9 +62,9 @@ export default function* tokenize(code: string) {
                     const eol = code.indexOf("\n", cursor);
                     parenthesis.lastIndex = eol === -1 ? codeLen : eol;
                     level = 0;
-                } else if (m[0] == "(") {
+                } else if (m[0] === "(") {
                     level++;
-                } else if (m[0] == ")") {
+                } else if (m[0] === ")") {
                     level--;
                 } else {
                     throw "Unreachable";
@@ -91,7 +91,7 @@ export default function* tokenize(code: string) {
             token.lexeme = code[cursor];
         }
 
-        if (token.kind == "word" && Instructions.has(token.lexeme)) {
+        if (token.kind === "word" && Instructions.has(token.lexeme)) {
             token.kind = "keyword";
         }
 

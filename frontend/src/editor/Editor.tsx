@@ -1,6 +1,8 @@
-import { useCallback, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { IoShareSocial } from "react-icons/io5";
+
+import * as Completion from "./Completion";
 
 import CompilerError from "../vgs/CompilerError";
 import Highlights from "./Highlights";
@@ -19,16 +21,16 @@ interface Props {
 }
 
 export default function Editor({ autoFocus, program, compilerError, setSource }: Props) {
-    const textAreaRef = useRef<HTMLTextAreaElement>(null);
-
     const highlightsRef = useRef<HTMLPreElement>(null);
 
     const lastHighlightedSpan = useRef<HTMLElement>(null);
 
     const [ share, setShare ] = useState(false);
 
-    const onSelect = useCallback(() => {
-        const textArea = textAreaRef.current;
+    const [ completion, setCompletion ] = useState<Completion.Props|null>();
+
+    const onSelect = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const textArea = event.currentTarget;
         const highlights = highlightsRef.current;
 
         if (textArea === null || highlights === null)
@@ -53,14 +55,23 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
         // Set caret color to the foreground of the highlight.
         const highlightedSpan = findHighlightedSpan(highlights, caret.line, caret.column);
-        if (highlightedSpan && lastHighlightedSpan.current !== highlightedSpan) {
+        if (highlightedSpan
+            && lastHighlightedSpan.current !== highlightedSpan
+        ) {
             lastHighlightedSpan.current = highlightedSpan;
             textArea.style.caretColor = getComputedStyle(highlightedSpan).color;
         }
-    }, [ compilerError, program.source ]);
+
+        // Hide autocompletion when caret is moved.
+        if (completion
+            && completion.currentWord.caret !== textArea.selectionStart
+        ) {
+            setCompletion(null);
+        }
+    };
 
     return (
-        <div className={styles.editor}>
+        <div className={styles.editor} data-panel="editor">
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <IconButton
@@ -77,11 +88,10 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                 <Highlights
                     ref={highlightsRef}
                     program={program}
-                    compilerError={compilerError}
+                    compilerError={completion ? null : compilerError}
                 />
 
                 <textarea
-                    ref={textAreaRef}
                     value={program.source}
                     autoFocus={autoFocus}
                     spellCheck={false}
@@ -89,9 +99,28 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                     autoComplete="off"
                     autoCorrect="off"
                     onSelect={onSelect}
-                    onKeyDown={keyMapHandler}
-                    onChange={e => setSource(e.target.value)}
+                    onKeyDown={e => {
+                        if (completion) {
+                            const [ captured, nextState ] = Completion.onKeyDown(e, completion);
+                            if (captured) {
+                                setCompletion(nextState);
+                                e.preventDefault();
+                                return;
+                            }
+                        }
+
+                        keyMapHandler(e);
+                    }}
+                    onBlur={() => setCompletion(null)}
+                    onChange={e => {
+                        setSource(e.currentTarget.value);
+                        setCompletion(Completion.configure(e.currentTarget));
+                    }}
                 />
+
+                {
+                    completion && <Completion.Suggestions {...completion} />
+                }
             </div>
         </div>
     );

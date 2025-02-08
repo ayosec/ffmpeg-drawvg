@@ -2,9 +2,7 @@ export default function keyMapHandler(event: React.KeyboardEvent<HTMLTextAreaEle
     if (event.altKey || event.ctrlKey || event.metaKey)
         return;
 
-    const textarea = event.target;
-    if (!(textarea instanceof HTMLTextAreaElement))
-        return;
+    const textarea = event.currentTarget;
 
     const { selectionStart, selectionEnd } = textarea;
 

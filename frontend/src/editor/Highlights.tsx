@@ -144,6 +144,7 @@ export default function Highlights({ ref, program, compilerError }: Props) {
                         key={key}
                         style={style}
                         data-kind={kind}
+                        data-offset={token.offset}
                         data-line={token.line}
                         data-column={token.column}
                     >
