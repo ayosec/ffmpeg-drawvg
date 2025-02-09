@@ -34,6 +34,12 @@ export function configure(textarea: HTMLTextAreaElement): Props|null {
         case "color":
             return tryColors(textarea, cw);
 
+        case "cap":
+            return tryConstant(textarea, cw, [ "butt", "round", "square" ]);
+
+        case "join":
+            return tryConstant(textarea, cw, [ "bevel", "miter", "round" ]);
+
         default:
             return null;
     }
@@ -85,12 +91,18 @@ function getCurrentWord(textarea: HTMLTextAreaElement): CurrentWord|null {
         if (token.offset < caret
             && token.offset + token.lexeme.length >= caret
         ) {
-            let tokenKind = token.kind;
+            let tokenKind: string = token.kind;
 
             if (token.param) {
                 const params = getParameters(token.param.inst);
-                if (params && params[token.param.pos] === "color")
-                    tokenKind = "color";
+                const paramName = params && params[token.param.pos];
+                switch(paramName) {
+                    case "cap":
+                    case "color":
+                    case "join":
+                        tokenKind = paramName;
+                        break;
+                }
             }
 
             return {
@@ -105,6 +117,25 @@ function getCurrentWord(textarea: HTMLTextAreaElement): CurrentWord|null {
     return null;
 }
 
+function buildSuggestions(
+    suggestions: Suggestion[],
+    textarea: HTMLTextAreaElement,
+    cw: CurrentWord,
+): Props|null {
+    if (suggestions.length === 0
+        || (suggestions.length === 1 && suggestions[0].text === cw.word)
+    ) {
+        return null;
+    }
+
+    return {
+        textarea,
+        suggestions,
+        selected: 0,
+        currentWord: cw,
+    };
+}
+
 function tryInstructions(textarea: HTMLTextAreaElement, cw: CurrentWord): Props|null {
     const suggestions = [];
     for (const i of Instructions) {
@@ -114,20 +145,7 @@ function tryInstructions(textarea: HTMLTextAreaElement, cw: CurrentWord): Props|
         }
     }
 
-    if (suggestions.length === 0
-        || (suggestions.length === 1 && suggestions[0].text === cw.word)
-    ) {
-        return null;
-    }
-
-    suggestions.sort();
-
-    return {
-        textarea,
-        suggestions,
-        selected: 0,
-        currentWord: cw,
-    };
+    return buildSuggestions(suggestions, textarea, cw);
 }
 
 function tryColors(textarea: HTMLTextAreaElement, cw: CurrentWord): Props|null {
@@ -141,20 +159,25 @@ function tryColors(textarea: HTMLTextAreaElement, cw: CurrentWord): Props|null {
         }
     }
 
-    if (suggestions.length === 0
-        || (suggestions.length === 1 && suggestions[0].text === cw.word)
-    ) {
-        return null;
-    }
+    return buildSuggestions(suggestions, textarea, cw);
+}
 
-    suggestions.sort();
+function tryConstant(
+    textarea: HTMLTextAreaElement,
+    cw: CurrentWord,
+    constants: string[]
+): Props | null {
+    let suggestions = constants.filter(c => c.indexOf(cw.word) !== -1);
 
-    return {
+    // Show all values if the current word does not match any constant.
+    if (suggestions.length === 0)
+        suggestions = constants;
+
+    return buildSuggestions(
+        suggestions.map(c => ({ text: c })),
         textarea,
-        suggestions,
-        selected: 0,
-        currentWord: cw,
-    };
+        cw,
+    );
 }
 
 export function insertSuggestion(props: Props) {
