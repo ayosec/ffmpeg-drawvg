@@ -118,11 +118,13 @@ export default function Highlights({ ref, program, compilerError }: Props) {
                 needNewLine = false;
                 lineNumber++;
 
+                let className = styles.lineNumber;
+
+                if (compilerError?.line === lineNumber)
+                    className += " " + styles.hasError;
+
                 spans.push(
-                    <span
-                        key={`${key}-nl`}
-                        className={styles.lineNumber}
-                    >
+                    <span key={`${key}-nl`} className={className}>
                         {lineNumber}
                     </span>
                 );

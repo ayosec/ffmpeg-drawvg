@@ -38,13 +38,15 @@
     }
 
     pre {
+        --color-error: light-dark(#A00, #F55);
+
         [data-kind="comment"] { color: light-dark(#444, #CCC); font-style: italic; }
         [data-kind="keyword"] { color: light-dark(#519, #DAF); }
         [data-kind="number"] { color: light-dark(#063, #7FA); }
         [data-kind="expr"] { color: light-dark(#04A, #ACF); }
 
         [data-kind="_invalid"] {
-            color: light-dark(#A00, #F55);
+            color: var(--color-error);
             text-decoration: underline;
             text-decoration-style: wavy;
         }
@@ -99,6 +101,10 @@
     color: light-dark(#999, #777);
 
     &::after { content: " "; }
+
+    &.hasError {
+        color: var(--color-error);
+    }
 }
 
 .toolbar {
