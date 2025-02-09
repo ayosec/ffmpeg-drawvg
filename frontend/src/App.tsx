@@ -1,5 +1,5 @@
 import { inflate } from "pako";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
@@ -10,6 +10,8 @@ import Editor from "./editor/Editor";
 import Header from "./Header";
 import MonitorsPanel from "./monitors/MonitorsPanel";
 import OutputPanel from "./output/OutputPanel";
+
+const CURRENT_PROGRAM_STORAGE_KEY = "main/currentProgram";
 
 function extractCodeFromLocationHash() {
     const zipRaw = /zip=([^&]+)/.exec(location.hash);
@@ -40,6 +42,10 @@ function loadInitialCode() {
     const code = extractCodeFromLocationHash();
     if (code !== null)
         return code;
+
+    const stored = localStorage.getItem(CURRENT_PROGRAM_STORAGE_KEY);
+    if (stored !== null)
+        return stored;
 
     return `\
 rect 0 0 w h
@@ -72,6 +78,8 @@ export default function App() {
 
     const [ compilerError, setCompilerError ] = useState<CompilerError|null>(null);
 
+    const debounceStorageUpdate = useRef<ReturnType<typeof setTimeout>>(null);
+
     useEffect(() => {
         const handler = () => {
             const source = extractCodeFromLocationHash();
@@ -82,6 +90,22 @@ export default function App() {
         window.addEventListener("hashchange", handler);
         return () => window.removeEventListener("hashchange", handler);
     }, []);
+
+    useEffect(() => {
+        const cancel = () => {
+            if (debounceStorageUpdate.current !== null)
+                clearTimeout(debounceStorageUpdate.current);
+        };
+
+        cancel();
+
+        debounceStorageUpdate.current = setTimeout(() => {
+            debounceStorageUpdate.current = null;
+            localStorage.setItem(CURRENT_PROGRAM_STORAGE_KEY, program.source);
+        }, 2000);
+
+        return cancel;
+    }, [ program ]);
 
     const resizeHandle = () => (
         <PanelResizeHandle className={styles.resizeHandle} children={<span />} />
