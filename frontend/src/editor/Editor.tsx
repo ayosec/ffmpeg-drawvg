@@ -106,7 +106,7 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <IconButton
-                        icon={IoShareSocial}
+                        Icon={IoShareSocial}
                         label="Share"
                         onClick={() => setShare(true) }
                     />

@@ -192,3 +192,7 @@
         font-style: italic;
     }
 }
+
+.editor:not(:hover) .hoverInfo {
+    display: none;
+}

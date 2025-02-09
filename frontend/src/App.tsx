@@ -107,13 +107,14 @@ export default function App() {
         return cancel;
     }, [ program ]);
 
-    const resizeHandle = () => (
+    const ResizeHandle = () => (
         <PanelResizeHandle className={styles.resizeHandle} children={<span />} />
     );
 
     return (
         <div className={styles.main} >
             <Header />
+
             <PanelGroup direction="horizontal">
                 <Panel>
                     <Editor
@@ -127,7 +128,7 @@ export default function App() {
                     />
                 </Panel>
 
-                { resizeHandle() }
+                <ResizeHandle />
 
                 <Panel>
                     <PanelGroup direction="vertical">
@@ -135,7 +136,7 @@ export default function App() {
                             <OutputPanel program={program} />
                         </Panel>
 
-                        { resizeHandle() }
+                        <ResizeHandle />
 
                         <Panel defaultSize={25}>
                             <MonitorsPanel
@@ -148,5 +149,4 @@ export default function App() {
             </PanelGroup>
         </div>
     );
-
 }

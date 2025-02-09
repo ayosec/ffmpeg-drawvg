@@ -283,7 +283,7 @@ export default function MonitorsPanel({ programId, setCompilerError }: Props) {
                 <div className={styles.actions}>
                     {limitSetting}
 
-                    <IconButton icon={HiOutlineTrash} onClick={clear} label="Clear" />
+                    <IconButton Icon={HiOutlineTrash} onClick={clear} label="Clear" />
                 </div>
             </div>
 
