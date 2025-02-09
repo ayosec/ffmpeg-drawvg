@@ -1,5 +1,5 @@
 import { inflate } from "pako";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
@@ -11,10 +11,10 @@ import Header from "./Header";
 import MonitorsPanel from "./monitors/MonitorsPanel";
 import OutputPanel from "./output/OutputPanel";
 
-function loadInitialCode() {
+function extractCodeFromLocationHash() {
     const zipRaw = /zip=([^&]+)/.exec(location.hash);
     if (zipRaw) {
-        location.hash = "";
+        history.replaceState(null, "", location.href.split("#")[0]);
 
         try {
             const zip = decodeURIComponent(zipRaw[1]);
@@ -32,6 +32,14 @@ function loadInitialCode() {
             console.log("Unable to load code from URL.", error);
         }
     }
+
+    return null;
+}
+
+function loadInitialCode() {
+    const code = extractCodeFromLocationHash();
+    if (code !== null)
+        return code;
 
     return `\
 rect 0 0 w h
@@ -63,6 +71,17 @@ export default function App() {
     const [ program, setProgram ] = useState(() => ({ id: 0, source: loadInitialCode() }));
 
     const [ compilerError, setCompilerError ] = useState<CompilerError|null>(null);
+
+    useEffect(() => {
+        const handler = () => {
+            const source = extractCodeFromLocationHash();
+            if (source !== null)
+                setProgram({ id: performance.now(), source });
+        };
+
+        window.addEventListener("hashchange", handler);
+        return () => window.removeEventListener("hashchange", handler);
+    }, []);
 
     const resizeHandle = () => (
         <PanelResizeHandle className={styles.resizeHandle} children={<span />} />
