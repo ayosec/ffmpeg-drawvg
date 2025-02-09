@@ -105,6 +105,7 @@ export default function OutputPanel({ program }: Props) {
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <Select
+                        title="Frame size"
                         value={[fitRenderView, canvasSize]}
                         valueLabel={canvasSize.join("×")}
                         onChange={configureCanvasSize}
@@ -149,6 +150,7 @@ export default function OutputPanel({ program }: Props) {
                     }
 
                     <Select
+                        title="Playback speed"
                         value={playbackSpeed}
                         valueLabel={playbackSpeed + "x"}
                         onChange={setPlaybackSpeed}

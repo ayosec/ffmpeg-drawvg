@@ -270,6 +270,7 @@ export default function MonitorsPanel({ program, setCompilerError }: Props) {
 
             limitSetting = (
                 <Select
+                    title="Messages limit"
                     key="setLogsLimit"
                     optionsAlign="right"
                     value={content.logsLimit}
@@ -285,6 +286,7 @@ export default function MonitorsPanel({ program, setCompilerError }: Props) {
 
             limitSetting = (
                 <Select
+                    title="Frames limit"
                     key="setRenderTimeLimit"
                     optionsAlign="right"
                     value={content.renderTimeLimit}

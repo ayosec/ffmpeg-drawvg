@@ -27,11 +27,11 @@ html, body, #root {
     padding: 0.5ch 1ch;
     border-radius: 0.5ch;
 
-    border: 1px solid black;
+    box-shadow: 0 0 3px light-dark(white, black);
 
     &, &::before {
-        background: light-dark(black, #fff);
         color: light-dark(white, black);
+        background: light-dark(black, #fff);
     }
 
     &::before {
