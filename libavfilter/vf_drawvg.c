@@ -137,7 +137,7 @@ enum VGSInstruction {
     INS_SET_LINE_JOIN,          ///<  setlinejoin (join)
     INS_SET_LINE_WIDTH,         ///<  setlinewidth (width)
     INS_SET_RGBA,               ///<  setrgba (r g b a)
-    INS_SET_VAR,                ///<  setvar (u# value)
+    INS_SET_VAR,                ///<  setvar (varname value)
     INS_STROKE,                 ///<  stroke
     INS_STROKE_PRESERVE,        ///<  pstroke
     INS_S_CURVE_TO,             ///<  S (x2 y2 x y)
