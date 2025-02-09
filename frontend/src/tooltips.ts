@@ -1,5 +1,5 @@
 // Replace some hard-to-see keys with the full name.
-const KEY_NAMES: {[key:string]: string} = {
+export const KEY_NAMES: {[key:string]: string} = {
     ",": "comma",
     ".": "period",
 };

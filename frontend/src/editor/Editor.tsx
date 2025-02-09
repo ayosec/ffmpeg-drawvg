@@ -1,12 +1,14 @@
 import { useRef, useState } from "react";
 
 import { IoShareSocial } from "react-icons/io5";
+import { LuKeyboard } from "react-icons/lu";
 
 import * as CompImpl from "./completion.impl";
 import CompilerError from "../vgs/CompilerError";
 import Completion from "./Completion";
 import Highlights from "./Highlights";
 import IconButton from "../IconButton";
+import KeyboardShortcuts from "../KeyboardShortcuts";
 import Share from "./Share";
 import keyMapHandler from "./keymap";
 import { Program } from "../render/protocol";
@@ -35,6 +37,8 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
     const lastHighlightedSpan = useRef<HTMLElement>(null);
 
     const [ share, setShare ] = useState(false);
+
+    const [ keyboardShortcuts, setKeyboardShortcuts ] = useState(false);
 
     const [ completion, setCompletion ] = useState<CompImpl.Props|null>();
 
@@ -112,6 +116,19 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                     />
 
                     { share && <Share source={program.source} onClose={() => setShare(false)} /> }
+
+                    { keyboardShortcuts &&
+                        <KeyboardShortcuts onClose={() => setKeyboardShortcuts(false)} />
+                    }
+                </div>
+
+                <div>
+                    <IconButton
+                        Icon={LuKeyboard}
+                        label="Keyboard Shortcuts"
+                        shortcut="ctrl-k"
+                        onClick={() => setKeyboardShortcuts(!keyboardShortcuts)}
+                    />
                 </div>
             </div>
 

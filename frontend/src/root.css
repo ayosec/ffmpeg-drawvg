@@ -63,24 +63,25 @@ html, body, #root {
         }
     }
 
-    .kb-shortcut {
-        text-align: center;
-        padding: 1ch 0;
+}
 
-        span {
-            color: black;
-            background: #fafafa;
+.kb-shortcut {
+    text-align: center;
+    padding: 1ch 0;
 
-            text-transform: capitalize;
+    span {
+        color: black;
+        background: #fafafa;
 
-            padding: 0.25ch 1ch;
-            font-size: 0.7rem;
-            margin: 0.2ch;
+        text-transform: capitalize;
 
-            border-radius: 0.5ch;
-            border: solid #ddd;
-            border-width: 1px 1px 3px
-        }
+        padding: 0.25ch 1ch;
+        font-size: 0.7rem;
+        margin: 0.2ch;
+
+        border-radius: 0.5ch;
+        border: solid #ddd;
+        border-width: 1px 1px 3px
     }
 }
 
