@@ -12,6 +12,8 @@ export default function Completion(props: Props) {
     useLayoutEffect(() => {
         const box = ref.current;
 
+        // Put the menu next to the <span> of the current word.
+
         const span = box
             ?.closest("[data-panel='editor']")
             ?.querySelector(`pre span[data-offset="${currentWord.start}"]`);
@@ -29,6 +31,11 @@ export default function Completion(props: Props) {
             box.style.top = spanRect.top - boxRect.height + "px";
 
         box.style.left = spanRect.left + "px";
+
+
+        // Ensure the selected option is visible.
+
+        box.querySelector("." + styles.selected)?.scrollIntoView({ block: "nearest" });
     });
 
     return (

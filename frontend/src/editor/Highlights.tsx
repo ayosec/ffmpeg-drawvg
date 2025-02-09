@@ -92,7 +92,7 @@ export default function Highlights({ ref, program, compilerError }: Props) {
         }
 
         let lexeme = token.lexeme;
-        let kind = token.kind;
+        let kind: string = token.kind;
 
         if (compilerError
             && compilerError.line === token.line
