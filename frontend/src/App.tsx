@@ -140,7 +140,7 @@ export default function App() {
 
                         <Panel defaultSize={25}>
                             <MonitorsPanel
-                                programId={program.id}
+                                program={program}
                                 setCompilerError={setCompilerError}
                             />
                         </Panel>

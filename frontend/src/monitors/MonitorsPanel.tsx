@@ -1,7 +1,9 @@
 import { memo, useCallback, useContext, useEffect, useReducer, useState } from "react";
 
 import BackendContext from "../backend";
-import { LogEvent, RenderTimeChunk, ResourceUsage } from "../render/protocol";
+import tokenize from "../vgs/tokenizer";
+import { Instructions } from "@backend/syntax";
+import { LogEvent, Program, RenderTimeChunk, ResourceUsage } from "../render/protocol";
 import { usePageVisible } from "../hooks";
 
 import IconButton from "../IconButton";
@@ -18,7 +20,7 @@ import { LuLogs } from "react-icons/lu";
 import styles from "./monitors.module.css";
 
 interface Props {
-    programId: number;
+    program: Program;
     setCompilerError(compilerError: CompilerError|null): void;
 }
 
@@ -149,7 +151,7 @@ const RENDER_TIME_LIMIT_OPTIONS: [number, string][] =
 const IconLogs = memo(LuLogs);
 const IconTimer = memo(IoTimerOutline);
 
-export default function MonitorsPanel({ programId, setCompilerError }: Props) {
+export default function MonitorsPanel({ program, setCompilerError }: Props) {
 
     const pageVisible = usePageVisible();
 
@@ -202,8 +204,35 @@ export default function MonitorsPanel({ programId, setCompilerError }: Props) {
                     }
                 }
 
-                if (compilerError && compilerError.programId === programId)
+                if (compilerError && compilerError.programId === program.id) {
+                    // If the token is a known instruction, assume that the
+                    // error is part of the previous instruction.
+                    //
+                    // The span is moved to the first whitespace after the
+                    // instruction before the error reported by the compiler.
+                    if (Instructions.has(compilerError.token)) {
+                        const { line, column } = compilerError;
+
+                        let lastWS = undefined;
+
+                        for (const token of tokenize(program.source)) {
+                            if (token.line >= line && token.column >= column)
+                                break;
+
+                            if (lastWS === undefined && token.kind === "whitespace")
+                                lastWS = token;
+                            else if(token.kind === "keyword")
+                                lastWS = undefined;
+                        }
+
+                        if (lastWS !== undefined) {
+                            compilerError.line = lastWS.line;
+                            compilerError.column = lastWS.column;
+                        }
+                    }
+
                     setCompilerError(compilerError);
+                }
             }
         });
 
@@ -211,7 +240,7 @@ export default function MonitorsPanel({ programId, setCompilerError }: Props) {
             if ("resourceUsage" in response)
                 updateContent({ resourceUsage: response.resourceUsage });
         });
-    }, [ backend, programId, setCompilerError ]);
+    }, [ backend, program, setCompilerError ]);
 
     useEffect(() => {
         if (!pageVisible)
@@ -237,7 +266,7 @@ export default function MonitorsPanel({ programId, setCompilerError }: Props) {
     let currentTab, limitSetting;
     switch (selectedTab) {
         case Tab.Logs:
-            currentTab = <Logs rows={content.logs} lastProgramId={programId} />;
+            currentTab = <Logs rows={content.logs} lastProgramId={program.id} />;
 
             limitSetting = (
                 <Select
