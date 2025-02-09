@@ -103,6 +103,7 @@
 
 .results {
     padding: 2ch;
+    text-align: center;
 
     video {
         max-height: 50vh;

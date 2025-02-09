@@ -74,9 +74,12 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
                 onFinish(objectURL: string, size: number, duration: number) {
                     setObjectURL(objectURL);
 
-                    const time = duration > 180_000
-                        ? `${Math.round(duration / 60_000)} minutes`
-                        : `${Math.round(duration / 1000)} seconds`;
+                    let time = duration > 180_000
+                        ? `${Math.round(duration / 60_000)} minute`
+                        : `${Math.round(duration / 1000)} second`;
+
+                    if (!time.startsWith("1 "))
+                        time += "s";
 
                     const fmtSize = size > (4 << 20)
                         ? `${Math.round(size / (1 << 20))} MiB`
