@@ -632,6 +632,10 @@ static int vgs_parse_numeric_argument(
             0,
             log_ctx
         );
+
+        if (ret != 0)
+            vgs_log_invalid_token(log_ctx, parser, &token, "Invalid expression.");
+
         break;
 
     case TOKEN_WORD:
