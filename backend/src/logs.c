@@ -143,6 +143,7 @@ void av_log(void* avcl, int level, const char *fmt, ...)
         LOG.buffer_position = old_bufpos;
         LOG.events_count--;
         LOG.events[LOG.events_count - 1].repeat++;
+        LOG.events[LOG.events_count - 1].program_id = CurrentFrameVariables.program_id;
     }
 
     return;
