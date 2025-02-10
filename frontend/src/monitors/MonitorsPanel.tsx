@@ -219,10 +219,14 @@ export default function MonitorsPanel({ program, setCompilerError }: Props) {
                             if (token.line >= line && token.column >= column)
                                 break;
 
-                            if (lastWS === undefined && token.kind === "whitespace")
+                            if (lastWS === undefined
+                                && token.kind === "whitespace"
+                                && token.lexeme.indexOf("\n") !== -1
+                            ) {
                                 lastWS = token;
-                            else if(token.kind === "keyword")
+                            } else if(token.kind === "keyword") {
                                 lastWS = undefined;
+                            }
                         }
 
                         if (lastWS !== undefined) {
