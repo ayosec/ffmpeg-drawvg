@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
-import { IoShareSocial } from "react-icons/io5";
-import { LuKeyboard } from "react-icons/lu";
+import { FaKeyboard } from "react-icons/fa";
+import { IoSave, IoShareSocial } from "react-icons/io5";
 
 import * as CompImpl from "./completion.impl";
 import CompilerError from "../vgs/CompilerError";
@@ -9,6 +9,7 @@ import Completion from "./Completion";
 import Highlights from "./Highlights";
 import IconButton from "../IconButton";
 import KeyboardShortcuts from "../KeyboardShortcuts";
+import Saves from "./Saves";
 import Share from "./Share";
 import keyMapHandler from "./keymap";
 import { Program } from "../render/protocol";
@@ -37,6 +38,10 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
     const lastHighlightedSpan = useRef<HTMLElement>(null);
 
     const [ share, setShare ] = useState(false);
+
+    const [ saves, setSaves ] = useState(false);
+
+    const [ saveSource, setSaveSource ] = useState("");
 
     const [ keyboardShortcuts, setKeyboardShortcuts ] = useState(false);
 
@@ -110,12 +115,30 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <IconButton
+                        Icon={IoSave}
+                        label="Saves"
+                        shortcut="ctrl-s"
+                        onClick={() => {
+                            setSaveSource(program.source);
+                            setSaves(true);
+                        }}
+                    />
+
+                    <IconButton
                         Icon={IoShareSocial}
                         label="Share"
-                        onClick={() => setShare(true) }
+                        onClick={() => setShare(!share) }
                     />
 
                     { share && <Share source={program.source} onClose={() => setShare(false)} /> }
+
+                    { saves &&
+                        <Saves
+                            source={saveSource}
+                            setSource={setSource}
+                            onClose={() => setSaves(false)}
+                        />
+                    }
 
                     { keyboardShortcuts &&
                         <KeyboardShortcuts onClose={() => setKeyboardShortcuts(false)} />
@@ -124,15 +147,15 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
                 <div>
                     <IconButton
-                        Icon={LuKeyboard}
+                        Icon={FaKeyboard}
                         label="Keyboard Shortcuts"
                         shortcut="ctrl-k"
                         onClick={() => setKeyboardShortcuts(!keyboardShortcuts)}
                     />
                 </div>
             </div>
-
             <div className={styles.code}>
+
                 <Highlights
                     ref={highlightsRef}
                     program={program}
@@ -149,7 +172,12 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                     onSelect={onSelect}
                     onMouseMove={onMouseMove}
                     onBlur={() => setCompletion(null)}
-                    onMouseLeave={() => setHoverInfo(null)}
+                    onMouseLeave={() =>{
+                        if (debounceHover.current !== null)
+                            clearTimeout(debounceHover.current);
+
+                        setHoverInfo(null);
+                    }}
                     onKeyDown={e => {
                         if (completion) {
                             const [ captured, nextState ] = CompImpl.onKeyDown(e, completion);

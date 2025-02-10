@@ -45,7 +45,7 @@ function configureTooltop(tooltipBox: HTMLElement, target: HTMLElement) {
     const { width: boxWidth, height: boxHeight } = tooltipBox.getBoundingClientRect();
     const parent = target.getBoundingClientRect();
 
-    let boxLeft = parent.x + (parent.width - boxWidth) / 2;
+    let boxLeft = Math.max(5, parent.x + (parent.width - boxWidth) / 2);
     if (boxLeft + boxWidth >= clientWidth)
         boxLeft = clientWidth - boxWidth;
 

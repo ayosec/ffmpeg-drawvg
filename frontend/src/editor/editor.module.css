@@ -199,6 +199,6 @@
     }
 }
 
-.editor:not(:hover) .hoverInfo {
+.editor:not(:has(textarea:hover)) .hoverInfo {
     display: none;
 }

@@ -88,6 +88,11 @@
 .actions {
     text-align: right;
 
+    &.multiGroups {
+        display: flex;
+        justify-content: space-between;
+    }
+
     a, button {
         appearance: none;
         border: 0;
@@ -132,4 +137,60 @@
 
     color: black;
     background: #faa;
+}
+
+.help {
+    font-size: 0.9rem;
+    max-width: 30vw;
+}
+
+.fileSavesList {
+    overflow: hidden;
+    border: 0;
+    outline: 0;
+    padding: 0;
+    border-radius: 1ch;
+    margin-bottom: 3ch;
+
+    color: var(--icon-button-fg);
+    background: var(--icon-button-bg);
+
+    box-shadow: 0 0 3px var(--icon-button-shadow);
+
+    .entry {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        padding: 1ch;
+        cursor: pointer;
+
+        &.selected, &:hover, &:focus {
+            color: var(--tab-selected-fg);
+            background: var(--tab-selected-bg);
+        }
+    }
+
+    &:focus {
+        box-shadow: 0 0 5px var(--icon-button-shadow-focus);
+    }
+}
+
+.fileSavesNew {
+    margin-bottom: 3ch;
+
+    input[type="text"] {
+        width: 20vw;
+        padding: 0.5ch 1ch;
+
+        border: 0;
+        outline: 0;
+        border-radius: 0.5ch;
+
+        box-shadow: 0 0 3px var(--icon-button-shadow);
+
+        &:focus {
+            box-shadow: 0 0 5px var(--icon-button-shadow-focus);
+        }
+    }
 }
