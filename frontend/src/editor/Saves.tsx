@@ -7,18 +7,19 @@ import { HiOutlineTrash } from "react-icons/hi2";
 import styles from "../dialog.module.css";
 
 interface Props {
-    initialSource: string;
     onClose(): void;
 }
 
 const PREFIX_STORAGE_KEY = "saves/byName/";
 
-export default function Saves({ initialSource, onClose }: Props) {
+export default function Saves({ onClose }: Props) {
     const setSource = useCurrentProgram(s => s.setSource);
 
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     const fileAccepted = useRef(false);
+
+    const initialSource = useRef("\0");
 
     const [ saves, setSaves ] = useState(() => {
         const saves: string[] = [];
@@ -50,12 +51,16 @@ export default function Saves({ initialSource, onClose }: Props) {
         (dialog.querySelector("[tabindex]") as HTMLElement)?.focus();
     }, []);
 
+    if (initialSource.current === "\0") {
+        initialSource.current = useCurrentProgram.getState().source;
+    }
+
     // TODO: when a file is open/save-with-new-name, changes on the <textarea>
     //           should also update the associated localStorage item for the file.
     //           - show the filename in the toolbar.
 
     const resetSelection = () => {
-        setSource(initialSource);
+        setSource(initialSource.current);
         setSelected(null);
     };
 
@@ -67,7 +72,7 @@ export default function Saves({ initialSource, onClose }: Props) {
     };
 
     const saveNewFile = () => {
-        localStorage.setItem(PREFIX_STORAGE_KEY + newFileName, initialSource);
+        localStorage.setItem(PREFIX_STORAGE_KEY + newFileName, initialSource.current);
         activateFile(newFileName);
     };
 
@@ -81,7 +86,7 @@ export default function Saves({ initialSource, onClose }: Props) {
         // If the dialog is closed without clicking on `Open`,
         // restore the original source before closing.
         if (!fileAccepted.current)
-            setSource(initialSource);
+            setSource(initialSource.current);
 
         onClose();
     };

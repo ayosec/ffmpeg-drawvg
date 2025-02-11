@@ -43,8 +43,6 @@ export default function Editor({ autoFocus }: Props) {
 
     const [ saves, setSaves ] = useState(false);
 
-    const [ saveSource, setSaveSource ] = useState("");
-
     const [ keyboardShortcuts, setKeyboardShortcuts ] = useState(false);
 
     const [ completion, setCompletion ] = useState<CompImpl.Props|null>();
@@ -120,23 +118,19 @@ export default function Editor({ autoFocus }: Props) {
                         Icon={IoSave}
                         label="Saves"
                         shortcut="ctrl-s"
-                        onClick={() => {
-                            setSaveSource(source);
-                            setSaves(true);
-                        }}
+                        onClick={() => setSaves(true)}
                     />
 
                     <IconButton
                         Icon={IoShareSocial}
                         label="Share"
-                        onClick={() => setShare(!share) }
+                        onClick={() => setShare(!share)}
                     />
 
                     { share && <Share source={source} onClose={() => setShare(false)} /> }
 
                     { saves &&
                         <Saves
-                            initialSource={saveSource}
                             onClose={() => {
                                 setSaves(false);
 
