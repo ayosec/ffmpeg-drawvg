@@ -1,28 +1,22 @@
 import { memo, useCallback, useContext, useEffect, useReducer, useState } from "react";
 
 import BackendContext from "../backend";
-import tokenize from "../vgs/tokenizer";
-import { Instructions } from "@backend/syntax";
-import { LogEvent, Program, RenderTimeChunk, ResourceUsage } from "../render/protocol";
-import { usePageVisible } from "../hooks";
-
 import IconButton from "../IconButton";
 import Logs from "./Logs";
 import RenderTimeChart from "./RenderTimeChart";
 import Select from "../Select";
 import SerialNumber from "../serial";
-import CompilerError from "../vgs/CompilerError";
+import tokenize from "../vgs/tokenizer";
+import useCurrentProgram, { CompilerError } from "../currentProgram";
+import { Instructions } from "@backend/syntax";
+import { LogEvent, RenderTimeChunk, ResourceUsage } from "../render/protocol";
+import { usePageVisible } from "../hooks";
 
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoTimerOutline } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 
 import styles from "./monitors.module.css";
-
-interface Props {
-    program: Program;
-    setCompilerError(compilerError: CompilerError|null): void;
-}
 
 const GET_LOGS_FREQ = 1000 / 2;
 
@@ -151,7 +145,10 @@ const RENDER_TIME_LIMIT_OPTIONS: [number, string][] =
 const IconLogs = memo(LuLogs);
 const IconTimer = memo(IoTimerOutline);
 
-export default function MonitorsPanel({ program, setCompilerError }: Props) {
+export default function MonitorsPanel() {
+    const programId = useCurrentProgram(s => s.programId);
+    const source = useCurrentProgram(s => s.source);
+    const setCompilerError = useCurrentProgram(s => s.setCompilerError);
 
     const pageVisible = usePageVisible();
 
@@ -204,7 +201,7 @@ export default function MonitorsPanel({ program, setCompilerError }: Props) {
                     }
                 }
 
-                if (compilerError && compilerError.programId === program.id) {
+                if (compilerError && compilerError.programId === programId) {
                     // If the token is a known instruction, assume that the
                     // error is part of the previous instruction.
                     //
@@ -215,7 +212,7 @@ export default function MonitorsPanel({ program, setCompilerError }: Props) {
 
                         let lastWS = undefined;
 
-                        for (const token of tokenize(program.source)) {
+                        for (const token of tokenize(source)) {
                             if (token.line >= line && token.column >= column)
                                 break;
 
@@ -244,7 +241,7 @@ export default function MonitorsPanel({ program, setCompilerError }: Props) {
             if ("resourceUsage" in response)
                 updateContent({ resourceUsage: response.resourceUsage });
         });
-    }, [ backend, program, setCompilerError ]);
+    }, [ backend, programId, source, setCompilerError ]);
 
     useEffect(() => {
         if (!pageVisible)
@@ -270,7 +267,7 @@ export default function MonitorsPanel({ program, setCompilerError }: Props) {
     let currentTab, limitSetting;
     switch (selectedTab) {
         case Tab.Logs:
-            currentTab = <Logs rows={content.logs} lastProgramId={program.id} />;
+            currentTab = <Logs rows={content.logs} lastProgramId={programId} />;
 
             limitSetting = (
                 <Select

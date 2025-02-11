@@ -1,14 +1,12 @@
-import CompilerError from "../vgs/CompilerError";
 import tokenize from "../vgs/tokenizer";
+import useCurrentProgram from "../currentProgram";
 import { Colors } from "@backend/syntax";
-import { Program } from "../render/protocol";
 
 import styles from "./editor.module.css";
 
 interface Props {
     ref?: React.RefObject<HTMLPreElement|null>;
-    program: Program;
-    compilerError: CompilerError|null;
+    showErrors: boolean;
 }
 
 interface KnownColor {
@@ -73,14 +71,17 @@ function getColor(colorExpr: string): KnownColor | undefined {
     };
 }
 
-export default function Highlights({ ref, program, compilerError }: Props) {
+export default function Highlights({ ref, showErrors }: Props) {
+    const source = useCurrentProgram(s => s.source);
+    const compilerError = useCurrentProgram(s => s.compilerError);
+
     const spans = [];
     let index = 0;
 
     let needNewLine = true;
     let lineNumber = 0;
 
-    for (const token of tokenize(program.source)) {
+    for (const token of tokenize(source)) {
         const style: React.CSSProperties = {};
 
         if (token.kind == "word" || token.kind == "color") {
@@ -94,7 +95,8 @@ export default function Highlights({ ref, program, compilerError }: Props) {
         let lexeme = token.lexeme;
         let kind: string = token.kind;
 
-        if (compilerError
+        if (showErrors
+            && compilerError
             && compilerError.line === token.line
             && compilerError.column === token.column
         ) {

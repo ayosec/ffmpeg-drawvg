@@ -32,7 +32,7 @@ export default function Share({ source, onClose }: Props) {
 
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const [ copyFinished, setCopyFinished ]  = useState(false);
+    const [ copyFinished, setCopyFinished ] = useState(false);
 
     const shareURL = useMemo(() => {
         const url = new URL(location.href);

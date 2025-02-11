@@ -5,10 +5,10 @@ import BackendContext from "../../backend";
 import styles from "../../dialog.module.css";
 import outputStyles from "../output.module.css";
 import Configure from "./Configure";
+import useCurrentProgram from "../../currentProgram";
 
 interface Props {
     size: [ number, number ];
-    source: string;
     onClose: () => void;
 };
 
@@ -28,7 +28,9 @@ type Process
     | { state: "export", config: Configuration }
     ;
 
-export default function VideoExport({ size, source, onClose }: Props) {
+export default function VideoExport({ size, onClose }: Props) {
+    const source = useCurrentProgram(s => s.source);
+
     const [ process, setProcess ] = useState<Process>({ state: "config" });
 
     if (process.state === "export") {

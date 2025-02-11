@@ -4,7 +4,6 @@ import { FaKeyboard } from "react-icons/fa";
 import { IoSave, IoShareSocial } from "react-icons/io5";
 
 import * as CompImpl from "./completion.impl";
-import CompilerError from "../vgs/CompilerError";
 import Completion from "./Completion";
 import Highlights from "./Highlights";
 import IconButton from "../IconButton";
@@ -12,16 +11,13 @@ import KeyboardShortcuts from "../KeyboardShortcuts";
 import Saves from "./Saves";
 import Share from "./Share";
 import keyMapHandler from "./keymap";
-import { Program } from "../render/protocol";
 import { getParameters } from "../vgs/decls";
 
 import styles from "./editor.module.css";
+import useCurrentProgram from "../currentProgram";
 
 interface Props {
     autoFocus?: boolean,
-    program: Program,
-    compilerError: CompilerError|null;
-    setSource(source: string): void;
 }
 
 interface HoverInfo {
@@ -32,8 +28,14 @@ interface HoverInfo {
     paramsPosition: number;
 }
 
-export default function Editor({ autoFocus, program, compilerError, setSource }: Props) {
+export default function Editor({ autoFocus }: Props) {
+    const source = useCurrentProgram(s => s.source);
+    const compilerError = useCurrentProgram(s => s.compilerError);
+    const setSource = useCurrentProgram(s => s.setSource);
+
     const highlightsRef = useRef<HTMLPreElement>(null);
+
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const lastHighlightedSpan = useRef<HTMLElement>(null);
 
@@ -58,7 +60,7 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
         if (textArea === null || highlights === null)
             return;
 
-        const caret = getCaretPosition(program.source, textArea.selectionStart);
+        const caret = getCaretPosition(source, textArea.selectionStart);
 
         // Hide error message is caret is below it.
         if (compilerError !== null) {
@@ -119,7 +121,7 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                         label="Saves"
                         shortcut="ctrl-s"
                         onClick={() => {
-                            setSaveSource(program.source);
+                            setSaveSource(source);
                             setSaves(true);
                         }}
                     />
@@ -130,13 +132,18 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
                         onClick={() => setShare(!share) }
                     />
 
-                    { share && <Share source={program.source} onClose={() => setShare(false)} /> }
+                    { share && <Share source={source} onClose={() => setShare(false)} /> }
 
                     { saves &&
                         <Saves
-                            source={saveSource}
-                            setSource={setSource}
-                            onClose={() => setSaves(false)}
+                            initialSource={saveSource}
+                            onClose={() => {
+                                setSaves(false);
+
+                                requestAnimationFrame(() => {
+                                    textareaRef.current?.focus();
+                                });
+                            }}
                         />
                     }
 
@@ -158,12 +165,12 @@ export default function Editor({ autoFocus, program, compilerError, setSource }:
 
                 <Highlights
                     ref={highlightsRef}
-                    program={program}
-                    compilerError={completion ? null : compilerError}
+                    showErrors={!completion}
                 />
 
                 <textarea
-                    value={program.source}
+                    ref={textareaRef}
+                    value={source}
                     autoFocus={autoFocus}
                     spellCheck={false}
                     autoCapitalize="off"

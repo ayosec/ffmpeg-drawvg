@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 
 import IconButton from "../IconButton";
+import useCurrentProgram from "../currentProgram";
 import { HiOutlineTrash } from "react-icons/hi2";
 
 import styles from "../dialog.module.css";
 
 interface Props {
-    source: string;
-    setSource(source: string): void;
+    initialSource: string;
     onClose(): void;
 }
 
 const PREFIX_STORAGE_KEY = "saves/byName/";
 
-export default function Saves({ source, setSource, onClose }: Props) {
+export default function Saves({ initialSource, onClose }: Props) {
+    const setSource = useCurrentProgram(s => s.setSource);
+
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     const fileAccepted = useRef(false);
@@ -53,9 +55,9 @@ export default function Saves({ source, setSource, onClose }: Props) {
     //           - show the filename in the toolbar.
 
     const resetSelection = () => {
-        setSource(source);
+        setSource(initialSource);
         setSelected(null);
-    }
+    };
 
     const activateFile = (name: string) => {
         console.log({activateFile: name});
@@ -65,7 +67,7 @@ export default function Saves({ source, setSource, onClose }: Props) {
     };
 
     const saveNewFile = () => {
-        localStorage.setItem(PREFIX_STORAGE_KEY + newFileName, source);
+        localStorage.setItem(PREFIX_STORAGE_KEY + newFileName, initialSource);
         activateFile(newFileName);
     };
 
@@ -79,7 +81,7 @@ export default function Saves({ source, setSource, onClose }: Props) {
         // If the dialog is closed without clicking on `Open`,
         // restore the original source before closing.
         if (!fileAccepted.current)
-            setSource(source);
+            setSource(initialSource);
 
         onClose();
     };

@@ -10,11 +10,6 @@ import styles from "./output.module.css";
 import BackendContext from "../backend";
 import Select from "../Select";
 import VideoExport from "./video/VideoExport";
-import { Program } from "../render/protocol";
-
-interface Props {
-    program: Program;
-}
 
 enum PlaybackStatus {
     Pause,
@@ -31,7 +26,7 @@ const CANVAS_FIXED_SIZES: [ number, number][] = [
 const PLAYBACK_SPEEDS: [ number, string ][] =
     [ 0.1, 0.25, 0.5, 1, 1.25, 1.5, 2, 4 ].map(x => [ x, `${x}` ]);
 
-export default function OutputPanel({ program }: Props) {
+export default function OutputPanel() {
     const backend = useContext(BackendContext);
 
     const [ canvasSize, setCanvasSize ] = useState<[number, number]>([320, 240]);
@@ -205,14 +200,13 @@ export default function OutputPanel({ program }: Props) {
                 data-fit-render={fitRenderView ? "1" : "0"}
                 className={styles.renderView}
             >
-                <RenderView program={program} size={canvasSize} />
+                <RenderView size={canvasSize} />
             </div>
 
             {
                 openVideoExport &&
                     <VideoExport
                         size={canvasSize}
-                        source={program.source}
                         onClose={() => setOpenVideoExport(false)}
                     />
             }
