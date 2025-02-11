@@ -3,7 +3,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { BsFillSkipBackwardFill } from "react-icons/bs";
 import { IoCamera, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward, IoVideocam } from "react-icons/io5";
 
-import IconButton from "../IconButton";
+import IconButton from "../base/IconButton";
 import RenderView from "./RenderView";
 import styles from "./output.module.css";
 

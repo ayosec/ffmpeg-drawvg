@@ -1,7 +1,7 @@
 import { memo, useCallback, useContext, useEffect, useReducer, useState } from "react";
 
 import BackendContext from "../backend";
-import IconButton from "../IconButton";
+import IconButton from "../base/IconButton";
 import Logs from "./Logs";
 import RenderTimeChart from "./RenderTimeChart";
 import Select from "../Select";

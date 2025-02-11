@@ -1,7 +1,7 @@
 import deepEqual from "fast-deep-equal";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import widgets from "./widgets.module.css";
+import widgets from "./base/widgets.module.css";
 
 interface Props<T> {
     title?: string;

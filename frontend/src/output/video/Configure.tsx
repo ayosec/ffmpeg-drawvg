@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import outputStyles from "../output.module.css";
-import styles from "../../dialog.module.css";
+import styles from "../../base/dialog.module.css";
 import { Configuration } from "./VideoExport";
 
 interface ConfigureProps {

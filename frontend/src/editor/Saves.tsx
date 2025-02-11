@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-import IconButton from "../IconButton";
+import IconButton from "../base/IconButton";
 import useCurrentProgram from "../currentProgram";
 import { HiOutlineTrash } from "react-icons/hi2";
 
-import styles from "../dialog.module.css";
+import styles from "../base/dialog.module.css";
 
 interface Props {
     onClose(): void;

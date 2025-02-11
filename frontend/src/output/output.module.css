@@ -3,15 +3,15 @@
 }
 
 .output {
-    composes: panel from "../widgets.module.css";
+    composes: panel from "../base/widgets.module.css";
 
     grid-template-rows: auto 1fr;
     background: unset;
 }
 
 .toolbar {
-    composes: toolbar from "../widgets.module.css";
-    composes: topToolbar from "../widgets.module.css";
+    composes: toolbar from "../base/widgets.module.css";
+    composes: topToolbar from "../base/widgets.module.css";
 }
 
 .canvasSize {

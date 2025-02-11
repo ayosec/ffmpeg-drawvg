@@ -1,7 +1,7 @@
 import { deflate } from "pako";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import styles from "../dialog.module.css";
+import styles from "../base/dialog.module.css";
 import editorStyles from "./editor.module.css";
 
 interface Props {

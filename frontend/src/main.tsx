@@ -1,9 +1,9 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import App from "./App";
-import initKeyboardShortcuts from "./keyshortcuts";
-import initTooltips from "./tooltips";
+import App from "./base/App";
+import initKeyboardShortcuts from "./base/keyshortcuts";
+import initTooltips from "./base/tooltips";
 import { BackendProvider } from "./backend";
 
 import "@fontsource-variable/quicksand/index.css";

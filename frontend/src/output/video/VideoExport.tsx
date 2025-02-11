@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 
 import BackendContext from "../../backend";
 
-import styles from "../../dialog.module.css";
+import styles from "../../base/dialog.module.css";
 import outputStyles from "../output.module.css";
 import Configure from "./Configure";
 import useCurrentProgram from "../../currentProgram";

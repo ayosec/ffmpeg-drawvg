@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 
 import { KEY_NAMES } from "./tooltips";
 
-import styles from "./dialog.module.css";
+import styles from "../base/dialog.module.css";
 
 interface Props {
     onClose(): void;

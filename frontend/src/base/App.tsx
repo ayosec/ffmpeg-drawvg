@@ -2,11 +2,11 @@ import { useEffect } from "react";
 
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
-import Editor from "./editor/Editor";
+import Editor from "../editor/Editor";
 import Header from "./Header";
-import MonitorsPanel from "./monitors/MonitorsPanel";
-import OutputPanel from "./output/OutputPanel";
-import useCurrentProgram from "./currentProgram";
+import MonitorsPanel from "../monitors/MonitorsPanel";
+import OutputPanel from "../output/OutputPanel";
+import useCurrentProgram from "../currentProgram";
 
 import styles from "./app.module.css";
 
