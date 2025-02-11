@@ -33,8 +33,15 @@
     & > div {
         --button-size: 20px;
 
+        flex: 1;
         display: inline-flex;
+
+        width: fit-content;
         height: 30px;
+
+        justify-content: center;
+        &:first-child { justify-content: flex-start; }
+        &:last-child { justify-content: flex-end; }
     }
 }
 

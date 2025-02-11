@@ -13,12 +13,25 @@ interface CurrentProgram {
     programId: number;
     source: string;
     compilerError: CompilerError|null;
-    setSource(source: string): void;
+
+    activeFileName: string|null;
+    fileNames: string[];
+
+    setSource(source: string, fileName?: string|null): void;
     setCompilerError(e: CompilerError|null): void;
+
+    selectFile(fileName: string|null): void;
+    saveNewFile(fileName: string): void;
+    deleteFile(fileName: string): void;
+
     updateSourceFromLocationHash(): void;
 }
 
-const CURRENT_PROGRAM_STORAGE_KEY = "main/currentProgram";
+const ACTIVE_FILE_KEY = "saves/activeFileName";
+
+const CURRENT_PROGRAM_KEY = "main/currentProgram";
+
+const PREFIX_FILE_KEY = "saves/byName/";
 
 function extractCodeFromLocationHash() {
     const zipRaw = /zip=([^&]+)/.exec(location.hash);
@@ -45,74 +58,143 @@ function extractCodeFromLocationHash() {
     return null;
 }
 
-function loadInitialCode() {
-    const code = extractCodeFromLocationHash();
-    if (code !== null)
-        return code;
+function loadFileNames() {
+    const saves: string[] = [];
 
-    const stored = localStorage.getItem(CURRENT_PROGRAM_STORAGE_KEY);
+    for (let index = 0; index < localStorage.length; index++) {
+        const key = localStorage.key(index);
+        if (key?.startsWith(PREFIX_FILE_KEY)) {
+            saves.push(key.slice(PREFIX_FILE_KEY.length));
+        }
+    }
+
+    saves.sort();
+
+    return saves;
+}
+
+function getStorageKeyForCode(activeFileName: string|null) {
+    if (activeFileName === null)
+        return CURRENT_PROGRAM_KEY;
+    else
+        return PREFIX_FILE_KEY + activeFileName;
+}
+
+function loadCode(activeFileName: string|null) {
+    const stored = localStorage.getItem(getStorageKeyForCode(activeFileName));
     if (stored !== null)
         return stored;
 
-    return `\
-rect 0 0 w h
-setcolor #fefefe
-fill
+    return null;
+}
 
-setvar rad (h/8)
-setvar count (w/rad+1)
-setlinewidth (rad/8)
+function computeSelectFile(state: CurrentProgram, fileName: string|null): Partial<CurrentProgram> {
+    if (fileName !== null && state.fileNames.indexOf(fileName) === -1)
+        return {};
 
-repeat count {
-    setvar hue (360/count*i)
-    setvar top (rad*1.5)
+    if (fileName !== null)
+        localStorage.setItem(ACTIVE_FILE_KEY, fileName);
+    else
+        localStorage.removeItem(ACTIVE_FILE_KEY);
 
-    circle (rad*i+rad/2) top rad
-    sethsla hue 0.9 0.5 1
-    pstroke
-    sethsla hue 0.9 0.7 1
-    fill
 
-    setvar p (t/1.5-floor(t/1.5))
-    sethsla hue 0.9 0.7 (1-p)
-    circle (rad*i+rad/2) (top+h*p) (rad-p*rad)
-    fill
-}`;
+    return {
+        source: loadCode(fileName) ?? "",
+        activeFileName: fileName,
+        programId: state.programId + 1,
+        compilerError: null,
+    };
 }
 
 const useCurrentProgram = create<CurrentProgram>()((set, get) => {
+    let initialActiveFileName: string|null = null;
+    let initialSource = extractCodeFromLocationHash();
+
+    if (initialSource === null) {
+        initialActiveFileName = localStorage.getItem(ACTIVE_FILE_KEY);
+        initialSource = loadCode(initialActiveFileName) ?? "";
+    }
+
     let storageWriteTask: ReturnType<typeof setTimeout>|null = null;
 
     return {
         programId: 1,
-        source: loadInitialCode(),
+        source: initialSource,
+        activeFileName: initialActiveFileName,
+        fileNames: loadFileNames(),
         compilerError: null,
 
-        setSource(source: string) {
-            set(s => ({
-                source,
-                programId: s.programId + 1,
-                compilerError: null,
-            }));
+        setSource(source: string, fileName?: string|null) {
+            set(s => {
 
-            // Debounce writes to localStorage.
-            if (storageWriteTask !== null)
-                clearTimeout(storageWriteTask);
+                const activeFileName = fileName === undefined ? s.activeFileName : fileName;
 
-            storageWriteTask = setTimeout(() => {
-                storageWriteTask = null;
-                localStorage.setItem(CURRENT_PROGRAM_STORAGE_KEY, source);
-            }, 2000);
+                // Debounce writes to localStorage.
+                if (storageWriteTask !== null)
+                    clearTimeout(storageWriteTask);
+
+                storageWriteTask = setTimeout(
+                    () => {
+                        storageWriteTask = null;
+                        const key = getStorageKeyForCode(activeFileName);
+                        localStorage.setItem(key, source);
+                    },
+                    2000,
+                );
+
+                return {
+                    source,
+                    activeFileName,
+                    programId: s.programId + 1,
+                    compilerError: null,
+                };
+
+            });
         },
 
         setCompilerError(e: CompilerError|null) {
             set(() => ({ compilerError: e }));
         },
 
+        selectFile(fileName: string|null) {
+            set(s => computeSelectFile(s, fileName));
+        },
+
+        saveNewFile(fileName: string) {
+            set(s => {
+                localStorage.setItem(PREFIX_FILE_KEY + fileName, s.source);
+                localStorage.setItem(ACTIVE_FILE_KEY, fileName);
+
+                const fileNames = [...s.fileNames, fileName];
+                fileNames.sort();
+
+                return {
+                    activeFileName: fileName,
+                    fileNames,
+                };
+            });
+        },
+
+        deleteFile(fileName: string) {
+            localStorage.removeItem(PREFIX_FILE_KEY + fileName);
+
+            set(s => {
+                let updated: Partial<CurrentProgram> = {};
+
+                if (s.activeFileName === fileName)
+                    updated = computeSelectFile(s, null);
+
+                if (s.fileNames.indexOf(fileName) !== -1)
+                    updated.fileNames = s.fileNames.filter(n => n !== fileName);
+
+                return updated;
+            });
+        },
+
         updateSourceFromLocationHash() {
             const source = extractCodeFromLocationHash();
             if (source !== null)
-                get().setSource(source);
+                get().setSource(source, null);
         },
     };
 });

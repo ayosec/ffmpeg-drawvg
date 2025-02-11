@@ -10,37 +10,20 @@ interface Props {
     onClose(): void;
 }
 
-const PREFIX_STORAGE_KEY = "saves/byName/";
-
-export default function Saves({ onClose }: Props) {
-    const setSource = useCurrentProgram(s => s.setSource);
+export default function Files({ onClose }: Props) {
+    const activeFileName = useCurrentProgram(s => s.activeFileName);
+    const fileNames = useCurrentProgram(s => s.fileNames);
+    const selectFile = useCurrentProgram(s => s.selectFile);
 
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     const fileAccepted = useRef(false);
 
-    const initialSource = useRef("\0");
+    const initialFileName = useRef<string|null|undefined>(undefined);
 
-    const [ saves, setSaves ] = useState(() => {
-        const saves: string[] = [];
-
-        for (let index = 0; index < localStorage.length; index++) {
-            const key = localStorage.key(index);
-            if (key?.startsWith(PREFIX_STORAGE_KEY)) {
-                saves.push(key.slice(PREFIX_STORAGE_KEY.length));
-            }
-        }
-
-        saves.sort();
-
-        return saves;
-    });
-
-    const [ newFile, setNewFile ] = useState(saves.length === 0);
+    const [ newFile, setNewFile ] = useState(fileNames.length === 0);
 
     const [ newFileName, setNewFileName ] = useState("");
-
-    const [ selected, setSelected ] = useState<number|null>(null);
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -51,108 +34,61 @@ export default function Saves({ onClose }: Props) {
         (dialog.querySelector("[tabindex]") as HTMLElement)?.focus();
     }, []);
 
-    if (initialSource.current === "\0") {
-        initialSource.current = useCurrentProgram.getState().source;
+    if (initialFileName.current === undefined) {
+        initialFileName.current = useCurrentProgram.getState().activeFileName;
     }
 
-    // TODO: when a file is open/save-with-new-name, changes on the <textarea>
-    //           should also update the associated localStorage item for the file.
-    //           - show the filename in the toolbar.
-
-    const resetSelection = () => {
-        setSource(initialSource.current);
-        setSelected(null);
-    };
-
-    const activateFile = (name: string) => {
-        console.log({activateFile: name});
-
+    const acceptFile = () => {
         fileAccepted.current = true;
         onClose();
     };
 
     const saveNewFile = () => {
-        localStorage.setItem(PREFIX_STORAGE_KEY + newFileName, initialSource.current);
-        activateFile(newFileName);
-    };
-
-    const removeSave = (name: string) => {
-        localStorage.removeItem(PREFIX_STORAGE_KEY + name);
-        resetSelection();
-        setSaves(saves.filter(s => name !== s));
+        useCurrentProgram.getState().saveNewFile(newFileName);
+        fileAccepted.current = true;
+        onClose();
     };
 
     const closeDialog = () => {
         // If the dialog is closed without clicking on `Open`,
         // restore the original source before closing.
-        if (!fileAccepted.current)
-            setSource(initialSource.current);
+        if (!fileAccepted.current && initialFileName.current !== undefined)
+            selectFile(initialFileName.current);
 
         onClose();
-    };
-
-    const changeSelection = (index: number) => {
-        const name = saves[index];
-        const loaded = localStorage.getItem(PREFIX_STORAGE_KEY + name);
-        if (loaded) {
-            setSelected(index);
-            setSource(loaded);
-        }
-    };
-
-    const Entry = ({name, index}: { name: string, index: number }) => {
-        return (
-            <div
-                data-index={index}
-                className={styles.entry + (selected === index ? ` ${styles.selected}` : "")}
-                onClick={() => {
-                    if (selected === index)
-                        resetSelection();
-                    else
-                        changeSelection(index);
-                }}
-            >
-                <span>{name}</span>
-
-                <IconButton
-                    label="Remove"
-                    Icon={HiOutlineTrash}
-                    onClick={() => removeSave(name)}
-                />
-            </div>
-        );
     };
 
     const onKeyDownList = (e: React.KeyboardEvent) => {
         if (document.activeElement !== e.currentTarget)
             return;
 
+        const moveSelection = (offset: number) => {
+            let toSelect = fileNames.indexOf(activeFileName ?? "\0") + offset;
+            if (toSelect < 0)
+                toSelect = fileNames.length - 1;
+            else if (toSelect >= fileNames.length)
+                toSelect = 0;
+
+            selectFile(fileNames[toSelect]);
+        };
+
         switch (e.key) {
             case "ArrowUp":
-                changeSelection(
-                    (selected === 0 || selected === null
-                        ? saves.length
-                        : selected
-                    ) - 1
-                );
+                moveSelection(-1);
                 break;
 
             case "ArrowDown":
-                if (selected === null)
-                    changeSelection(0);
-                else
-                    changeSelection((selected + 1) % saves.length );
+                moveSelection(1);
                 break;
 
             case "Enter":
-                if (selected !== null)
-                    onClose();
-
+                if (activeFileName !== null)
+                    acceptFile();
                 break;
         }
     };
 
-    const showNewFile = newFile || saves.length === 0;
+    const showNewFile = newFile || fileNames.length === 0;
 
     return (
         <dialog
@@ -162,7 +98,7 @@ export default function Saves({ onClose }: Props) {
         >
             <div className={styles.mainLayout}>
                 <div className={styles.front}>
-                    <h1>Saves</h1>
+                    <h1>Files</h1>
                 </div>
 
                 <div className={styles.content}>
@@ -178,7 +114,9 @@ export default function Saves({ onClose }: Props) {
                                 onKeyDown={onKeyDownList}
 
                             >
-                                { saves.map((n, i) => <Entry key={n} name={n} index={i} />) }
+                                { fileNames.map(n =>
+                                    <Entry key={n} name={n} onAccept={acceptFile} />)
+                                }
                             </div>
                         </>
                     }
@@ -205,7 +143,7 @@ export default function Saves({ onClose }: Props) {
                     <div className={styles.actions + " " + styles.multiGroups}>
                         <div>
                             <button className={styles.close} onClick={closeDialog}>
-                                { selected !== null ? "Cancel" : "Close" }
+                                Close
                             </button>
                         </div>
 
@@ -213,16 +151,18 @@ export default function Saves({ onClose }: Props) {
                             { !showNewFile &&
                                 <button
                                     onClick={() => {
-                                        resetSelection();
-                                        setNewFile(true);
+                                        if (initialFileName.current !== undefined) {
+                                            selectFile(initialFileName.current);
+                                            setNewFile(true);
+                                        }
                                     }}
                                 >
                                     New File
                                 </button>
                             }
 
-                            { selected !== null &&
-                                <button onClick={() => activateFile(saves[selected])}>Open</button>
+                            { activeFileName !== initialFileName.current &&
+                                <button onClick={() => acceptFile()}>Open</button>
                             }
 
                             { showNewFile &&
@@ -237,10 +177,42 @@ export default function Saves({ onClose }: Props) {
     );
 }
 
-const NewFileHelp = () =>
+function Entry({ name, onAccept }: { name: string, onAccept(): void, }) {
+    const activeFileName = useCurrentProgram(s => s.activeFileName);
+    const selectFile = useCurrentProgram(s => s.selectFile);
+
+    const deleteFile = (name: string) => {
+        useCurrentProgram.getState().deleteFile(name);
+    };
+
+    const active = activeFileName === name;
+
+    return (
+        <div
+            className={styles.entry + (active ? ` ${styles.selected}` : "")}
+            onClick={() => {
+                selectFile(active ? null : name);
+            }}
+            onDoubleClick={() => {
+                selectFile(name);
+                onAccept();
+            }}
+        >
+            <span>{name}</span>
+
+            <IconButton
+                label="Remove"
+                Icon={HiOutlineTrash}
+                onClick={() => deleteFile(name)}
+            />
+        </div>
+    );
+}
+
+const NewFileHelp = () => (
     <div className={styles.help}>
         <p>
-            You can save files in the{" "}
+            You can store scripts in the{" "}
             <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">
                 <code>localStorage</code>
             </a>
@@ -249,10 +221,11 @@ const NewFileHelp = () =>
 
         <p>
             If you clear your browser data, or if you are using private/incognito mode,
-            the saves will be lost.
+            the files will be lost.
         </p>
 
         <p>
             Your saved files will appear in this dialog window.
         </p>
-    </div>;
+    </div>
+);

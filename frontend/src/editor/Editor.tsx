@@ -5,10 +5,10 @@ import { IoSave, IoShareSocial } from "react-icons/io5";
 
 import * as CompImpl from "./completion.impl";
 import Completion from "./Completion";
+import Files from "./Files";
 import Highlights from "./Highlights";
 import IconButton from "../base/IconButton";
 import KeyboardShortcuts from "../base/KeyboardShortcuts";
-import Saves from "./Saves";
 import Share from "./Share";
 import keyMapHandler from "./keymap";
 import { getParameters } from "../vgs/decls";
@@ -30,6 +30,7 @@ interface HoverInfo {
 
 export default function Editor({ autoFocus }: Props) {
     const source = useCurrentProgram(s => s.source);
+    const activeFileName = useCurrentProgram(s => s.activeFileName);
     const compilerError = useCurrentProgram(s => s.compilerError);
     const setSource = useCurrentProgram(s => s.setSource);
 
@@ -41,7 +42,7 @@ export default function Editor({ autoFocus }: Props) {
 
     const [ share, setShare ] = useState(false);
 
-    const [ saves, setSaves ] = useState(false);
+    const [ showFiles, setShowFiles ] = useState(false);
 
     const [ keyboardShortcuts, setKeyboardShortcuts ] = useState(false);
 
@@ -116,9 +117,9 @@ export default function Editor({ autoFocus }: Props) {
                 <div>
                     <IconButton
                         Icon={IoSave}
-                        label="Saves"
+                        label="Files"
                         shortcut="ctrl-s"
-                        onClick={() => setSaves(true)}
+                        onClick={() => setShowFiles(true)}
                     />
 
                     <IconButton
@@ -129,10 +130,10 @@ export default function Editor({ autoFocus }: Props) {
 
                     { share && <Share source={source} onClose={() => setShare(false)} /> }
 
-                    { saves &&
-                        <Saves
+                    { showFiles &&
+                        <Files
                             onClose={() => {
-                                setSaves(false);
+                                setShowFiles(false);
 
                                 requestAnimationFrame(() => {
                                     textareaRef.current?.focus();
@@ -145,6 +146,19 @@ export default function Editor({ autoFocus }: Props) {
                         <KeyboardShortcuts onClose={() => setKeyboardShortcuts(false)} />
                     }
                 </div>
+
+                {
+                    activeFileName && (
+                        <div>
+                            <span
+                                aria-label={`Current File: ${activeFileName}`}
+                                className={styles.fileName}
+                            >
+                                <span>{activeFileName}</span>
+                            </span>
+                        </div>
+                    )
+                }
 
                 <div>
                     <IconButton
