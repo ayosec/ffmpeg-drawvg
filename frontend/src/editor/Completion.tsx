@@ -34,8 +34,8 @@ export default function Completion(props: Props) {
 
 
         // Ensure the selected option is visible.
-
-        box.querySelector("." + styles.selected)?.scrollIntoView({ block: "nearest" });
+        box.getElementsByClassName(styles.selected)[0]
+            ?.scrollIntoView({ block: "nearest" });
     });
 
     return (

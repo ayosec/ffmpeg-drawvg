@@ -118,7 +118,7 @@ function useTableRects() {
 function onMouseEnterTimeRange(event: React.MouseEvent<HTMLSpanElement>) {
     const dataRef = event.currentTarget;
 
-    const info = dataRef.closest("table")?.querySelector(`div.${styles.activeColumn}`);
+    const info = dataRef.closest("table")?.getElementsByClassName(styles.activeColumn)[0];
 
     if (!(info instanceof HTMLDivElement))
         return;
