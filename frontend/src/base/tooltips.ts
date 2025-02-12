@@ -5,25 +5,35 @@ export const KEY_NAMES: {[key:string]: string} = {
 };
 
 function makeFloatingBox(parent: HTMLElement) {
-    const ID = "tooltip-floating-box";
-    let node = <HTMLSpanElement|null>parent.querySelector("span#" + ID);
-    if (node !== null)
+    const CLASS_NAME = "tooltip-floating-box";
+
+    const node = parent.getElementsByClassName(CLASS_NAME)[0];
+    if (node !== null && node instanceof HTMLSpanElement)
         return node;
 
-    node = document.createElement("span");
-    node.id = ID;
-    parent.appendChild(node);
-    return node;
+    const newNode = document.createElement("span");
+    newNode.classList.add(CLASS_NAME);
+    parent.appendChild(newNode);
+    return newNode;
 }
 
-function configureTooltop(tooltipBox: HTMLElement, target: HTMLElement) {
-
+function configureTooltop(container: HTMLElement, target: HTMLElement) {
     const label = target?.ariaLabel;
     if (!label)
         return;
 
+    const tooltipBox = makeFloatingBox(container);
     tooltipBox.innerText = label;
 
+    // Reparent if `target` is in a <dialog>.
+    const dialogAncestor = target.closest("dialog");
+    if (dialogAncestor !== null
+        && tooltipBox.parentElement !== dialogAncestor
+    ) {
+        dialogAncestor.append(tooltipBox);
+    }
+
+    // Add a line with the associated shortcut.
     const shortcut = target.dataset.shortcut;
     if (shortcut) {
         const el = document.createElement("div");
@@ -39,6 +49,7 @@ function configureTooltop(tooltipBox: HTMLElement, target: HTMLElement) {
         tooltipBox.append(el);
     }
 
+    // Move next to its parent.
     const clientWidth = window.innerWidth - 10;
     const clientHeight = window.innerHeight - 10;
 
@@ -68,12 +79,13 @@ function configureTooltop(tooltipBox: HTMLElement, target: HTMLElement) {
 }
 
 export default function initTooltips(parent: HTMLElement) {
-    const Box = makeFloatingBox(parent);
-    Box.innerText = "";
-
-    parent.addEventListener("mouseenter", event => {
-        const target = <HTMLElement|null>event.target;
-        if (target)
-            configureTooltop(Box, target);
-    }, true);
+    parent.addEventListener(
+        "mouseenter",
+        event => {
+            const target = <HTMLElement|null>event.target;
+            if (target)
+                configureTooltop(parent, target);
+        },
+        true,
+    );
 }

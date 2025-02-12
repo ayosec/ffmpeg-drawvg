@@ -10,10 +10,10 @@ html, body, #root {
     background: light-dark(white, #222);
 }
 
-#tooltip-floating-box {
+.tooltip-floating-box {
     display: none;
 
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     z-index: 1000;
@@ -85,7 +85,7 @@ html, body, #root {
     }
 }
 
-body:has([aria-label]:hover) #tooltip-floating-box {
+body:has([aria-label]:hover) .tooltip-floating-box {
     display: unset;
 }
 
