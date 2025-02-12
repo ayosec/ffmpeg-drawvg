@@ -81,52 +81,35 @@ function getStorageKeyForCode(activeFileName: string|null) {
 }
 
 function loadCode(activeFileName: string|null) {
-    const stored = localStorage.getItem(getStorageKeyForCode(activeFileName));
-    if (stored !== null)
-        return stored;
-
-    return null;
+    return localStorage.getItem(getStorageKeyForCode(activeFileName));
 }
 
-function computeSelectFile(state: CurrentProgram, fileName: string|null): Partial<CurrentProgram> {
-    if (fileName !== null && state.fileNames.indexOf(fileName) === -1)
-        return {};
+function loadInitialSource() {
+    let activeFileName: string|null = null;
+    let source = extractCodeFromLocationHash();
 
-    if (fileName !== null)
-        localStorage.setItem(ACTIVE_FILE_KEY, fileName);
-    else
-        localStorage.removeItem(ACTIVE_FILE_KEY);
-
+    if (source === null) {
+        activeFileName = localStorage.getItem(ACTIVE_FILE_KEY);
+        source = loadCode(activeFileName) ?? "";
+    }
 
     return {
-        source: loadCode(fileName) ?? "",
-        activeFileName: fileName,
-        programId: state.programId + 1,
-        compilerError: null,
+        source,
+        activeFileName,
     };
 }
 
 const useCurrentProgram = create<CurrentProgram>()((set, get) => {
-    let initialActiveFileName: string|null = null;
-    let initialSource = extractCodeFromLocationHash();
-
-    if (initialSource === null) {
-        initialActiveFileName = localStorage.getItem(ACTIVE_FILE_KEY);
-        initialSource = loadCode(initialActiveFileName) ?? "";
-    }
-
     let storageWriteTask: ReturnType<typeof setTimeout>|null = null;
 
     return {
+        ...loadInitialSource(),
         programId: 1,
-        source: initialSource,
-        activeFileName: initialActiveFileName,
         fileNames: loadFileNames(),
         compilerError: null,
 
         setSource(source: string, fileName?: string|null) {
             set(s => {
-
                 const activeFileName = fileName === undefined ? s.activeFileName : fileName;
 
                 // Debounce writes to localStorage.
@@ -136,6 +119,7 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
                 storageWriteTask = setTimeout(
                     () => {
                         storageWriteTask = null;
+
                         const key = getStorageKeyForCode(activeFileName);
                         localStorage.setItem(key, source);
                     },
@@ -148,7 +132,6 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
                     programId: s.programId + 1,
                     compilerError: null,
                 };
-
             });
         },
 
@@ -157,7 +140,22 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
         },
 
         selectFile(fileName: string|null) {
-            set(s => computeSelectFile(s, fileName));
+            set(s => {
+                if (fileName !== null && s.fileNames.indexOf(fileName) === -1)
+                    return {};
+
+                if (fileName !== null)
+                    localStorage.setItem(ACTIVE_FILE_KEY, fileName);
+                else
+                    localStorage.removeItem(ACTIVE_FILE_KEY);
+
+                return {
+                    source: loadCode(fileName) ?? "",
+                    activeFileName: fileName,
+                    programId: s.programId + 1,
+                    compilerError: null,
+                };
+            });
         },
 
         saveNewFile(fileName: string) {
@@ -178,17 +176,13 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
         deleteFile(fileName: string) {
             localStorage.removeItem(PREFIX_FILE_KEY + fileName);
 
-            set(s => {
-                let updated: Partial<CurrentProgram> = {};
+            const state = get();
 
-                if (s.activeFileName === fileName)
-                    updated = computeSelectFile(s, null);
+            if (state.activeFileName === fileName)
+                state.selectFile(null);
 
-                if (s.fileNames.indexOf(fileName) !== -1)
-                    updated.fileNames = s.fileNames.filter(n => n !== fileName);
-
-                return updated;
-            });
+            if (state.fileNames.indexOf(fileName) !== -1)
+                set(s => ({ fileNames: s.fileNames.filter(n => n !== fileName) }));
         },
 
         updateSourceFromLocationHash() {

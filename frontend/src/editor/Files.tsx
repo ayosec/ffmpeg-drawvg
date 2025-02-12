@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
+import { HiOutlineTrash } from "react-icons/hi2";
+import { IoSave } from "react-icons/io5";
+
 import IconButton from "../base/IconButton";
 import useCurrentProgram from "../currentProgram";
-import { HiOutlineTrash } from "react-icons/hi2";
 
 import styles from "../base/dialog.module.css";
 
@@ -98,15 +100,25 @@ export default function Files({ onClose }: Props) {
         >
             <div className={styles.mainLayout}>
                 <div className={styles.front}>
-                    <h1>Files</h1>
+                    <h1>Saved Files</h1>
                 </div>
 
                 <div className={styles.content}>
                     { !showNewFile &&
                         <>
-                            <p>
-                                Open an existing file, or save the current one.
-                            </p>
+                            <div className={styles.topBar}>
+                                <IconButton
+                                    Icon={IoSave}
+                                    label="Save a new file"
+                                    onClick={() => {
+                                        if (initialFileName.current !== undefined) {
+                                            selectFile(initialFileName.current);
+                                            setNewFile(true);
+                                        }
+                                    }}
+                                />
+
+                            </div>
 
                             <div
                                 tabIndex={0}
@@ -140,33 +152,19 @@ export default function Files({ onClose }: Props) {
                         </div>
                     }
 
-                    <div className={styles.actions + " " + styles.multiGroups}>
+                    <div className={styles.actions}>
                         <div>
                             <button className={styles.close} onClick={closeDialog}>
                                 Close
                             </button>
-                        </div>
 
-                        <div>
-                            { !showNewFile &&
-                                <button
-                                    onClick={() => {
-                                        if (initialFileName.current !== undefined) {
-                                            selectFile(initialFileName.current);
-                                            setNewFile(true);
-                                        }
-                                    }}
-                                >
-                                    New File
-                                </button>
+                            { activeFileName !== initialFileName.current
+                                && !showNewFile
+                                && <button onClick={() => acceptFile()}>Open</button>
                             }
 
-                            { activeFileName !== initialFileName.current &&
-                                <button onClick={() => acceptFile()}>Open</button>
-                            }
-
-                            { showNewFile &&
-                                <button disabled={newFileName === ""} onClick={saveNewFile}>Save</button>
+                            { showNewFile
+                                && <button disabled={newFileName === ""} onClick={saveNewFile}>Save</button>
                             }
                         </div>
                     </div>
@@ -225,7 +223,7 @@ const NewFileHelp = () => (
         </p>
 
         <p>
-            Your saved files will appear in this dialog window.
+            Your saved files will appear in this dialog window the next time you open it.
         </p>
     </div>
 );
