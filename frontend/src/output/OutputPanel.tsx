@@ -8,7 +8,7 @@ import RenderView from "./RenderView";
 import styles from "./output.module.css";
 
 import BackendContext from "../backend";
-import Select from "../Select";
+import Select from "../base/Select";
 import VideoExport from "./video/VideoExport";
 
 enum PlaybackStatus {

@@ -1,6 +1,6 @@
 import * as protocol from "./protocol";
 import * as shaders from "./graphics";
-import SerialNumber from "../serial";
+import SerialNumber from "../utils/serial";
 import createMachine, { Machine, Program } from "./machine";
 import exportVideo from "./exportVideo";
 

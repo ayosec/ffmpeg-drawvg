@@ -4,13 +4,13 @@ import BackendContext from "../backend";
 import IconButton from "../base/IconButton";
 import Logs from "./Logs";
 import RenderTimeChart from "./RenderTimeChart";
-import Select from "../Select";
-import SerialNumber from "../serial";
+import Select from "../base/Select";
+import SerialNumber from "../utils/serial";
 import tokenize from "../vgs/tokenizer";
 import useCurrentProgram, { CompilerError } from "../currentProgram";
 import { Instructions } from "@backend/syntax";
 import { LogEvent, RenderTimeChunk, ResourceUsage } from "../render/protocol";
-import { usePageVisible } from "../hooks";
+import { usePageVisible } from "../utils/hooks";
 
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoTimerOutline } from "react-icons/io5";
