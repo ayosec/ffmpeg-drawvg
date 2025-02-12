@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { FaUndo } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoSave } from "react-icons/io5";
 
@@ -10,6 +11,17 @@ import styles from "../base/dialog.module.css";
 
 interface Props {
     onClose(): void;
+}
+
+interface EntryProps {
+    name: string;
+    onAccept(): void;
+    onDelete(): void;
+}
+
+interface LastRemovedFile {
+    name: string;
+    source: string;
 }
 
 export default function Files({ onClose }: Props) {
@@ -26,6 +38,8 @@ export default function Files({ onClose }: Props) {
     const [ newFile, setNewFile ] = useState(fileNames.length === 0);
 
     const [ newFileName, setNewFileName ] = useState("");
+
+    const [ removeUndoHistory, setRemoveUndoHistory ] = useState<LastRemovedFile[]>([]);
 
     useEffect(() => {
         const dialog = dialogRef.current;
@@ -107,17 +121,39 @@ export default function Files({ onClose }: Props) {
                     { !showNewFile &&
                         <>
                             <div className={styles.topBar}>
-                                <IconButton
-                                    Icon={IoSave}
-                                    label="Save a new file"
-                                    onClick={() => {
-                                        if (initialFileName.current !== undefined) {
-                                            selectFile(initialFileName.current);
-                                            setNewFile(true);
-                                        }
-                                    }}
-                                />
+                                <div>
+                                    <IconButton
+                                        Icon={IoSave}
+                                        label="Save a new file"
+                                        onClick={() => {
+                                            if (initialFileName.current !== undefined) {
+                                                selectFile(initialFileName.current);
+                                                setNewFile(true);
+                                            }
+                                        }}
+                                    />
+                                </div>
 
+                                <div>
+                                    {
+                                        removeUndoHistory.length > 0 &&
+                                            <IconButton
+                                                Icon={FaUndo}
+                                                label="Restore removed file"
+                                                onClick={() => {
+                                                    const lrf = removeUndoHistory[0];
+                                                    if (!lrf)
+                                                        return;
+
+                                                    const state = useCurrentProgram.getState();
+                                                    state.saveNewFile(lrf.name, lrf.source);
+                                                    state.selectFile(lrf.name);
+
+                                                    setRemoveUndoHistory(removeUndoHistory.slice(1));
+                                                }}
+                                            />
+                                    }
+                                </div>
                             </div>
 
                             <div
@@ -126,8 +162,25 @@ export default function Files({ onClose }: Props) {
                                 onKeyDown={onKeyDownList}
 
                             >
-                                { fileNames.map(n =>
-                                    <Entry key={n} name={n} onAccept={acceptFile} />)
+                                { fileNames.map(name =>
+                                    <Entry
+                                        key={name}
+                                        name={name}
+                                        onAccept={acceptFile}
+                                        onDelete={() => {
+                                            const state = useCurrentProgram.getState();
+
+                                            const source = state.getSource(name);
+                                            if (source) {
+                                                setRemoveUndoHistory([
+                                                    { name, source },
+                                                    ...removeUndoHistory,
+                                                ]);
+                                            }
+
+                                            state.deleteFile(name);
+                                        }}
+                                    />)
                                 }
                             </div>
                         </>
@@ -175,13 +228,9 @@ export default function Files({ onClose }: Props) {
     );
 }
 
-function Entry({ name, onAccept }: { name: string, onAccept(): void, }) {
+function Entry({ name, onAccept, onDelete }: EntryProps) {
     const activeFileName = useCurrentProgram(s => s.activeFileName);
     const selectFile = useCurrentProgram(s => s.selectFile);
-
-    const deleteFile = (name: string) => {
-        useCurrentProgram.getState().deleteFile(name);
-    };
 
     const active = activeFileName === name;
 
@@ -201,7 +250,7 @@ function Entry({ name, onAccept }: { name: string, onAccept(): void, }) {
             <IconButton
                 label="Remove"
                 Icon={HiOutlineTrash}
-                onClick={() => deleteFile(name)}
+                onClick={onDelete}
             />
         </div>
     );

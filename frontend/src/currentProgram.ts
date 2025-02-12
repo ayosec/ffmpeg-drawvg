@@ -17,11 +17,13 @@ interface CurrentProgram {
     activeFileName: string|null;
     fileNames: string[];
 
+    getSource(fileName?: string|null): string|null;
+
     setSource(source: string, fileName?: string|null): void;
     setCompilerError(e: CompilerError|null): void;
 
     selectFile(fileName: string|null): void;
-    saveNewFile(fileName: string): void;
+    saveNewFile(fileName: string, source?: string): void;
     deleteFile(fileName: string): void;
 
     updateSourceFromLocationHash(): void;
@@ -108,6 +110,10 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
         fileNames: loadFileNames(),
         compilerError: null,
 
+        getSource(fileName: string|null) {
+            return loadCode(fileName);
+        },
+
         setSource(source: string, fileName?: string|null) {
             set(s => {
                 const activeFileName = fileName === undefined ? s.activeFileName : fileName;
@@ -158,9 +164,9 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
             });
         },
 
-        saveNewFile(fileName: string) {
+        saveNewFile(fileName: string, source?: string) {
             set(s => {
-                localStorage.setItem(PREFIX_FILE_KEY + fileName, s.source);
+                localStorage.setItem(PREFIX_FILE_KEY + fileName, source ?? s.source);
                 localStorage.setItem(ACTIVE_FILE_KEY, fileName);
 
                 const fileNames = [...s.fileNames, fileName];

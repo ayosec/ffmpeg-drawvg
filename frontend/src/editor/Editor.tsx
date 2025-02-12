@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
-import { FaFolderOpen } from "react-icons/fa6";
 import { FaKeyboard } from "react-icons/fa";
+import { FaRegFolderOpen } from "react-icons/fa6";
 import { IoShareSocial } from "react-icons/io5";
 
 import * as CompImpl from "./completion.impl";
@@ -117,7 +117,7 @@ export default function Editor({ autoFocus }: Props) {
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <IconButton
-                        Icon={FaFolderOpen}
+                        Icon={FaRegFolderOpen}
                         label="Files"
                         shortcut="ctrl-s"
                         onClick={() => setShowFiles(true)}
