@@ -2,15 +2,6 @@ import { deflateRaw } from "pako";
 
 import computeCRC32 from "./crc32";
 
-// Expected version of the ZIP decompressor (UNIX, spec 6.3).
-//
-// Spec 6.3 is needed for the language encoding flag.
-const ZIP_VERSION = 0x0300 | 63;
-
-// Flag to indicate that the filename is encoded in UTF-8,
-// instead of CP437.
-const UTF8_FLAG = 1 << 11;
-
 export default class ZipFile {
     #files: ArrayBuffer[] = [];
 
@@ -25,6 +16,7 @@ export default class ZipFile {
         const compressed = deflateRaw(contentsBuffer, { level: 9 });
 
         const fileName = new TextEncoder().encode(fixName(name));
+        const { zipVersion, flags } = specFromName(fileName);
 
         const crc32 = computeCRC32(contentsBuffer);
 
@@ -32,8 +24,8 @@ export default class ZipFile {
         const fileHeader = new DataView(fileHeaderBuffer);
 
         fileHeader.setUint32(0, 0x504B0304);        // PK\03\04
-        fileHeader.setUint16(4, ZIP_VERSION, true); // Extract version.
-        fileHeader.setUint16(6, UTF8_FLAG, true);   // Flag for UTF-8 support.
+        fileHeader.setUint16(4, zipVersion, true);
+        fileHeader.setUint16(6, flags, true);
         fileHeader.setUint16(8, 8, true);           // DEFLATE.
         fileHeader.setUint16(10, time, true);       // Mod. time.
         fileHeader.setUint16(12, date, true);       // Mod. date.
@@ -49,6 +41,8 @@ export default class ZipFile {
             date,
             time,
             crc32,
+            zipVersion,
+            flags,
             compressedSize: compressed.length,
             uncompressedSize: contentsBuffer.length,
         });
@@ -59,19 +53,19 @@ export default class ZipFile {
     }
 
     toChunks(): ArrayBuffer[] {
+        // Add a CDFH (Central Directory File Header) for each file.
         const centralDirectory = [];
-
         let centralDirectoryByteSize = 0;
 
         for (const entry of this.#entries) {
             const cdfhBuffer = new ArrayBuffer(46);
             const cdfh = new DataView(cdfhBuffer);
 
-            cdfh.setUint32(0, 0x504B0102);          // PK\01\02
-            cdfh.setUint16(4, ZIP_VERSION, true);   // Version made by.
-            cdfh.setUint16(6, ZIP_VERSION, true);   // Extract version.
-            cdfh.setUint16(8, UTF8_FLAG, true);     // Flag for UTF-8 support.
-            cdfh.setUint16(10, 8, true);            // DEFLATE.
+            cdfh.setUint32(0, 0x504B0102);              // PK\01\02
+            cdfh.setUint16(4, entry.zipVersion, true);
+            cdfh.setUint16(6, entry.zipVersion, true);
+            cdfh.setUint16(8, entry.flags, true);
+            cdfh.setUint16(10, 8, true);                // DEFLATE.
 
             cdfh.setUint16(12, entry.time, true);
             cdfh.setUint16(14, entry.date, true);
@@ -80,11 +74,15 @@ export default class ZipFile {
             cdfh.setUint32(24, entry.uncompressedSize, true);
             cdfh.setUint16(28, entry.fileName.byteLength, true);
 
+            cdfh.setUint32(38, 0o600 << 16, true);      // External file attributes
+
             cdfh.setUint32(42, entry.position, true);
 
             centralDirectory.push(cdfhBuffer, entry.fileName);
             centralDirectoryByteSize += cdfhBuffer.byteLength + entry.fileName.byteLength;
         }
+
+        // Compute the End Of Central Directory record.
 
         const eocdBuffer = new ArrayBuffer(22);
         const eocd = new DataView(eocdBuffer);
@@ -109,6 +107,8 @@ interface Entry {
     date: number;
     time: number;
     crc32: number;
+    zipVersion: number;
+    flags: number;
     compressedSize: number;
     uncompressedSize: number;
 }
@@ -117,20 +117,41 @@ function fixName(name: string) {
     return name
         .replace(/^(\w):/, "$1_")
         .replace(
-            /[\0-\x20\\/]/g,
+            /[\0-\x1F\\/]/g,
             c => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"),
         );
+}
+
+function specFromName(fileName: Uint8Array) {
+    // If all bytes are printable ASCII characters, then the name is
+    // compatible with the default encoding for ZIP files (CP 437).
+    //
+    // If there are bytes outside that range, we have to increase the
+    // spec version to 6.3, and set the language encoding flag.
+    const needUTF8 = fileName.find(b => b < 32 || b > 126) !== undefined;
+
+    if (needUTF8) {
+        return {
+            zipVersion: 0x0300 | 63,
+            flags: 1 << 11,
+        };
+    } else {
+        return {
+            zipVersion: 0x0300 | 46,
+            flags: 0,
+        };
+    }
 }
 
 function dosTime() {
     const now = new Date();
 
-    let date
+    const date
         = now.getDate() & 0x1F
         | (((now.getMonth() + 1) & 0xF) << 5)
         | (((now.getFullYear() - 1980) & 0x7F) << 9);
 
-    let time
+    const time
         = Math.floor(now.getSeconds() / 2)
         | ((now.getMinutes() & 0x3F) << 5)
         | ((now.getHours() & 0x1F) << 11);

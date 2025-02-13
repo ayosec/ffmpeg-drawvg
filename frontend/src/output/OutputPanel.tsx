@@ -10,6 +10,7 @@ import styles from "./output.module.css";
 import BackendContext from "../backend";
 import Select from "../base/Select";
 import VideoExport from "./video/VideoExport";
+import { downloadBlob } from "../utils/blobs";
 
 enum PlaybackStatus {
     Pause,
@@ -221,16 +222,6 @@ function saveToImage(ref: HTMLDivElement|null) {
             return;
         }
 
-        const url = URL.createObjectURL(blob);
-        try {
-            const anchor = document.createElement("a");
-            anchor.href = url;
-            anchor.download = "vgs.png";
-            document.body.append(anchor);
-            anchor.click();
-            anchor.remove();
-        } finally {
-            URL.revokeObjectURL(url);
-        }
+        downloadBlob(blob, "vgs-%NOW.png");
     });
 }

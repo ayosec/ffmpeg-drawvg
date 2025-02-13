@@ -187,7 +187,9 @@
     margin-bottom: 3ch;
 
     input[type="text"] {
-        width: 20vw;
+        box-sizing: border-box;
+
+        width: 100%;
         padding: 0.5ch 1ch;
 
         border: 0;

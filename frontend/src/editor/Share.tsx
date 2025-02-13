@@ -46,7 +46,7 @@ export default function Share({ source, onClose }: Props) {
             return;
 
         dialog.showModal();
-        (dialog.querySelector("button:last-child") as HTMLButtonElement)?.focus();
+        dialog.querySelector<HTMLButtonElement>("button:last-child")?.focus();
     }, []);
 
     useEffect(() => {

@@ -37,7 +37,7 @@ export default function KeyboardShortcuts({ onClose }: Props) {
             return;
 
         dialog.showModal();
-        (dialog.querySelector("button:last-child") as HTMLButtonElement)?.focus();
+        dialog.querySelector<HTMLButtonElement>("button:last-child")?.focus();
     }, []);
 
     return (

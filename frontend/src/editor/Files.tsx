@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 
 import { FaUndo } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi2";
-import { IoSave } from "react-icons/io5";
+import { IoArchive, IoSave } from "react-icons/io5";
 
 import IconButton from "../base/IconButton";
+import ZipFile from "../utils/zipfiles";
 import useCurrentProgram from "../currentProgram";
+import { downloadBlob } from "../utils/blobs";
 
 import styles from "../base/dialog.module.css";
 
@@ -47,7 +49,7 @@ export default function Files({ onClose }: Props) {
             return;
 
         dialog.showModal();
-        (dialog.querySelector("[tabindex]") as HTMLElement)?.focus();
+        dialog.querySelector<HTMLElement>("[tabindex]")?.focus();
     }, []);
 
     if (initialFileName.current === undefined) {
@@ -80,6 +82,7 @@ export default function Files({ onClose }: Props) {
 
         const moveSelection = (offset: number) => {
             let toSelect = fileNames.indexOf(activeFileName ?? "\0") + offset;
+
             if (toSelect < 0)
                 toSelect = fileNames.length - 1;
             else if (toSelect >= fileNames.length)
@@ -132,26 +135,31 @@ export default function Files({ onClose }: Props) {
                                             }
                                         }}
                                     />
+
+                                    <IconButton
+                                        Icon={IoArchive}
+                                        label="Download as a ZIP archive"
+                                        onClick={dowloadZip}
+                                    />
                                 </div>
 
                                 <div>
-                                    {
-                                        removeUndoHistory.length > 0 &&
-                                            <IconButton
-                                                Icon={FaUndo}
-                                                label="Restore removed file"
-                                                onClick={() => {
-                                                    const lrf = removeUndoHistory[0];
-                                                    if (!lrf)
-                                                        return;
+                                    { removeUndoHistory.length > 0 &&
+                                        <IconButton
+                                            Icon={FaUndo}
+                                            label="Restore removed file"
+                                            onClick={() => {
+                                                const lrf = removeUndoHistory[0];
+                                                if (!lrf)
+                                                    return;
 
-                                                    const state = useCurrentProgram.getState();
-                                                    state.saveNewFile(lrf.name, lrf.source);
-                                                    state.selectFile(lrf.name);
+                                                const state = useCurrentProgram.getState();
+                                                state.saveNewFile(lrf.name, lrf.source);
+                                                state.selectFile(lrf.name);
 
-                                                    setRemoveUndoHistory(removeUndoHistory.slice(1));
-                                                }}
-                                            />
+                                                setRemoveUndoHistory(removeUndoHistory.slice(1));
+                                            }}
+                                        />
                                     }
                                 </div>
                             </div>
@@ -208,7 +216,7 @@ export default function Files({ onClose }: Props) {
                     <div className={styles.actions}>
                         <div>
                             <button className={styles.close} onClick={closeDialog}>
-                                Close
+                                { showNewFile ? "Cancel" : "Close" }
                             </button>
 
                             { activeFileName !== initialFileName.current
@@ -276,3 +284,18 @@ const NewFileHelp = () => (
         </p>
     </div>
 );
+
+function dowloadZip() {
+    const state = useCurrentProgram.getState();
+
+    const zip = new ZipFile();
+
+    for (const name of state.fileNames) {
+        const source = state.getSource(name);
+        if (source)
+            zip.add(name + ".txt", source);
+    }
+
+    const blob = new Blob(zip.toChunks(), { type: "application/zip" });
+    downloadBlob(blob, "drawvg-%NOW.zip");
+}
