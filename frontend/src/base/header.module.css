@@ -11,7 +11,7 @@
     text-shadow: 1px 1px 2px black;
 }
 
-.themeSwitcher {
+.optionSwitcher {
     display: inline-flex;
     flex-direction: row;
 
@@ -34,7 +34,7 @@
         #777 calc(var(--background-start) + 50%)
     );
 
-    &[data-select-theme="light"] {
+    &[data-option-highlight="right"] {
         --background-start: 50%;
     }
 
@@ -48,4 +48,8 @@
     syntax: "<percentage>";
     inherits: true;
     initial-value: 0%;
+}
+
+.animatedColors [data-panel-group] * {
+    transition: color ease-out 125ms, background-color ease-out 125ms;
 }
