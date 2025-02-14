@@ -102,7 +102,10 @@ function loadInitialSource() {
 }
 
 const useCurrentProgram = create<CurrentProgram>()((set, get) => {
-    let storageWriteTask: ReturnType<typeof setTimeout>|null = null;
+    const storageWriteTask = {
+        id: <ReturnType<typeof setTimeout>|null>null,
+        fileName: <string|null>null,
+    };
 
     return {
         ...loadInitialSource(),
@@ -119,18 +122,25 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
                 const activeFileName = fileName === undefined ? s.activeFileName : fileName;
 
                 // Debounce writes to localStorage.
-                if (storageWriteTask !== null)
-                    clearTimeout(storageWriteTask);
+                if (storageWriteTask.id !== null
+                    && storageWriteTask.fileName === activeFileName
+                ) {
+                    clearTimeout(storageWriteTask.id);
+                }
 
-                storageWriteTask = setTimeout(
-                    () => {
-                        storageWriteTask = null;
+                // Store the file only if the name is not empty.
+                if (activeFileName !== "") {
+                    storageWriteTask.fileName = activeFileName;
+                    storageWriteTask.id = setTimeout(
+                        () => {
+                            storageWriteTask.id = null;
 
-                        const key = getStorageKeyForCode(activeFileName);
-                        localStorage.setItem(key, source);
-                    },
-                    2000,
-                );
+                            const key = getStorageKeyForCode(activeFileName);
+                            localStorage.setItem(key, source);
+                        },
+                        2000,
+                    );
+                }
 
                 return {
                     source,

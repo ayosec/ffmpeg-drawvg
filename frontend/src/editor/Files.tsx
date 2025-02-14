@@ -26,6 +26,12 @@ interface LastRemovedFile {
     source: string;
 }
 
+enum NewFileAction {
+    Init,
+    SaveExisting,
+    CreateNew,
+}
+
 export default function Files({ onClose }: Props) {
     const activeFileName = useCurrentProgram(s => s.activeFileName);
     const fileNames = useCurrentProgram(s => s.fileNames);
@@ -55,6 +61,11 @@ export default function Files({ onClose }: Props) {
     if (initialFileName.current === undefined) {
         initialFileName.current = useCurrentProgram.getState().activeFileName;
     }
+
+    const newFileAction
+        = fileNames.length === 0 ? NewFileAction.Init
+        : initialFileName.current === null ? NewFileAction.SaveExisting
+        : NewFileAction.CreateNew;
 
     const acceptFile = () => {
         fileAccepted.current = true;
@@ -107,7 +118,7 @@ export default function Files({ onClose }: Props) {
         }
     };
 
-    const showNewFile = newFile || fileNames.length === 0;
+    const showNewFile = newFile || newFileAction === NewFileAction.Init;
 
     return (
         <dialog
@@ -127,12 +138,18 @@ export default function Files({ onClose }: Props) {
                                 <div>
                                     <IconButton
                                         Icon={IoSave}
-                                        label="Save a new file"
+                                        label={
+                                            newFileAction === NewFileAction.CreateNew
+                                                ? "Create a new file"
+                                                : "Save current script"
+                                        }
                                         onClick={() => {
-                                            if (initialFileName.current !== undefined) {
+                                            if (newFileAction == NewFileAction.CreateNew)
+                                                useCurrentProgram.getState().setSource("", "");
+                                            else if (initialFileName.current !== undefined)
                                                 selectFile(initialFileName.current);
-                                                setNewFile(true);
-                                            }
+
+                                            setNewFile(true);
                                         }}
                                     />
 
@@ -196,7 +213,9 @@ export default function Files({ onClose }: Props) {
 
                     { showNewFile &&
                         <div className={styles.fileSavesNew}>
-                            <NewFileHelp />
+                            <div className={styles.help}>
+                                <SaveFileHelp action={newFileAction} />
+                            </div>
 
                             <input
                                 type="text"
@@ -264,26 +283,35 @@ function Entry({ name, onAccept, onDelete }: EntryProps) {
     );
 }
 
-const NewFileHelp = () => (
-    <div className={styles.help}>
-        <p>
-            You can store scripts in the{" "}
-            <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">
-                <code>localStorage</code>
-            </a>
-            {" "}of your browser.
-        </p>
+function SaveFileHelp({ action }: { action: NewFileAction }) {
+    switch (action){
+        case NewFileAction.CreateNew:
+            return <p>Create a new empty file.</p>;
 
-        <p>
-            If you clear your browser data, or if you are using private/incognito mode,
-            the files will be lost.
-        </p>
+        case NewFileAction.SaveExisting:
+            return <p>Save the current script to a new file.</p>;
 
-        <p>
-            Your saved files will appear in this dialog window the next time you open it.
-        </p>
-    </div>
-);
+        case NewFileAction.Init:
+            return <>
+                <p>
+                    You can store scripts in the{" "}
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">
+                        <code>localStorage</code>
+                    </a>
+                    {" "}of your browser.
+                </p>
+
+                <p>
+                    If you clear your browser data, or if you are using private/incognito mode,
+                    the files will be lost.
+                </p>
+
+                <p>
+                    Your saved files will appear in this dialog window the next time you open it.
+                </p>
+            </>;
+    }
+}
 
 function dowloadZip() {
     const state = useCurrentProgram.getState();
