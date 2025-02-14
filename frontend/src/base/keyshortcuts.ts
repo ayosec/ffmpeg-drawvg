@@ -9,7 +9,20 @@ export default function initKeyboardShortcuts(parent: HTMLElement) {
         const button = parent.querySelector<HTMLButtonElement>(`button[data-shortcut="${seq}" i]`);
         if (button) {
             event.preventDefault();
+
             button.click();
+
+            button.animate(
+                [
+                    {},
+                    { boxShadow: "0 0 1ch" },
+                    {}
+                ], {
+                    duration: 250,
+                    easing: "ease-out",
+                    iterations: 1,
+                }
+            );
         }
     });
 }
