@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 
+import { BsTextIndentLeft } from "react-icons/bs";
 import { FaKeyboard } from "react-icons/fa";
 import { FaRegFolderOpen } from "react-icons/fa6";
 import { IoShareSocial } from "react-icons/io5";
@@ -11,6 +12,7 @@ import Highlights from "./Highlights";
 import IconButton from "../base/IconButton";
 import KeyboardShortcuts from "../base/KeyboardShortcuts";
 import Share from "./Share";
+import format from "../vgs/formatter";
 import keyMapHandler from "./keymap";
 import { getParameters } from "../vgs/decls";
 
@@ -129,6 +131,16 @@ export default function Editor({ autoFocus }: Props) {
                         onClick={() => setShare(!share)}
                     />
 
+                    <IconButton
+                        Icon={BsTextIndentLeft}
+                        label="Reformat code"
+                        shortcut="ctrl-i"
+                        onClick={() => {
+                            if (textareaRef.current)
+                                reformatCode(textareaRef.current);
+                        }}
+                    />
+
                     { share && <Share source={source} onClose={() => setShare(false)} /> }
 
                     { showFiles &&
@@ -218,6 +230,19 @@ export default function Editor({ autoFocus }: Props) {
             </div>
         </div>
     );
+}
+
+function reformatCode(textarea: HTMLTextAreaElement) {
+    const { code, caret } = format(textarea.value, textarea.selectionStart);
+
+    // Use execCommand to set the value, so users can use the native undo action
+    // to restore the code before reformat.
+
+    textarea.focus();
+    textarea.select();
+
+    (document as any).execCommand("insertText", false, code);
+    textarea.setSelectionRange(caret, caret);
 }
 
 function HoverInfo({ clientX, clientY, inst, params, paramsPosition }: HoverInfo) {
