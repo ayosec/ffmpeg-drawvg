@@ -25,12 +25,16 @@ export default function RenderView({ size }: Props) {
         if (canvas === null || Object.is(canvas, canvasRef.current))
             return;
 
-        backend.init(canvas);
+        backend.init(canvas, size);
         backend.setProgram(programId, source);
+
         canvasRef.current = canvas;
     };
 
-    useEffect(() => backend.setSize(size), [ backend, size ]);
+    useEffect(
+        () => { backend.setSize(size); },
+        [ backend, size ],
+    );
 
     return <canvas ref={setCanvas} />;
 

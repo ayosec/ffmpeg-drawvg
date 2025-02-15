@@ -16,6 +16,12 @@ interface ExportVideoHandlers {
     onFinish(objectURL: string, size: number, duration: number): void;
 }
 
+interface InitData {
+    canvas: HTMLCanvasElement;
+    size: [ number, number ];
+    requestsQueue: Request[];
+}
+
 export interface ExportVideoTask {
     cancel(): void;
 }
@@ -24,35 +30,45 @@ const Backend = {
 
     renderWorker: new RenderWorkerImpl({ name: "MainRender" }),
 
-    pendingCanvas: undefined as HTMLCanvasElement|undefined,
+    initData: <InitData|undefined>undefined,
 
     responseListeners: new Map<number, Listener>(),
 
     lastRequestId: 0,
 
-    init(canvas: HTMLCanvasElement) {
+    init(canvas: HTMLCanvasElement, size: [ number, number ]) {
         this.renderWorker.onmessage = (event) => this.handleResponse(event);
         this._postMessage({ request: "init" });
 
-        this.pendingCanvas = canvas;
+        this.initData = { canvas, size, requestsQueue: [] };
     },
 
     handleResponse(event: MessageEvent<any>) {
         const response: Response = event.data;
 
         if ("init" in response && response.init === "ok") {
-            const canvas = this.pendingCanvas;
+            if (this.initData === undefined) {
+                console.warn("Missing data to initialize canvas.");
+                return;
+            }
+
+            const { canvas, size, requestsQueue } = this.initData;
+            delete this.initData;
+
             if (canvas === undefined || canvas.dataset.drawvgInWorker !== undefined)
                 return;
 
-            delete this.pendingCanvas;
-
             canvas.dataset.drawvgInWorker = ".";
+
             const offscreen = canvas.transferControlToOffscreen();
             this.renderWorker.postMessage(
-                <Request>{ request: "register", canvas: offscreen },
+                <Request>{ request: "register", canvas: offscreen, size },
                 [ offscreen ]
             );
+
+            for (const req of requestsQueue) {
+                this.renderWorker.postMessage(req);
+            }
 
             return;
         }
@@ -151,7 +167,10 @@ const Backend = {
     },
 
     _postMessage(message: Request) {
-        this.renderWorker.postMessage(message);
+        if (this.initData !== undefined)
+            this.initData.requestsQueue.push(message);
+        else
+            this.renderWorker.postMessage(message);
     },
 
 };

@@ -28,7 +28,7 @@ export type Action
 
 export type Request
     = { request: "init" }
-    | { request: "register", canvas: OffscreenCanvas }
+    | { request: "register", canvas: OffscreenCanvas, size: [ number, number ] }
     | { request: "state", change: StateChange }
     | { request: "action", requestId: number, action: Action }
     | { request: "video", params: VideoParams }

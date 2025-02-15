@@ -187,7 +187,7 @@ self.onmessage = event => {
             break;
 
         case "register":
-            register(message.canvas);
+            register(message.canvas, message.size);
             break;
 
         case "state":
@@ -245,12 +245,13 @@ function createDrawContext(canvas: OffscreenCanvas) {
     return new DrawContext(canvas, gl, vertices.count);
 }
 
-function register(canvas: OffscreenCanvas) {
+function register(canvas: OffscreenCanvas, size: [ number, number ]) {
     STATE.drawContext?.gl
         ?.getExtension("WEBGL_lose_context")
         ?.loseContext();
 
     STATE.drawContext = createDrawContext(canvas);
+    STATE.resizeRequest = size;
 
     if (STATE.pendingDrawId === undefined)
         draw();
