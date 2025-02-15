@@ -174,8 +174,11 @@
         user-select: none;
         padding: 0.25ch 0.5ch;
 
-        &.selected, &:hover, &:focus {
+        &.selected {
             color: var(--tab-selected-fg);
+        }
+
+        &.selected, &:hover, &:focus {
             background: var(--tab-selected-bg);
         }
 

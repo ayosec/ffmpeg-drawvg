@@ -172,8 +172,11 @@
         max-width: 30vw;
         word-break: break-all;
 
-        &.selected, &:hover, &:focus {
+        &.selected {
             color: var(--tab-selected-fg);
+        }
+
+        &.selected, &:hover, &:focus {
             background: var(--tab-selected-bg);
         }
     }
