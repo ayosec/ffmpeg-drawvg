@@ -1,11 +1,8 @@
 .main {
-    height: 100vh;
-    width: 100vw;
     box-sizing: border-box;
 
-    padding: 0 0 1ch 0;
-
-    row-gap: 1ch;
+    height: 100vh;
+    width: 100vw;
 
     display: grid;
     grid-template-rows: auto 1fr;
@@ -27,9 +24,28 @@
         background: #333;
     }
 
-    & > div {
-        & > div:first-child { margin-left: 1ch; }
-        & > div:last-child { margin-right: 1ch; }
+    &[data-layout="main"] {
+        row-gap: 1ch;
+        padding: 0 0 1ch 0;
+
+        & > div {
+            & > div:first-child { margin-left: 1ch; }
+            & > div:last-child { margin-right: 1ch; }
+        }
+    }
+
+    &[data-layout="vertical"] {
+        .verticalContent {
+            overflow: auto;
+
+            grid-column: 1 / 3;
+            grid-row: 2 / 3;
+
+            & > div {
+                height: 75vh;
+                margin: 1ch;
+            }
+        }
     }
 }
 

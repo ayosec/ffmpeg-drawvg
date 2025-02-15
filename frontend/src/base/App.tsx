@@ -6,12 +6,20 @@ import Editor from "../editor/Editor";
 import Header from "./Header";
 import MonitorsPanel from "../monitors/MonitorsPanel";
 import OutputPanel from "../output/OutputPanel";
+import useAppLayout from "./layout";
 import useCurrentProgram from "../currentProgram";
 
 import styles from "./app.module.css";
 
+enum Layout {
+    Main = 0,
+    Vertical = 1,
+}
+
 export default function App() {
     const updateSourceFromLocationHash = useCurrentProgram(s => s.updateSourceFromLocationHash);
+
+    const layout = useAppLayout(s => s.layout);
 
     useEffect(() => {
         const handler = () => { updateSourceFromLocationHash(); };
@@ -24,10 +32,12 @@ export default function App() {
         <PanelResizeHandle className={styles.resizeHandle} children={<span />} />
     );
 
-    return (
-        <div className={styles.main} >
-            <Header />
+    let app;
+    let layoutName;
+    if (layout == Layout.Main) {
+        layoutName = "main";
 
+        app = (
             <PanelGroup direction="horizontal">
                 <Panel>
                     <Editor autoFocus={true} />
@@ -49,6 +59,23 @@ export default function App() {
                     </PanelGroup>
                 </Panel>
             </PanelGroup>
+        );
+    } else {
+        layoutName = "vertical";
+
+        app = (
+            <div className={styles.verticalContent}>
+                <Editor autoFocus={true} />
+                <MonitorsPanel renderOutput={true} />
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.main} data-layout={layoutName}>
+            <Header />
+
+            {app}
         </div>
     );
 }

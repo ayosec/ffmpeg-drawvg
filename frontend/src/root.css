@@ -6,8 +6,8 @@ html, body, #root {
     font-family: var(--regular-font, sans-serif), sans-serif;
     font-size: 14pt;
 
-    color: light-dark(black, white);
-    background: light-dark(white, #222);
+    color: var(--main-fg);
+    background: var(--main-bg);
 }
 
 .tooltip-floating-box {

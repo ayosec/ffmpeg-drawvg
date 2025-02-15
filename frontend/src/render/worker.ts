@@ -246,6 +246,10 @@ function createDrawContext(canvas: OffscreenCanvas) {
 }
 
 function register(canvas: OffscreenCanvas) {
+    STATE.drawContext?.gl
+        ?.getExtension("WEBGL_lose_context")
+        ?.loseContext();
+
     STATE.drawContext = createDrawContext(canvas);
 
     if (STATE.pendingDrawId === undefined)

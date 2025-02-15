@@ -1,12 +1,18 @@
-.output, .toolbar {
-    border-radius: 0 var(--border-radius) 0 0;
-}
-
 .output {
     composes: panel from "../base/widgets.module.css";
 
     grid-template-rows: auto 1fr;
     background: unset;
+}
+
+[data-layout="main"] {
+    .output, .toolbar {
+        border-radius: 0 var(--border-radius) 0 0;
+    }
+}
+
+[data-layout="vertical"] .output {
+    border: 0;
 }
 
 .toolbar {
@@ -23,7 +29,10 @@
 }
 
 .renderView {
-    background-attachment: fixed;
+    [data-layout="main"] & {
+        background-attachment: fixed;
+    }
+
     background-color: #f0f0f0;
     background-image: url(./checkerboard.svg);
 

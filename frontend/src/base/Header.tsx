@@ -1,6 +1,9 @@
 import { useRef, useState } from "react";
 
 import { MdOutlineDarkMode, MdOutlineLightMode } from "react-icons/md";
+import { RiLayout2Line, RiLayoutRowLine } from "react-icons/ri";
+
+import useAppLayout, { Layout } from "./layout";
 
 import styles from "./header.module.css";
 
@@ -14,6 +17,27 @@ function getColorScheme() {
         return Theme.Dark;
     else
         return Theme.Light;
+}
+
+function LayoutSwitcher() {
+    const layout = useAppLayout(s => s.layout);
+    const setLayout = useAppLayout(s => s.setLayout);
+
+    const onToggleLayout = () => {
+        setLayout(layout === Layout.Main ? Layout.Vertical : Layout.Main);
+    };
+
+    return (
+        <div
+            className={styles.optionSwitcher}
+            aria-label="Layout"
+            data-option-highlight={layout == Layout.Main ? "left" : "right"}
+            onClick={onToggleLayout}
+        >
+            <RiLayout2Line size="10px" />
+            <RiLayoutRowLine size="10px" />
+        </div>
+    );
 }
 
 function ThemeSwitcher() {
@@ -41,6 +65,7 @@ function ThemeSwitcher() {
     return (
         <div
             id="selected-theme"
+            aria-label="Theme"
             className={styles.optionSwitcher}
             data-select-theme={theme}
             data-option-highlight={theme === Theme.Light ? "right" : "left"}
@@ -58,6 +83,7 @@ export default function Header() {
             <div className={styles.title}>FFmpeg - drawvg</div>
 
             <div className={styles.actions}>
+                <LayoutSwitcher />
                 <ThemeSwitcher />
             </div>
         </header>

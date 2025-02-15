@@ -5,12 +5,14 @@ import { IoCamera, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward, IoVideoca
 
 import IconButton from "../base/IconButton";
 import RenderView from "./RenderView";
-import styles from "./output.module.css";
 
 import BackendContext from "../backend";
 import Select from "../base/Select";
 import VideoExport from "./video/VideoExport";
+import useAppLayout, { Layout } from "../base/layout";
 import { downloadBlob } from "../utils/blobs";
+
+import styles from "./output.module.css";
 
 enum PlaybackStatus {
     Pause,
@@ -29,6 +31,8 @@ const PLAYBACK_SPEEDS: [ number, string ][] =
 
 export default function OutputPanel() {
     const backend = useContext(BackendContext);
+
+    const appLayout = useAppLayout(s => s.layout);
 
     const [ canvasSize, setCanvasSize ] = useState<[number, number]>([320, 240]);
 
@@ -87,7 +91,7 @@ export default function OutputPanel() {
     let needCurrentSize = true;
 
     for (const size of CANVAS_FIXED_SIZES) {
-        if (size[0] == canvasSize[0] && size[1] == canvasSize[1])
+        if (size[0] === canvasSize[0] && size[1] === canvasSize[1])
             needCurrentSize = false;
 
         canvasSizeOptions.push([ [ false, size ], size.join("×")]);
@@ -96,8 +100,13 @@ export default function OutputPanel() {
     if (needCurrentSize)
         canvasSizeOptions.splice(1, 0, [ [ false, canvasSize ], "Keep current size" ]);
 
+    const parentStyles: React.CSSProperties = {};
+
+    if (!fitRenderView && appLayout == Layout.Vertical)
+        parentStyles.height = "auto";
+
     return (
-        <div className={styles.output}>
+        <div className={styles.output} style={parentStyles}>
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <Select

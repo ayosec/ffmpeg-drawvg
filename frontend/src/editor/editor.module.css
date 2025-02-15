@@ -1,6 +1,5 @@
 .editor {
     grid-template-rows: auto 1fr;
-    border-radius: var(--border-radius) 0 0 var(--border-radius);
 
     composes: panel from "../base/widgets.module.css";
 }
@@ -125,8 +124,6 @@
 .toolbar {
     composes: toolbar from "../base/widgets.module.css";
     composes: topToolbar from "../base/widgets.module.css";
-
-    border-radius: var(--border-radius) 0 0 0;
 }
 
 .shareWidget {
@@ -216,4 +213,20 @@
 
 .editor:not(:has(textarea:hover)) .hoverInfo {
     display: none;
+}
+
+[data-layout="main"] {
+    .editor {
+        border-radius: var(--border-radius) 0 0 var(--border-radius);
+    }
+
+    .toolbar {
+        border-radius: var(--border-radius) 0 0 0;
+    }
+}
+
+[data-layout="vertical"] {
+    .editor, .toolbar {
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+    }
 }

@@ -4,7 +4,6 @@
     display: grid;
 
     height: 100%;
-    width: 100%;
     box-sizing: border-box;
 
     border: 1.5px solid var(--panel-border-color);
@@ -21,6 +20,11 @@
     background: var(--toolbar-bg);
 
     border-bottom: var(--toolbar-border-width) solid var(--panel-border-color);
+
+    [data-layout="vertical"] & {
+        overflow: auto;
+        scrollbar-width: none;
+    }
 }
 
 .topToolbar {
@@ -143,7 +147,7 @@
     top: 0;
     left: 0;
     width: 100vw;
-    height: 100vw;
+    height: 100vh;
 
     z-index: 2000;
 }

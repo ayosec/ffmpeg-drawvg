@@ -3,6 +3,7 @@ import { memo, useCallback, useContext, useEffect, useReducer, useState } from "
 import BackendContext from "../backend";
 import IconButton from "../base/IconButton";
 import Logs from "./Logs";
+import OutputPanel from "../output/OutputPanel";
 import RenderTimeChart from "./RenderTimeChart";
 import Select from "../base/Select";
 import SerialNumber from "../utils/serial";
@@ -17,6 +18,10 @@ import { IoTimerOutline } from "react-icons/io5";
 import { LuLogs } from "react-icons/lu";
 
 import styles from "./monitors.module.css";
+
+interface Props {
+    renderOutput?: boolean;
+}
 
 const GET_LOGS_FREQ = 1000 / 2;
 
@@ -43,6 +48,7 @@ interface RowChange {
 };
 
 enum Tab {
+    Output,
     Logs,
     RenderTime,
 }
@@ -145,7 +151,7 @@ const RENDER_TIME_LIMIT_OPTIONS: [number, string][] =
 const IconLogs = memo(LuLogs);
 const IconTimer = memo(IoTimerOutline);
 
-export default function MonitorsPanel() {
+export default function MonitorsPanel({ renderOutput }: Props) {
     const programId = useCurrentProgram(s => s.programId);
     const source = useCurrentProgram(s => s.source);
     const setCompilerError = useCurrentProgram(s => s.setCompilerError);
@@ -154,7 +160,7 @@ export default function MonitorsPanel() {
 
     const backend = useContext(BackendContext);
 
-    const [ selectedTab, setSelectedTab ] = useState(Tab.Logs);
+    const [ selectedTab, setSelectedTab ] = useState(renderOutput ? Tab.Output : Tab.Logs);
 
     const [ content, updateContent ] = useReducer(updateContentImpl, {
         renderTimeChunks: [],
@@ -266,6 +272,10 @@ export default function MonitorsPanel() {
 
     let currentTab, limitSetting;
     switch (selectedTab) {
+        case Tab.Output:
+            currentTab = <OutputPanel />;
+            break;
+
         case Tab.Logs:
             currentTab = <Logs rows={content.logs} lastProgramId={programId} />;
 
@@ -303,6 +313,12 @@ export default function MonitorsPanel() {
         <div className={styles.monitors}>
             <div className={styles.toolbar}>
                 <div role="tablist" className={styles.tabs}>
+                    { renderOutput &&
+                        <ButtonTab tab={Tab.Output}>
+                            <IconLogs /> Output
+                        </ButtonTab>
+                    }
+
                     <ButtonTab tab={Tab.Logs}>
                         <IconLogs /> Console
                     </ButtonTab>

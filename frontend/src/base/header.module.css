@@ -5,6 +5,9 @@
 }
 
 .actions {
+    .optionSwitcher {
+        margin-left: 2ch;
+    }
 }
 
 .title {
@@ -50,6 +53,6 @@
     initial-value: 0%;
 }
 
-.animatedColors [data-panel-group] * {
+.animatedColors :is(.header + div) * {
     transition: color ease-out 125ms, background-color ease-out 125ms;
 }
