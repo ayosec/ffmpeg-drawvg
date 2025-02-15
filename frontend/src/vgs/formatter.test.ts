@@ -12,7 +12,7 @@ test("basic", () => {
             "} fill",
             "\t",
             "\t// 3 4 5 6",
-            "setcolor black circle 10 20 30 stroke",
+            "setcolor black circle 10 0x10p5 0xAA stroke",
             "// abcdef",
             "",
         ].join("\n"),
@@ -37,7 +37,7 @@ test("basic", () => {
             "",
             "// 3 4 5 6",
             "setcolor black",
-            "circle 10 20 30",
+            "circle 10 0x10p5 0xAA",
             "stroke",
             "// abcdef",
         ].join("\n")
