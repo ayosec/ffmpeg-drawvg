@@ -179,8 +179,12 @@ const useCurrentProgram = create<CurrentProgram>()((set, get) => {
                 localStorage.setItem(PREFIX_FILE_KEY + fileName, source ?? s.source);
                 localStorage.setItem(ACTIVE_FILE_KEY, fileName);
 
-                const fileNames = [...s.fileNames, fileName];
-                fileNames.sort();
+                let fileNames = s.fileNames;
+
+                if (fileNames.indexOf(fileName) === -1) {
+                    fileNames = [...s.fileNames, fileName];
+                    fileNames.sort();
+                }
 
                 return {
                     activeFileName: fileName,
