@@ -179,6 +179,10 @@
         &.selected, &:hover, &:focus {
             background: var(--tab-selected-bg);
         }
+
+        button {
+            margin-left: 1ch;
+        }
     }
 
     &:focus {
@@ -204,5 +208,19 @@
         &:focus {
             box-shadow: 0 0 5px var(--icon-button-shadow-focus);
         }
+    }
+}
+
+@media (max-width: 800px) {
+    .mainLayout {
+        flex-direction: column;
+
+        .front {
+            width: auto;
+        }
+    }
+
+    .help, .fileSavesList .entry {
+        max-width: unset;
     }
 }
