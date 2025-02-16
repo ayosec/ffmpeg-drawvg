@@ -128,10 +128,12 @@ function buildSuggestions(
         return null;
     }
 
+    const selected = suggestions.findIndex(s => s.text === cw.word);
+
     return {
         textarea,
         suggestions,
-        selected: 0,
+        selected: selected === -1 ? 0 : selected,
         currentWord: cw,
     };
 }
