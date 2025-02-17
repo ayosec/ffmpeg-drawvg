@@ -44,6 +44,10 @@
             & > div {
                 height: 75vh;
                 margin: 1ch;
+
+                &:has([data-fixed-height-render="true"]) {
+                    height: auto;
+                }
             }
         }
     }

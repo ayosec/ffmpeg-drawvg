@@ -100,13 +100,11 @@ export default function OutputPanel() {
     if (needCurrentSize)
         canvasSizeOptions.splice(1, 0, [ [ false, canvasSize ], "Keep current size" ]);
 
-    const parentStyles: React.CSSProperties = {};
-
-    if (!fitRenderView && appLayout == Layout.Vertical)
-        parentStyles.height = "auto";
-
     return (
-        <div className={styles.output} style={parentStyles}>
+        <div
+            className={styles.output}
+            data-fixed-height-render={!fitRenderView && appLayout == Layout.Vertical ? "true" : undefined}
+        >
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <Select
