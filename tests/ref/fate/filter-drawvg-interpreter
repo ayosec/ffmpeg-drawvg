@@ -81,6 +81,7 @@ check_script: vgs_parse = -22
 
 --- check_script:  setvar v0 0 setvar v1 1 setvar v2 2 setvar v3 3 setvar v4 4 setvar v5 5 setvar v6 6 setvar v7 7 setvar v8 8 setvar v9 9 M (v0) (v9) 1 (unknown_var)
 av_log[16]: Undefined constant or missing '(' in 'unknown_var)'
+av_log[16]: Invalid token '(unknown_var)' at line 1, column 136: Invalid expression.
 check_script: vgs_parse = -22
 
 --- check_script:  setvar v1 0 setvar v2 1 setvar v3 2 setvar v4 3 setvar v5 4 setvar v6 5 setvar v7 6 setvar v8 7 setvar v9 8 setvar v10 9 setvar v11 10
