@@ -98,7 +98,7 @@ void* backend_program_run(
     );
 
     // VGS interpreter.
-    vgs_eval_state_init(&eval_state, log_ctx());
+    vgs_eval_state_init(&eval_state, program, log_ctx());
 
     eval_state.cairo_ctx = cairo_create(surface);
 
