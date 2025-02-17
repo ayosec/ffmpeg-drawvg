@@ -27,6 +27,7 @@
 #include "libavutil/avstring.h"
 #include "libavutil/eval.h"
 #include "libavutil/internal.h"
+#include "libavutil/macros.h"
 #include "libavutil/mem.h"
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
@@ -116,6 +117,8 @@ enum VGSInstruction {
     INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
     INS_NEW_PATH,               ///<  newpath
     INS_PRINT,                  ///<  print (expr)
+    INS_PROC_ASSIGN,            ///<  proc name { subprogram }
+    INS_PROC_CALL,              ///<  call name
     INS_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
     INS_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
@@ -178,6 +181,7 @@ struct VGSParameter {
         PARAM_MAY_REPEAT,
         PARAM_NUMERIC,
         PARAM_NUMERIC_METADATA,
+        PARAM_PROC_NAME,
         PARAM_SUBPROGRAM,
         PARAM_VARIADIC,
         PARAM_VAR_NAME,
@@ -218,6 +222,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_ARC,              "arc",            R(N, N, N, N, N) },
     { INS_ARC_NEG,          "arcn",           R(N, N, N, N, N) },
     { INS_CURVE_TO_REL,     "c",              R(N, N, N, N, N, N) },
+    { INS_PROC_CALL,        "call",           L({ PARAM_PROC_NAME }) },
     { INS_CIRCLE,           "circle",         R(N, N, N) },
     { INS_CLIP,             "clip",           NONE },
     { INS_CLOSE_PATH,       "closepath",      NONE },
@@ -238,6 +243,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_MOVE_TO,          "moveto",         R(N, N) },
     { INS_NEW_PATH,         "newpath",        NONE },
     { INS_PRINT,            "print",          { { PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } } },
+    { INS_PROC_ASSIGN,      "proc",           L({ PARAM_PROC_NAME }, { PARAM_SUBPROGRAM }) },
     { INS_STROKE_PRESERVE,  "pstroke",        NONE },
     { INS_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
     { INS_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
@@ -311,6 +317,9 @@ static const struct VGSInstructionDecl* vgs_get_instruction(const char *name, si
 struct VGSParser {
     const char* source;
     size_t cursor;
+
+    const char **proc_names;
+    int proc_names_count;
 
     // Store the variable names for the default ones
     // (from `vgs_default_vars`) and the variables
@@ -511,6 +520,7 @@ struct VGSArgument {
         ARG_CONST,
         ARG_EXPR,
         ARG_LITERAL,
+        ARG_PROCEDURE_ID,
         ARG_SUBPROGRAM,
         ARG_VARIABLE,
     } type;
@@ -520,6 +530,7 @@ struct VGSArgument {
         int constant;
         AVExpr *expr;
         double literal;
+        int proc_id;
         struct VGSProgram *subprogram;
         int variable;
     };
@@ -537,6 +548,9 @@ struct VGSStatement {
 struct VGSProgram {
     struct VGSStatement *statements;
     int statements_count;
+
+    const char **proc_names;
+    int proc_names_count;
 };
 
 static void vgs_free(struct VGSProgram *program);
@@ -582,6 +596,13 @@ static void vgs_free(struct VGSProgram *program) {
         vgs_statement_free(&program->statements[i]);
 
     av_freep(&program->statements);
+
+    if (program->proc_names != NULL) {
+        for (int i = 0; i < program->proc_names_count; i++)
+            av_freep(&program->proc_names[i]);
+
+        av_freep(&program->proc_names);
+    }
 }
 
 static int vgs_parse_numeric_argument(
@@ -721,6 +742,26 @@ static int vgs_parser_can_repeat_inst(void *log_ctx, struct VGSParser *parser) {
 }
 
 
+static int vgs_is_valid_identifier(const struct VGSParserToken *token) {
+    // An identifier is valid if:
+    //
+    //  - It starts with an alphabetic character or an underscore.
+    //  - Everything else, alphanumeric or underscore
+
+    for (int i = 0; i < token->length; i++) {
+        char c = token->lexeme[i];
+        if (c != '_'
+            && !(c >= 'a' && c <= 'z')
+            && !(c >= 'A' && c <= 'Z')
+            && !(i > 0 && c >= '0' && c <= '9')
+        ) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
 // Extract the arguments for an instruction, and add a new statement
 // to the program.
 //
@@ -855,6 +896,47 @@ static int vgs_parse_statement(
 
             break;
 
+        case PARAM_PROC_NAME: {
+            int proc_id;
+
+            ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
+            if (ret != 0)
+                FAIL(EINVAL);
+
+            if (!vgs_is_valid_identifier(&token)) {
+                vgs_log_invalid_token(log_ctx, parser, &token, "Invalid procedure name.");
+                FAIL(EINVAL);
+            }
+
+            // Use the index in the array as the identifier of the name.
+
+            for (proc_id = 0; proc_id < parser->proc_names_count; proc_id++) {
+                if (vgs_token_is_string(&token, parser->proc_names[proc_id]))
+                    break;
+            }
+
+            if (proc_id == parser->proc_names_count) {
+                const char *name = av_strndup(token.lexeme, token.length);
+
+                const char **r = av_dynarray2_add(
+                    (void*)&parser->proc_names,
+                    &parser->proc_names_count,
+                    sizeof(name),
+                    (void*)&name
+                );
+
+                if (r == NULL) {
+                    av_freep(&name);
+                    FAIL(ENOMEM);
+                }
+            }
+
+            arg.type = ARG_PROCEDURE_ID;
+            arg.proc_id = proc_id;
+
+            break;
+        }
+
         case PARAM_SUBPROGRAM:
             ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
             if (ret != 0)
@@ -910,19 +992,9 @@ static int vgs_parse_statement(
 
             // Need to allocate a new variable.
             if (parser->var_names[var_idx] == NULL) {
-                for (int i = 0; i < token.length; i++) {
-                    // Validate the name:
-                    //  - Starts with alphabetic character or underscore.
-                    //  - Everything else, alphanumeric or underscore
-                    char c = token.lexeme[i];
-                    if (c != '_'
-                        && !(c >= 'a' && c <= 'z')
-                        && !(c >= 'A' && c <= 'Z')
-                        && !(i > 0 && c >= '0' && c <= '9')
-                    ) {
-                        vgs_log_invalid_token(log_ctx, parser, &token, "Invalid variable name.");
-                        FAIL(EINVAL);
-                    }
+                if (!vgs_is_valid_identifier(&token)) {
+                    vgs_log_invalid_token(log_ctx, parser, &token, "Invalid variable name.");
+                    FAIL(EINVAL);
                 }
 
                 parser->var_names[var_idx] = av_strndup(token.lexeme, token.length);
@@ -957,6 +1029,9 @@ static void vgs_parser_init(struct VGSParser *parser, const char *source) {
     parser->source = source;
     parser->cursor = 0;
 
+    parser->proc_names = NULL;
+    parser->proc_names_count = 0;
+
     memset(parser->var_names, 0, sizeof(parser->var_names));
     for (int i = 0; i < VAR_U0; i++)
         parser->var_names[i] = vgs_default_vars[i];
@@ -966,6 +1041,13 @@ static void vgs_parser_free(struct VGSParser *parser) {
     for (int i = VAR_U0; i < VAR_COUNT; i++)
         if (parser->var_names[i] != NULL)
             av_freep(&parser->var_names[i]);
+
+    if (parser->proc_names != NULL) {
+        for (int i = 0; i < parser->proc_names_count; i++)
+            av_freep(&parser->proc_names[i]);
+
+        av_freep(&parser->proc_names);
+    }
 }
 
 // Parse a script to generate the program statements.
@@ -982,6 +1064,9 @@ static int vgs_parse(
     program->statements = NULL;
     program->statements_count = 0;
 
+    program->proc_names = NULL;
+    program->proc_names_count = 0;
+
     for (;;) {
         int ret;
         const struct VGSInstructionDecl *inst;
@@ -995,6 +1080,10 @@ static int vgs_parse(
             if (subprogram) {
                 vgs_log_invalid_token(log_ctx, parser, &token, "Expected '}'.");
                 goto fail;
+            } else {
+                // Move the proc names to the main program.
+                FFSWAP(const char **, program->proc_names, parser->proc_names);
+                FFSWAP(int, program->proc_names_count, parser->proc_names_count);
             }
 
             return 0;
@@ -1045,6 +1134,12 @@ struct VGSEvalState {
 
     /// Register is `finish` was called in a subprogram.
     int interrupted;
+
+    /// Subprograms associated to each procedure identifier.
+    struct VGSProgram **procedures;
+
+    /// Procedure name for each identifier.
+    const char *const *proc_names;
 
     /// Values for the variables in expressions.
     ///
@@ -1141,11 +1236,20 @@ static double vgs_fn_pathlen(void *data, double arg) {
     return length;
 }
 
-static void vgs_eval_state_init(struct VGSEvalState *state, void *log_ctx) {
+static void vgs_eval_state_init(
+    struct VGSEvalState *state,
+    const struct VGSProgram *program,
+    void *log_ctx
+) {
     memset(state, 0, sizeof(*state));
 
     state->log_ctx = log_ctx;
     state->rcp.status = RCP_NONE;
+
+    if (program->proc_names != NULL) {
+        state->procedures = av_calloc(sizeof(struct VGSProgram*), program->proc_names_count);
+        state->proc_names = program->proc_names;
+    }
 
     for (int i = 0; i < VAR_COUNT; i++)
         state->vars[i] = NAN;
@@ -1154,6 +1258,9 @@ static void vgs_eval_state_init(struct VGSEvalState *state, void *log_ctx) {
 static void vgs_eval_state_free(struct VGSEvalState *state) {
     if (state->pattern_builder != NULL)
         cairo_pattern_destroy(state->pattern_builder);
+
+    if (state->procedures != NULL)
+        av_free(state->procedures);
 
     memset(state, 0, sizeof(*state));
 }
@@ -1626,6 +1733,37 @@ static int vgs_eval(
             break;
         }
 
+        case INS_PROC_ASSIGN:
+            ASSERT_ARGS(2);
+            state->procedures[statement->args[0].proc_id] = statement->args[1].subprogram;
+            break;
+
+        case INS_PROC_CALL: {
+            int proc_id;
+            const struct VGSProgram *subprogram;
+
+            ASSERT_ARGS(1);
+            proc_id = statement->args[0].proc_id;
+
+            subprogram = state->procedures[proc_id];
+            if (subprogram == NULL) {
+                const char *proc_name = state->proc_names[proc_id];
+                av_log(state->log_ctx, AV_LOG_ERROR, "Missing procedure for '%s'\n", proc_name);
+            } else {
+                int ret = vgs_eval(state, subprogram);
+                if (ret != 0)
+                    return ret;
+
+                // `finish` interrupts the procedure, but don't stop the program.
+                if (state->interrupted) {
+                    state->interrupted = 0;
+                    break;
+                }
+            }
+
+            break;
+        }
+
         case INS_Q_CURVE_TO:
         case INS_Q_CURVE_TO_REL:
             ASSERT_ARGS(4);
@@ -1979,7 +2117,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
     struct VGSEvalState eval_state;
-    vgs_eval_state_init(&eval_state, drawvg_ctx);
+    vgs_eval_state_init(&eval_state, &drawvg_ctx->program, drawvg_ctx);
 
     // Draw directly on the frame data.
     surface = cairo_image_surface_create_for_data(

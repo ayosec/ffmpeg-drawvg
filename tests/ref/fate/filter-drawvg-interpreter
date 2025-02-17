@@ -54,6 +54,7 @@ cairo_set_dash [ -1.0 2.0 ] -2.0
 cairo_set_dash [ -1.0 3.0 ] -2.0
 cairo_set_dash [ -1.0 ] 4.0
 cairo_set_dash [ ] 0.0
+cairo_move_to 100.0 200.0
 
 --- check_script: M 0 (1*(t+1)
 av_log[16]: Invalid token '(' at line 1, column 5: Unmatched parenthesis.
@@ -87,6 +88,12 @@ check_script: vgs_parse = -22
 --- check_script:  setvar v1 0 setvar v2 1 setvar v3 2 setvar v4 3 setvar v5 4 setvar v6 5 setvar v7 6 setvar v8 7 setvar v9 8 setvar v10 9 setvar v11 10
 av_log[16]: Invalid token 'v11' at line 1, column 130: Too many user variables. Can define up to 10 variables.
 check_script: vgs_parse = -22
+
+--- check_script: call a
+av_log[16]: Missing procedure for 'a'
+
+--- check_script: proc a { call b } call a
+av_log[16]: Missing procedure for 'b'
 
 --- check_script: M 0 (1 + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n)
 cairo_move_to 0.0 101.0

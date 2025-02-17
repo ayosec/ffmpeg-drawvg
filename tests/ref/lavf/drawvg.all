@@ -66,3 +66,8 @@ clip eoclip
 setdash 1 2 3
 setdashoffset 4
 resetdash
+
+// Procedures
+proc f0 { M 100 200 finish call invalid }
+proc f1 { call f0 }
+call f1

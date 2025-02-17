@@ -235,7 +235,9 @@ static void check_script(int is_file, const char* source) {
 
     vgs_parser_init(&parser, source);
 
-    vgs_eval_state_init(&state, NULL);
+    ret = vgs_parse(NULL, &parser, &program, 0);
+
+    vgs_eval_state_init(&state, &program, NULL);
 
     for (int i = 0; i < VAR_COUNT; i++)
         state.vars[i] = 1 << i;
@@ -243,7 +245,6 @@ static void check_script(int is_file, const char* source) {
     current_point_x = 0;
     current_point_y = 0;
 
-    ret = vgs_parse(NULL, &parser, &program, 0);
     vgs_parser_free(&parser);
 
     if (ret != 0) {
@@ -308,6 +309,10 @@ int main(int argc, const char **argv)
         av_strlcatf(buf, sizeof(buf), " setvar v%d %d", i + 1, i);
     }
     check_script(0, buf);
+
+    // Invalid procedure names.
+    check_script(0, "call a");
+    check_script(0, "proc a { call b } call a");
 
     // Long expressions.
     memset(buf, 0, sizeof(buf));
