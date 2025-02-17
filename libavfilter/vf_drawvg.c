@@ -95,6 +95,7 @@ static double (*const vgs_func1_impls[])(void *, double) = {
 enum VGSInstruction {
     INS_ARC = 1,                ///<  arc (cx cy radius angle1 angle2)
     INS_ARC_NEG,                ///<  arcn (cx cy radius angle1 angle2)
+    INS_BREAK,                  ///<  break
     INS_CIRCLE,                 ///<  circle (cx cy radius)
     INS_CLIP,                   ///<  clip
     INS_CLIP_EO,                ///<  eoclip
@@ -106,7 +107,6 @@ enum VGSInstruction {
     INS_ELLIPSE,                ///<  ellipse (cx cy rx ry)
     INS_FILL,                   ///<  fill
     INS_FILL_EO,                ///<  eofill
-    INS_FINISH,                 ///<  finish
     INS_HORZ,                   ///<  H (x)
     INS_HORZ_REL,               ///<  h (dx)
     INS_IF,                     ///<  if (condition) { subprogram }
@@ -221,6 +221,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_CLOSE_PATH,       "Z",              NONE },
     { INS_ARC,              "arc",            R(N, N, N, N, N) },
     { INS_ARC_NEG,          "arcn",           R(N, N, N, N, N) },
+    { INS_BREAK,            "break",          NONE },
     { INS_CURVE_TO_REL,     "c",              R(N, N, N, N, N, N) },
     { INS_PROC_CALL,        "call",           L({ PARAM_PROC_NAME }) },
     { INS_CIRCLE,           "circle",         R(N, N, N) },
@@ -233,7 +234,6 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_CLIP_EO,          "eoclip",         NONE },
     { INS_FILL_EO,          "eofill",         NONE },
     { INS_FILL,             "fill",           NONE },
-    { INS_FINISH,           "finish",         NONE },
     { INS_HORZ_REL,         "h",              R(N) },
     { INS_IF,               "if",             L(N, { PARAM_SUBPROGRAM }) },
     { INS_LINE_TO_REL,      "l",              R(N, N) },
@@ -1132,7 +1132,7 @@ struct VGSEvalState {
     /// Pattern being built by instructions like `colorstop`.
     cairo_pattern_t *pattern_builder;
 
-    /// Register is `finish` was called in a subprogram.
+    /// Register if `break` was called in a subprogram.
     int interrupted;
 
     /// Subprograms associated to each procedure identifier.
@@ -1651,7 +1651,7 @@ static int vgs_eval(
             cairo_fill(state->cairo_ctx);
             break;
 
-        case INS_FINISH:
+        case INS_BREAK:
             state->interrupted = 1;
             return 0;
 
@@ -1754,7 +1754,7 @@ static int vgs_eval(
                 if (ret != 0)
                     return ret;
 
-                // `finish` interrupts the procedure, but don't stop the program.
+                // `break` interrupts the procedure, but don't stop the program.
                 if (state->interrupted) {
                     state->interrupted = 0;
                     break;
@@ -1814,7 +1814,7 @@ static int vgs_eval(
                 if (ret != 0)
                     return ret;
 
-                // `finish` interrupts the loop, but don't stop the program.
+                // `break` interrupts the loop, but don't stop the program.
                 if (state->interrupted) {
                     state->interrupted = 0;
                     break;

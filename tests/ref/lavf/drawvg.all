@@ -16,7 +16,7 @@ setlinecap round
 // if/repeat
 M 0 0
 repeat 10 {
-    if (eq(i,3)) { finish }
+    if (eq(i,3)) { break }
     l (i) (i)
 }
 
@@ -68,6 +68,6 @@ setdashoffset 4
 resetdash
 
 // Procedures
-proc f0 { M 100 200 finish call invalid }
+proc f0 { M 100 200 break call invalid }
 proc f1 { call f0 }
 call f1
