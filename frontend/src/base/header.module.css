@@ -1,7 +1,12 @@
 .header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+
+    font-size: 1.2rem;
+
+    color: white;
+    background: #333;
 }
 
 .actions {
@@ -55,4 +60,10 @@
 
 .animatedColors :is(.header + div) * {
     transition: color ease-out 125ms, background-color ease-out 125ms;
+}
+
+@media (max-width: 600px) {
+    .header {
+        font-size: 0.8rem;
+    }
 }

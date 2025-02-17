@@ -74,6 +74,7 @@ html, body, #root {
         background: #fafafa;
 
         text-transform: capitalize;
+        white-space: pre;
 
         padding: 0.25ch 1ch;
         font-size: 0.7rem;
@@ -87,6 +88,12 @@ html, body, #root {
 
 body:has([aria-label]:hover) .tooltip-floating-box {
     display: unset;
+}
+
+@media not (any-hover: hover) {
+    .tooltip-floating-box {
+        visibility: hidden;
+    }
 }
 
 button, select, input {
