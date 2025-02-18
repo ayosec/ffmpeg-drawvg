@@ -55,7 +55,7 @@ radialgrad 1 2 3 4 5 6
 repeat 2 { colorstop (i/10) black ((i+1)/10) white }
 stroke
 
-// Curves. The next line should be equivalent to SVG's <path>.
+// Curves. The next line should be compatible with SVG's <path>.
 M 10,50 Q 25,25 40,50 t 30,0 30,0 c 20 50 40 -50 100 0
 
 // Fill/clip
@@ -68,6 +68,10 @@ setdashoffset 4
 resetdash
 
 // Procedures
-proc f0 { M 100 200 break call invalid }
-proc f1 { call f0 }
-call f1
+setvar a -1
+setvar b -2
+proc2 f2 a b { M a b break call invalid }
+proc1 f1 a { call2 f2 a 2 }
+proc f0 { call1 f1 1 }
+call f0
+l a b

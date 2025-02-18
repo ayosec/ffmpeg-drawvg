@@ -90,6 +90,9 @@ static double (*const vgs_func1_impls[])(void *, double) = {
     NULL,
 };
 
+
+#define MAX_PROC_ARGS 2
+
 // Instructions.
 
 enum VGSInstruction {
@@ -119,6 +122,10 @@ enum VGSInstruction {
     INS_PRINT,                  ///<  print (expr)
     INS_PROC_ASSIGN,            ///<  proc name { subprogram }
     INS_PROC_CALL,              ///<  call name
+    INS_PROC1_ASSIGN,           ///<  proc1 name varname { subprogram }
+    INS_PROC1_CALL,             ///<  call1 name arg
+    INS_PROC2_ASSIGN,           ///<  proc2 name varname1 varname2 { subprogram }
+    INS_PROC2_CALL,             ///<  call2 name arg1 arg2
     INS_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
     INS_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
@@ -204,6 +211,8 @@ struct VGSInstructionDecl {
 #define R(...) { __VA_ARGS__, { PARAM_MAY_REPEAT } }     // Repeatable PL
 #define NONE { { PARAM_END } }
 #define N { PARAM_NUMERIC }
+#define V { PARAM_VAR_NAME }
+#define P { PARAM_SUBPROGRAM }
 #define C(c) { PARAM_CONSTANT, .constants = c }
 
 // Instructions available to the scripts.
@@ -224,6 +233,8 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_BREAK,            "break",          NONE },
     { INS_CURVE_TO_REL,     "c",              R(N, N, N, N, N, N) },
     { INS_PROC_CALL,        "call",           L({ PARAM_PROC_NAME }) },
+    { INS_PROC1_CALL,       "call1",          L({ PARAM_PROC_NAME }, N) },
+    { INS_PROC2_CALL,       "call2",          L({ PARAM_PROC_NAME }, N, N) },
     { INS_CIRCLE,           "circle",         R(N, N, N) },
     { INS_CLIP,             "clip",           NONE },
     { INS_CLOSE_PATH,       "closepath",      NONE },
@@ -235,7 +246,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_FILL_EO,          "eofill",         NONE },
     { INS_FILL,             "fill",           NONE },
     { INS_HORZ_REL,         "h",              R(N) },
-    { INS_IF,               "if",             L(N, { PARAM_SUBPROGRAM }) },
+    { INS_IF,               "if",             L(N, P) },
     { INS_LINE_TO_REL,      "l",              R(N, N) },
     { INS_LINEAR_GRAD,      "lineargrad",     L(N, N, N, N) },
     { INS_LINE_TO,          "lineto",         R(N, N) },
@@ -243,13 +254,15 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_MOVE_TO,          "moveto",         R(N, N) },
     { INS_NEW_PATH,         "newpath",        NONE },
     { INS_PRINT,            "print",          { { PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } } },
-    { INS_PROC_ASSIGN,      "proc",           L({ PARAM_PROC_NAME }, { PARAM_SUBPROGRAM }) },
+    { INS_PROC_ASSIGN,      "proc",           L({ PARAM_PROC_NAME }, P) },
+    { INS_PROC1_ASSIGN,     "proc1",          L({ PARAM_PROC_NAME }, V, P) },
+    { INS_PROC2_ASSIGN,     "proc2",          L({ PARAM_PROC_NAME }, V, V, P) },
     { INS_STROKE_PRESERVE,  "pstroke",        NONE },
     { INS_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
     { INS_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
     { INS_CURVE_TO_REL,     "rcurveto",       R(N, N, N, N, N, N) },
     { INS_RECT,             "rect",           R(N, N, N, N) },
-    { INS_REPEAT,           "repeat",         L(N, { PARAM_SUBPROGRAM }) },
+    { INS_REPEAT,           "repeat",         L(N, P) },
     { INS_RESET_CLIP,       "resetclip",      NONE },
     { INS_RESET_DASH,       "resetdash",      NONE },
     { INS_RESTORE,          "restore",        NONE },
@@ -269,7 +282,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
     { INS_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
     { INS_SET_RGBA,         "setrgba",        L(N, N, N, N) },
-    { INS_SET_VAR,          "setvar",         L({ PARAM_VAR_NAME }, N) },
+    { INS_SET_VAR,          "setvar",         L(V, N) },
     { INS_STROKE,           "stroke",         NONE },
     { INS_T_CURVE_TO_REL,   "t",              R(N, N) },
     { INS_TRANSLATE,        "translate",      L(N, N) },
@@ -310,6 +323,25 @@ static const struct VGSInstructionDecl* vgs_get_instruction(const char *name, si
         sizeof(vgs_instructions[0]),
         vgs_comp_instruction_spec
     );
+}
+
+static int vgs_proc_num_args(enum VGSInstruction inst) {
+    switch (inst) {
+    case INS_PROC_CALL:
+    case INS_PROC_ASSIGN:
+        return 0;
+
+    case INS_PROC1_CALL:
+    case INS_PROC1_ASSIGN:
+        return 1;
+
+    case INS_PROC2_CALL:
+    case INS_PROC2_ASSIGN:
+        return 2;
+
+    default:
+        av_assert0(0);
+    }
 }
 
 // Parser.
@@ -1123,6 +1155,11 @@ fail:
 
 // Interpreter.
 
+struct VGSProcedure {
+    struct VGSProgram *program;
+    int args[MAX_PROC_ARGS];
+};
+
 struct VGSEvalState {
     void *log_ctx;
 
@@ -1136,7 +1173,7 @@ struct VGSEvalState {
     int interrupted;
 
     /// Subprograms associated to each procedure identifier.
-    struct VGSProgram **procedures;
+    struct VGSProcedure *procedures;
 
     /// Procedure name for each identifier.
     const char *const *proc_names;
@@ -1247,7 +1284,7 @@ static void vgs_eval_state_init(
     state->rcp.status = RCP_NONE;
 
     if (program->proc_names != NULL) {
-        state->procedures = av_calloc(sizeof(struct VGSProgram*), program->proc_names_count);
+        state->procedures = av_calloc(sizeof(struct VGSProcedure), program->proc_names_count);
         state->proc_names = program->proc_names;
     }
 
@@ -1734,23 +1771,65 @@ static int vgs_eval(
         }
 
         case INS_PROC_ASSIGN:
-            ASSERT_ARGS(2);
-            state->procedures[statement->args[0].proc_id] = statement->args[1].subprogram;
+        case INS_PROC1_ASSIGN:
+        case INS_PROC2_ASSIGN: {
+            int proc_args;
+            struct VGSProcedure *proc;
+
+            proc_args = vgs_proc_num_args(statement->inst);
+
+            ASSERT_ARGS(2 + proc_args);
+
+            proc = &state->procedures[statement->args[0].proc_id];
+
+            proc->program = statement->args[proc_args + 1].subprogram;
+
+            for (int i = 0; i < MAX_PROC_ARGS; i++)
+                proc->args[i] = i < proc_args ? statement->args[i + 1].constant : -1;
+
             break;
+        }
 
-        case INS_PROC_CALL: {
+        case INS_PROC_CALL:
+        case INS_PROC1_CALL:
+        case INS_PROC2_CALL: {
+            int proc_args;
             int proc_id;
-            const struct VGSProgram *subprogram;
 
-            ASSERT_ARGS(1);
+            const struct VGSProcedure *proc;
+
+            proc_args = vgs_proc_num_args(statement->inst);
+
+            ASSERT_ARGS(1 + proc_args);
             proc_id = statement->args[0].proc_id;
 
-            subprogram = state->procedures[proc_id];
-            if (subprogram == NULL) {
+            proc = &state->procedures[proc_id];
+            if (proc->program == NULL) {
                 const char *proc_name = state->proc_names[proc_id];
                 av_log(state->log_ctx, AV_LOG_ERROR, "Missing procedure for '%s'\n", proc_name);
             } else {
-                int ret = vgs_eval(state, subprogram);
+                int ret;
+                double current_vars[MAX_PROC_ARGS] = { 0 };
+
+                // Set variables for the procedure arguments
+                for (int i = 0; i < proc_args; i++) {
+                    int var = proc->args[i];
+                    if (var != -1) {
+                        current_vars[i] = state->vars[var];
+                        state->vars[var] = numerics[i + 1];
+                    }
+                }
+
+                ret = vgs_eval(state, proc->program);
+
+                // Restore variable values.
+                for (int i = 0; i < proc_args; i++) {
+                    int var = proc->args[i];
+                    if (var != -1) {
+                        state->vars[var] = current_vars[i];
+                    }
+                }
+
                 if (ret != 0)
                     return ret;
 
