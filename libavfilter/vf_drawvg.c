@@ -31,6 +31,7 @@
 #include "libavutil/mem.h"
 #include "libavutil/opt.h"
 #include "libavutil/pixdesc.h"
+#include "libavutil/sfc64.h"
 
 #include "avfilter.h"
 #include "filters.h"
@@ -78,20 +79,21 @@ static const char *const vgs_default_vars[] = {
 static const char *const vgs_func1_names[] = {
     "getvar",
     "pathlen",
+    "randomg",
     NULL,
 };
 
 static double vgs_fn_getvar(void*, double);
 static double vgs_fn_pathlen(void*, double);
+static double vgs_fn_randomg(void*, double);
 
 static double (*const vgs_func1_impls[])(void *, double) = {
     vgs_fn_getvar,
     vgs_fn_pathlen,
+    vgs_fn_randomg,
     NULL,
 };
 
-
-#define MAX_PROC_ARGS 2
 
 // Instructions.
 
@@ -1155,6 +1157,10 @@ fail:
 
 // Interpreter.
 
+#define MAX_PROC_ARGS 2
+
+#define RANDOM_STATES 4
+
 struct VGSProcedure {
     struct VGSProgram *program;
     int args[MAX_PROC_ARGS];
@@ -1183,6 +1189,9 @@ struct VGSEvalState {
     /// Some variables (like `cx` or `cy`) are written before
     /// executing each statement.
     double vars[VAR_COUNT];
+
+    /// State for each index available for the `randomg` function.
+    FFSFC64 random_state[RANDOM_STATES];
 
     // Reflected Control Points. Used in T and S instructions.
     //
@@ -1271,6 +1280,34 @@ static double vgs_fn_pathlen(void *data, double arg) {
     cairo_path_destroy(path);
 
     return length;
+}
+
+// Compute a random value between 0 and 1. Similar to `random`, but the
+// generator is global to the VGS program.
+//
+// The last 2 bits of the integer representation of the argument are used
+// as the state index. If the state is not initialized, the value is used
+// as the seed.
+static double vgs_fn_randomg(void *data, double arg) {
+    int rng_idx;
+    uint64_t iarg;
+
+    FFSFC64 *rng;
+    struct VGSEvalState *state = (struct VGSEvalState *)data;
+
+    if (!isfinite(arg))
+        return arg;
+
+    iarg = (uint64_t)arg;
+    rng_idx = iarg & (RANDOM_STATES - 1);
+    av_assert0(rng_idx >= 0 && rng_idx < RANDOM_STATES);
+
+    rng = &state->random_state[rng_idx];
+
+    if (rng->counter == 0)
+        ff_sfc64_init(rng, iarg, iarg, iarg, 12);
+
+    return ff_sfc64_get(rng) * (1.0 / UINT64_MAX);
 }
 
 static void vgs_eval_state_init(
