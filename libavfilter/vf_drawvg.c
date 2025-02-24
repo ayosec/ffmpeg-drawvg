@@ -1916,7 +1916,9 @@ static int vgs_eval(
             cairo_rectangle(state->cairo_ctx, numerics[0], numerics[1], numerics[2], numerics[3]);
             break;
 
-        case INS_REPEAT:
+        case INS_REPEAT: {
+            double var_i = state->vars[VAR_I];
+
             ASSERT_ARGS(2);
 
             if (!isfinite(numerics[0]))
@@ -1937,8 +1939,9 @@ static int vgs_eval(
                 }
             }
 
-            state->vars[VAR_I] = NAN;
+            state->vars[VAR_I] = var_i;
             break;
+        }
 
         case INS_RESTORE:
             ASSERT_ARGS(0);
