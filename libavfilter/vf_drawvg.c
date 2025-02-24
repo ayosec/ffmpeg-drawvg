@@ -346,6 +346,40 @@ static int vgs_proc_num_args(enum VGSInstruction inst) {
     }
 }
 
+/// Return `1` if the instruction changes the path.
+static int vgs_inst_change_path(enum VGSInstruction inst) {
+    switch (inst) {
+    case INS_BREAK:
+    case INS_COLOR_STOP:
+    case INS_COLOR_STOP_RGBA:
+    case INS_IF:
+    case INS_LINEAR_GRAD:
+    case INS_PRINT:
+    case INS_PROC_ASSIGN:
+    case INS_PROC_CALL:
+    case INS_PROC1_ASSIGN:
+    case INS_PROC1_CALL:
+    case INS_PROC2_ASSIGN:
+    case INS_PROC2_CALL:
+    case INS_RADIAL_GRAD:
+    case INS_REPEAT:
+    case INS_RESET_DASH:
+    case INS_SET_COLOR:
+    case INS_SET_DASH:
+    case INS_SET_DASH_OFFSET:
+    case INS_SET_HSLA:
+    case INS_SET_LINE_CAP:
+    case INS_SET_LINE_JOIN:
+    case INS_SET_LINE_WIDTH:
+    case INS_SET_RGBA:
+    case INS_SET_VAR:
+        return 0;
+
+    default:
+        return 1;
+    }
+}
+
 // Parser.
 
 struct VGSParser {
@@ -2139,11 +2173,12 @@ static int vgs_eval(
             break;
         }
 
-        // Discard reflected points if the last instruction did not
-        // set new points.
+        // Reflected control points will be discarded if the executed
+        // instruction did not update them, and it is a instruction
+        // to modify the path.
         if (state->rcp.status == RCP_UPDATED)
             state->rcp.status = RCP_VALID;
-        else
+        else if (vgs_inst_change_path(statement->inst))
             state->rcp.status = RCP_NONE;
     }
 
