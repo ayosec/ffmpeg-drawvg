@@ -121,6 +121,7 @@ export default function OutputPanel() {
                     <IconButton
                         Icon={BsFillSkipBackwardFill}
                         label="Reset playback"
+                        shortcut="ctrl-e"
                         onClick={() => backend.sendAction("ResetPlayback") }
                     />
 

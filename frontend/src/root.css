@@ -76,6 +76,8 @@ html, body, #root {
         text-transform: capitalize;
         white-space: pre;
 
+        font-family: var(--monospace-font, monospace), monospace;
+
         padding: 0.25ch 1ch;
         font-size: 0.7rem;
         margin: 0.2ch;
