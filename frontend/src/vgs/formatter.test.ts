@@ -57,3 +57,9 @@ test("caret on whitespaces", () => {
     expect(code).toBe("setvar x 1");
     expect(caret).toBe(6);
 });
+
+test("comments at first line", () => {
+    const { code, caret } = format("// first line \n\n// second line \n", 1);
+    expect(code).toBe("// first line\n\n// second line");
+    expect(caret).toBe(0);
+});

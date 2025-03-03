@@ -43,6 +43,8 @@ export default function format(code: string, caret: number) {
             case "comment":
                 if (hasBlankLine)
                     emit("\n\n");
+                else if (output.length === 0)
+                    { /* es-lint: no-empty: "allow" */ } // emit nothing.
                 else if (isSourceBOL)
                     emit("\n");
                 else if (!isBOL)
