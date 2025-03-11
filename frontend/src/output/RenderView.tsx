@@ -1,7 +1,7 @@
 import { useContext, useEffect, useRef } from "react";
 
-import BackendContext from "../backend";
 import useCurrentProgram from "../currentProgram";
+import BackendContext from "../BackendContext";
 
 interface Props {
     size: [number, number];

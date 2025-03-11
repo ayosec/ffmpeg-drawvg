@@ -1,6 +1,6 @@
 import { memo, useCallback, useContext, useEffect, useReducer, useState } from "react";
 
-import BackendContext from "../backend";
+import BackendContext from "../BackendContext";
 import IconButton from "../base/IconButton";
 import Logs from "./Logs";
 import OutputPanel from "../output/OutputPanel";

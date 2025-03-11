@@ -1,11 +1,11 @@
-import { useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import BackendContext from "../../backend";
+import Backend from "../../backend";
+import Configure from "./Configure";
+import useCurrentProgram from "../../currentProgram";
 
 import styles from "../../base/dialog.module.css";
 import outputStyles from "../output.module.css";
-import Configure from "./Configure";
-import useCurrentProgram from "../../currentProgram";
 
 interface Props {
     size: [ number, number ];
@@ -51,8 +51,6 @@ export default function VideoExport({ size, onClose }: Props) {
 function ExportProcess({ config, source, onClose }: ExportProcessProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
-    const backend = useContext(BackendContext);
-
     const [ progress, setProgress ] = useState(0);
 
     const [ summary, setSummary ] = useState(<></>);
@@ -64,6 +62,8 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
     useEffect(() => { dialogRef.current?.showModal(); }, []);
 
     useEffect(() => {
+        const backend = new Backend("ExportVideo");
+
         const task = backend.exportVideo(
             {
                 frames: config.frameCount,
@@ -93,7 +93,7 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
         );
 
         return () => { task.cancel(); };
-    }, [ backend, config, source ]);
+    }, [ config, source ]);
 
     useEffect(
         () => {

@@ -22,6 +22,7 @@ export type Action
     | "GetLogs"
     | "GetResourceUsage"
     | "NextFrame"
+    | "Ping"
     | "PreviousFrame"
     | "ResetPlayback"
     ;
@@ -66,6 +67,7 @@ export type Response
     | { requestId: number; failure: string; }
     | { requestId: number; logs: LogsData; }
     | { requestId: number; resourceUsage: ResourceUsage; }
+    | { requestId: number; pong: true }
     | { videoProgress: { frames: number } }
     | { videoFinish: { buffer: ArrayBuffer } }
     | { videoError: { error: string } }

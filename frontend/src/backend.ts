@@ -1,5 +1,3 @@
-import { createContext, createElement } from "react";
-
 import RenderWorkerImpl from "./render/worker?worker";
 import { Action, VideoParams, Request, Response } from "./render/protocol";
 
@@ -26,34 +24,52 @@ export interface ExportVideoTask {
     cancel(): void;
 }
 
-const Backend = {
+export default class Backend {
+    #renderWorker: Worker;
+    #responseListeners: Map<number, Listener>;
+    #lastRequestId: number;
+    #initData: InitData|undefined;
 
-    renderWorker: new RenderWorkerImpl({ name: "MainRender" }),
+    constructor(name: string) {
+        this.#renderWorker = new RenderWorkerImpl({ name });
+        this.#responseListeners = new Map<number, Listener>();
+        this.#lastRequestId = 0;
+        this.#initData = undefined;
 
-    initData: <InitData|undefined>undefined,
+        // Track visibility state. Use a timeout to detect if the
+        // worker is still running.
+        const handler = () => {
+            this.setVisibility(!document.hidden);
 
-    responseListeners: new Map<number, Listener>(),
+            const timeout = setTimeout(
+                () => { document.removeEventListener("visibilitychange", handler); },
+                5000,
+            );
 
-    lastRequestId: 0,
+            this.sendAction("Ping", () => { clearTimeout(timeout); }, true);
+        };
+
+        document.addEventListener("visibilitychange", handler);
+    }
 
     init(canvas: HTMLCanvasElement, size: [ number, number ]) {
-        this.renderWorker.onmessage = (event) => this.handleResponse(event);
+        this.#renderWorker.onmessage = (event) => this.handleResponse(event);
         this._postMessage({ request: "init" });
 
-        this.initData = { canvas, size, requestsQueue: [] };
-    },
+        this.#initData = { canvas, size, requestsQueue: [] };
+    }
 
     handleResponse(event: MessageEvent<any>) {
         const response: Response = event.data;
 
         if ("init" in response && response.init === "ok") {
-            if (this.initData === undefined) {
+            if (this.#initData === undefined) {
                 console.warn("Missing data to initialize canvas.");
                 return;
             }
 
-            const { canvas, size, requestsQueue } = this.initData;
-            delete this.initData;
+            const { canvas, size, requestsQueue } = this.#initData;
+            this.#initData = undefined;
 
             if (canvas === undefined || canvas.dataset.drawvgInWorker !== undefined)
                 return;
@@ -61,21 +77,21 @@ const Backend = {
             canvas.dataset.drawvgInWorker = ".";
 
             const offscreen = canvas.transferControlToOffscreen();
-            this.renderWorker.postMessage(
+            this.#renderWorker.postMessage(
                 <Request>{ request: "register", canvas: offscreen, size },
                 [ offscreen ]
             );
 
             for (const req of requestsQueue) {
-                this.renderWorker.postMessage(req);
+                this.#renderWorker.postMessage(req);
             }
 
             return;
         }
 
         if ("requestId" in response) {
-            const listener = this.responseListeners.get(response.requestId);
-            this.responseListeners.delete(response.requestId);
+            const listener = this.#responseListeners.get(response.requestId);
+            this.#responseListeners.delete(response.requestId);
 
             if (listener) {
                 listener.callback(response);
@@ -86,27 +102,29 @@ const Backend = {
         }
 
         console.error("Invalid response from worker:", response);
-    },
+    }
 
-    sendAction(action: Action, callback?: ListenerCallback) {
-        const requestId = ++this.lastRequestId;
+    sendAction(action: Action, callback?: ListenerCallback, ignoreTimeout?: boolean) {
+        const requestId = ++this.#lastRequestId;
 
         if (callback !== undefined) {
             const timeoutId = setTimeout(
                 () => {
-                    this.responseListeners.delete(requestId);
-                    console.error("Timeout waiting for response.", { action });
-                }, 3000,
+                    this.#responseListeners.delete(requestId);
+                    if (ignoreTimeout !== true)
+                        console.error("Timeout waiting for response.", { action });
+                },
+                3000,
             );
 
-            this.responseListeners.set(requestId, { timeoutId, callback });
+            this.#responseListeners.set(requestId, { timeoutId, callback });
         }
 
         this._postMessage({ request: "action", requestId, action });
-    },
+    }
 
     exportVideo(params: VideoParams, handlers: ExportVideoHandlers): ExportVideoTask {
-        const exporter = new RenderWorkerImpl({ name: "ExportVideo" });
+        const exporter = this.#renderWorker;
 
         let start = NaN;
 
@@ -148,46 +166,29 @@ const Backend = {
         return {
             cancel() { exporter.terminate(); },
         };
-    },
+    }
 
     setVisibility(visibility: boolean) {
         this._postMessage({ request: "state", change: { visibility } });
-    },
+    }
 
     setPlaying(playing: boolean, speed: number) {
         this._postMessage({ request: "state", change: { playing, speed } });
-    },
+    }
 
     setSize(size: [number, number]) {
         this._postMessage({ request: "state", change: { size } });
-    },
+    }
 
     setProgram(id: number, source: string) {
         this._postMessage({ request: "state", change: { program: { id, source } } });
-    },
+    }
 
-    _postMessage(message: Request) {
-        if (this.initData !== undefined)
-            this.initData.requestsQueue.push(message);
+    private _postMessage(message: Request) {
+        if (this.#initData !== undefined)
+            this.#initData.requestsQueue.push(message);
         else
-            this.renderWorker.postMessage(message);
-    },
+            this.#renderWorker.postMessage(message);
+    }
 
-};
-
-document.addEventListener(
-    "visibilitychange",
-    () => Backend.setVisibility(!document.hidden),
-);
-
-(<any>window).renderWorkerDumpMemoryStats = () => {
-    Backend.sendAction("DumpMemoryStats");
-};
-
-const Context = createContext(Backend);
-
-export function BackendProvider({ children }: { children: React.ReactNode }) {
-    return createElement(Context.Provider, { children, value: Backend });
 }
-
-export default Context;

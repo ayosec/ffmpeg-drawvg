@@ -397,6 +397,10 @@ function handleAction(requestId: number, action: protocol.Action) {
             requestRedraw();
             break;
 
+        case "Ping":
+            responseSender({ requestId, pong: true });
+            break;
+
         case "PreviousFrame":
             drawContext.timeline.playbackPreviousFrame();
             requestRedraw();

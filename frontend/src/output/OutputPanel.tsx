@@ -6,7 +6,7 @@ import { IoCamera, IoPause, IoPlay, IoPlaySkipBack, IoPlaySkipForward, IoVideoca
 import IconButton from "../base/IconButton";
 import RenderView from "./RenderView";
 
-import BackendContext from "../backend";
+import BackendContext from "../BackendContext";
 import Select from "../base/Select";
 import VideoExport from "./video/VideoExport";
 import useAppLayout, { Layout } from "../base/layout";
