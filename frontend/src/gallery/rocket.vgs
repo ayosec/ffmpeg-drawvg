@@ -1,0 +1,122 @@
+setvar MOVE_X 15
+setvar MOVE_Y 10
+
+rect 0 0 w h
+setcolor #001040
+fill
+
+proc1 star size {
+	setvar s1 (size/8)
+
+	M (-size) 0
+	L
+		(-s1) (-s1)
+		0 (-size)
+		s1 (-s1)
+		size 0
+		s1 s1
+		0 size
+		(-s1) s1
+	z
+
+	fill
+}
+
+proc rocket {
+	proc shape {
+		M 0 -20
+		Q -12 0 -5 20
+		h 10
+		Q 12 0 0 -20
+		z
+	}
+
+	proc fin {
+		M 0 0
+		l 9 0 5 10 0 10
+		z
+	}
+
+	proc1 draw body {
+		setlinewidth 1
+		setlinejoin miter
+
+		setcolor #204060
+		pstroke
+
+		if body {
+			setcolor white
+		}
+
+		if (not(body)) {
+			setcolor #FF7040
+		}
+
+		fill
+	}
+
+	// fire
+	setvar firetime (abs(0.15 - mod(t, 0.3)) / 0.15)
+	ellipse 0 20 (4 + firetime) (10 + firetime)
+	setcolor #FF5040
+	fill
+
+	circle 0 20 (3 + firetime)
+	setcolor #FFD000
+	fill
+
+	save
+	scalexy -1 1
+	call fin
+	call1 draw 0
+	restore
+
+	call fin
+	call1 draw 0
+
+	call shape
+	call1 draw 1
+
+	call shape
+	clip
+	circle 0 -20 12
+	ellipse 0 20 10 2
+	call1 draw 0
+	resetclip
+
+	// window
+	circle 0 0 3
+	setcolor #0040A0
+	setlinewidth 1
+	pstroke
+	setcolor #00AAFF
+	fill
+}
+
+repeat (sqrt(w * h) / 40) {
+	sethsla 200 0.5 0.75 (0.75 + sin(randomg(2) * 10 * t) / 2)
+
+	setvar sx (randomg(0) * w - ((mod(t, MOVE_X) * w / MOVE_X)))
+	setvar sy (randomg(1) * h + ((mod(t, MOVE_Y) * h / MOVE_Y)))
+
+	if (gt(sy, h)) {
+		setvar sy (sy - h)
+	}
+
+	if (lt(sx, 0)) {
+		setvar sx (w + sx)
+	}
+
+	save
+	translate sx sy
+	rotate (PI*randomg(2))
+	call1 star (8 + 4 * randomg(2))
+	restore
+}
+
+save
+translate (w / 2) (h / 2)
+rotate (atan2(MOVE_Y, MOVE_X))
+scale (min(w, h) / 100)
+call rocket
+restore

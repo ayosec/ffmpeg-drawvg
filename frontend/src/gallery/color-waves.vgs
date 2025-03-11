@@ -1,0 +1,28 @@
+setvar T ((sin(t / 4) + 1) / 2)
+
+scalexy (w / 50) (h / 100)
+
+repeat 13 {
+	sethsla (100 * i + 150) 0.9 (0.7 + T / 20) 1
+
+	M
+		(abs(sin(i / 14 + t / 12)) * -20)
+		((i - 2) * 10 + 5 * sin(5 * (i + T)))
+
+	setvar f (if(gt(randomg(3),0.5),-1,1))
+	repeat 15 {
+		setvar f (-f)
+		setvar d (T * sin(sin(t) / 10) + randomg(2))
+		setvar dx (5 + 5 * d)
+
+		q
+			dx (f * (3 + d / 2) * (0.5 + T))
+			(dx * 2) (randomg(0) - 0.5)
+	}
+
+	v 40
+	H 0
+	z
+
+	fill
+}

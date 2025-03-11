@@ -1,0 +1,38 @@
+setvar TARGET_X (w * 0.7)
+setvar TARGET_Y (h * 0.3)
+setvar RADIUS (min(w,h) / 10)
+
+setvar INTRO 0.85
+
+setvar T (mod(t, 2))
+
+setcolor darkblue
+rect 0 0 w h
+fill
+
+setcolor lightyellow
+
+// INTRO: from full frame to point
+if (lt(T, INTRO)) {
+	setvar FACTOR 5
+	setvar progress ((pow((FACTOR + 1), T / INTRO) - 1) / FACTOR)
+
+	// rect width
+	setvar rw (w * (1 - progress) + (RADIUS * 2) * progress)
+
+	roundedrect
+		(progress * (TARGET_X - RADIUS))
+		(progress * (TARGET_Y - RADIUS))
+		(rw)
+		(h * (1 - progress) + (RADIUS * 2) * progress)
+		(rw * T / 1.5)
+
+	fill
+	break
+}
+
+// After INTRO, regular circle.
+circle (TARGET_X) (TARGET_Y) (RADIUS)
+
+//setcolor seagreen
+fill

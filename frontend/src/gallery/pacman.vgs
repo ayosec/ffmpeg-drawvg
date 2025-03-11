@@ -1,0 +1,39 @@
+setvar r (min(w, h) / 5)
+setvar a ((1 + sin(15 * t)) * PI / 8)
+
+rect 0 0 w h
+fill
+
+// Grid
+
+setlinewidth (r/10)
+M 0 (h / 4)
+H w
+M 0 (3 * h / 4)
+H w
+setcolor #5657FF
+stroke
+
+// Dots
+
+M (w / 2) (h / 2)
+l w 0
+setcolor #FFFEAA
+setlinewidth (r / 6)
+setdash (r / 6) (r / 3)
+setdashoffset (t * r * 3)
+stroke
+resetdash
+
+// Character
+
+circle // Eye
+	(w / 2 + r / 5)
+	(h / 2 - r / 1.5)
+	(r / 7)
+
+M (w / 2) (h / 2)
+arc cx cy r (a) (-a)
+
+setcolor #FFFF57
+eofill

@@ -1,0 +1,21 @@
+.selected {
+    box-shadow: 0 0 10px var(--icon-button-shadow-focus);
+}
+
+.preview {
+    margin-bottom: 1ch;
+
+    canvas {
+        outline: 0;
+        border: 0;
+        box-sizing: border-box;
+        border-radius: 0.5ch;
+
+        transition: transform ease-out 100ms;
+
+        &:not(.selected) {
+            transform: scale(0.75);
+            transform-origin: 50% 50%;
+        }
+    }
+}

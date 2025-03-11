@@ -1,0 +1,26 @@
+// Pixels per second
+setvar MOVE_SPEED 20
+
+setcolor black
+rect 0 0 w h
+fill
+
+repeat (sqrt(w * h) / 2) {
+	setrgba 1 1 1 (randomg(0) / 2 + 0.1)
+
+	setvar x (randomg(0) * w)
+	setvar y (randomg(0) * h)
+	setvar r (randomg(0) * 4)
+
+	// Move 90% of the particles
+	if (lt(randomg(1), 0.90)) {
+		setvar speed (MOVE_SPEED * (0.5 + randomg(2)))
+		setvar angle (randomg(1) * 2 * PI)
+
+		setvar x (mod(x + cos(angle) * t * speed, w))
+		setvar y (mod(y + sin(angle) * t * speed, h))
+	}
+
+	circle x y r
+	fill
+}

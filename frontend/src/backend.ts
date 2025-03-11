@@ -24,32 +24,47 @@ export interface ExportVideoTask {
     cancel(): void;
 }
 
+class VisibilityObserver {
+    #handler: () => void;
+
+    constructor(private readonly backend: Backend) {
+        // Track visibility state. Use a timeout to detect if the
+        // worker is still running.
+        this.#handler = () => {
+            const timeout = setTimeout(
+                () => { this.remove(); },
+                5000,
+            );
+
+            this.backend.setVisibility(!document.hidden);
+            this.backend.sendAction(
+                "Ping",
+                () => { clearTimeout(timeout); },
+                true,
+            );
+        };
+
+        document.addEventListener("visibilitychange", this.#handler);
+    }
+
+    remove() {
+        document.removeEventListener("visibilitychange", this.#handler);
+    }
+}
+
 export default class Backend {
     #renderWorker: Worker;
     #responseListeners: Map<number, Listener>;
     #lastRequestId: number;
     #initData: InitData|undefined;
+    #visibilityObserver: VisibilityObserver;
 
     constructor(name: string) {
         this.#renderWorker = new RenderWorkerImpl({ name });
         this.#responseListeners = new Map<number, Listener>();
         this.#lastRequestId = 0;
         this.#initData = undefined;
-
-        // Track visibility state. Use a timeout to detect if the
-        // worker is still running.
-        const handler = () => {
-            this.setVisibility(!document.hidden);
-
-            const timeout = setTimeout(
-                () => { document.removeEventListener("visibilitychange", handler); },
-                5000,
-            );
-
-            this.sendAction("Ping", () => { clearTimeout(timeout); }, true);
-        };
-
-        document.addEventListener("visibilitychange", handler);
+        this.#visibilityObserver = new VisibilityObserver(this);
     }
 
     init(canvas: HTMLCanvasElement, size: [ number, number ]) {
@@ -184,11 +199,20 @@ export default class Backend {
         this._postMessage({ request: "state", change: { program: { id, source } } });
     }
 
+    terminate() {
+        this.#visibilityObserver.remove();
+        this.#renderWorker.terminate();
+
+        this.#renderWorker.postMessage = (message) => {
+            console.debug(message);
+            console.error("Backend is already terminated.");
+        };
+    }
+
     private _postMessage(message: Request) {
         if (this.#initData !== undefined)
             this.#initData.requestsQueue.push(message);
         else
             this.#renderWorker.postMessage(message);
     }
-
 }

@@ -1,0 +1,41 @@
+setvar tr_duration 0.75
+setvar tr_wait 0.5
+setvar tr_full (tr_duration + tr_wait)
+
+setvar P (mod(t, tr_full) / tr_duration)
+setvar S (min(w, h) / 4)
+setvar SP (S * P)
+
+setvar N (floor(t / tr_full))
+
+proc1 colorize d {
+	sethsla
+		((N + d) * 41)
+		(st(0, 1e6 * (N + d)); random(0) / 2 + 0.3)
+		(0.25 + 0.5 * mod((N + d), 2))
+		1
+}
+
+if (gte(P, 1)) {
+	// The transition is done, so we can fill the entire
+	// frame with the final color.
+
+	call1 colorize 1
+	rect 0 0 w h
+	fill
+	break
+}
+
+call1 colorize 0
+rect 0 0 w h
+fill
+
+call1 colorize 1
+repeat (w / S + 2) {
+	setvar x (i * S - SP / 2)
+	repeat (h / S + 2) {
+		rect x (i * S - SP / 2) SP SP
+	}
+}
+
+fill

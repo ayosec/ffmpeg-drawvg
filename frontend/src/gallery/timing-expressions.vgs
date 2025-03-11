@@ -1,0 +1,57 @@
+// Similar to [1]easing functions used in animations, but instead of
+// a specifying a curve, the change is described with a math expression.
+//
+// [1]: https://developer.mozilla.org/en-US/docs/Web/CSS/easing-function
+
+// Time, in seconds, to render the full bar.
+setvar LOOP_TIME 3
+
+setvar LINEAR 1
+setvar SIN 1
+setvar POW075 1
+setvar POW15 1
+setvar LOG10 1
+setvar LOG100 1
+
+setvar progress (mod(t / LOOP_TIME, 1))
+
+// Adjust the viewport so a full bar has a size of 1x1 pixels.
+scalexy
+	w
+	(h / (LINEAR + SIN + POW075 + POW15 + LOG10 + LOG100))
+
+proc1 draw p {
+	rect 0 0 p 1
+	fill
+	translate 0 1
+}
+
+if LINEAR {
+	setcolor lightgreen
+	call1 draw progress
+}
+
+if SIN {
+	setcolor skyblue
+	call1 draw (sin(PI/2 * progress))
+}
+
+if POW075 {
+	setcolor mediumseagreen
+	call1 draw (pow(progress, 0.75))
+}
+
+if POW15 {
+	setcolor cadetblue
+	call1 draw (pow(progress, 1.5))
+}
+
+if LOG10 {
+	setcolor seagreen
+	call1 draw ((log(1 + progress * 9))/log(10))
+}
+
+if LOG100 {
+	setcolor steelblue
+	call1 draw ((log(1 + progress * 99))/log(100))
+}

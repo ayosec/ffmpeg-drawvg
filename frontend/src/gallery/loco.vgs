@@ -1,0 +1,153 @@
+setvar VIEWPORT 410
+
+// Inspired by the https://loco.rs/ logo.
+
+// Sun
+setcolor #FC3820
+circle (w / 2) (h / 4) (h / 5)
+fill
+
+// Mountains
+save
+translate (-w * mod(t, 5) / 5) 0
+setcolor #FF8F82
+scalexy (w / 100) (h / 75)
+
+proc mountains {
+	M 0 60
+	l
+		10 -15
+		20 -5
+		-10 30
+		-40 0
+	z
+
+	M 18 70
+	l
+		40 -50
+		10 10
+		-5 40
+	z
+
+	M 60 70
+	l
+		20 -50
+		20 10
+		0 40
+	z
+}
+
+call mountains
+translate 100 0
+call mountains
+fill
+restore
+
+// Use the viewport from the original SVG
+setvar S (w / VIEWPORT)
+scale S
+
+// Smoke
+setvar SX 250
+setvar SY (h / 2 / S)
+
+save
+translate SX SY
+scale 4
+
+repeat 50 {
+	setvar R (randomg(0) + mod(t, 1.5) / 1.5)
+	setvar R (if(gt(R, 1), R - 1, R))
+	setvar y (40 * log(1 + R * 499) / log(500) - 10 * (randomg(1) + 0.5))
+	setvar x (R * 70 + (randomg(1) * 4 - 2))
+
+	if (gt(y,0)) {
+		circle (-x) (-y) (R * 5 + 3)
+	}
+
+	setrgba 0.7 0 0 (pow(1 - R, 1.2))
+	fill
+}
+
+restore
+
+// Train
+//
+// The path is copied from the SVG in https://loco.rs.
+// `translate` and `scale` are used to adjust the coordinates
+// from the original SVG.
+
+save
+
+translate 0 (h / S / 2 - 190)
+
+M 0 270
+h 280
+v 50
+H 0
+z
+setcolor white
+fill
+
+M 288 209
+L 242 199
+L -31 278
+C -33 288 -31 333 -31 333
+C -31 333 -25 333 -25 338
+C -24 340 -24 342 -24 344
+L -22 344
+L 234 306
+C 234 306 234 306 235 306
+C 228 300 214 281 214 281
+L -29 326
+V 322
+L 217 277
+L 241 304
+L 291 301
+L 300 277
+L 288 209
+Z
+
+// Chimney
+M 245 204
+V 200
+H 246
+V 195
+C 246 193 245 192 243 192
+H 242
+C 240 192 239 193 239 195
+V 200
+H 242
+V 206
+L 245 204
+Z
+
+setcolor #7A1307
+fill
+
+setcolor white
+ellipse 270 230 7 10
+fill
+
+// Terrain
+proc train_base {
+	M 0 340
+	l (w / S) (-atan2(45, 290) * (w / S))
+}
+
+call train_base
+v h
+H 0
+z
+setcolor #D45546
+fill
+
+// Rails
+call train_base
+v 30
+L 0 350
+z
+setcolor #BD210F
+fill
+
+restore

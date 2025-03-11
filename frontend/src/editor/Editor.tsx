@@ -3,10 +3,11 @@ import { useRef, useState } from "react";
 import { BsTextIndentLeft } from "react-icons/bs";
 import { FaKeyboard } from "react-icons/fa";
 import { FaRegFolderOpen } from "react-icons/fa6";
-import { IoShareSocial } from "react-icons/io5";
+import { IoLibrary, IoShareSocial } from "react-icons/io5";
 
 import * as CompImpl from "./completion.impl";
 import Completion from "./Completion";
+import ExampleGallery from "../gallery/ExampleGallery";
 import Files from "./Files";
 import Highlights from "./Highlights";
 import IconButton from "../base/IconButton";
@@ -48,6 +49,8 @@ export default function Editor({ autoFocus }: Props) {
     const [ showFiles, setShowFiles ] = useState(false);
 
     const [ keyboardShortcuts, setKeyboardShortcuts ] = useState(false);
+
+    const [ exampleGallery, setExampleGallery ] = useState(false);
 
     const [ completion, setCompletion ] = useState<CompImpl.Props|null>();
 
@@ -158,6 +161,10 @@ export default function Editor({ autoFocus }: Props) {
                     { keyboardShortcuts &&
                         <KeyboardShortcuts onClose={() => setKeyboardShortcuts(false)} />
                     }
+
+                    { exampleGallery &&
+                        <ExampleGallery onClose={() => setExampleGallery(false)}  />
+                    }
                 </div>
 
                 {
@@ -175,6 +182,12 @@ export default function Editor({ autoFocus }: Props) {
 
                 <div>
                     <IconButton
+                        Icon={IoLibrary}
+                        label="Example Gallery"
+                        onClick={() => setExampleGallery(!exampleGallery)}
+                    />
+
+                    <IconButton
                         Icon={FaKeyboard}
                         label="Keyboard Shortcuts"
                         shortcut="ctrl-k"
@@ -182,8 +195,8 @@ export default function Editor({ autoFocus }: Props) {
                     />
                 </div>
             </div>
-            <div className={styles.code}>
 
+            <div className={styles.code}>
                 <Highlights
                     ref={highlightsRef}
                     showErrors={!completion}

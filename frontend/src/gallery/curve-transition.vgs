@@ -1,0 +1,43 @@
+setvar TIME 1.25
+
+// Transition progress
+setvar tp (mod(t, TIME) / TIME)
+setvar tp (sin(PI/2 * tp))
+
+setvar phase1 (lt(mod(t, TIME * 2), TIME))
+
+setvar lw (min(50, w / 50))
+setlinewidth lw
+
+proc cut {
+	L (w / 2) (-lw / 2)
+
+	c
+		(w / 1.25) (h / 2)
+		(-w / 1.25) (h / 2)
+		0 (h + lw * 2)
+}
+
+call cut
+
+if phase1 {
+	setdash (pathlen(0) * tp) 1e6
+}
+
+stroke
+
+if phase1 {
+	break
+}
+
+save
+translate (-w * tp) 0
+call cut
+restore
+
+// Flip the transformation matrix to reuse the same curve.
+translate (w/2) (h/2)
+scalexy -1 -1
+translate (-w/2 - w * tp) (-h/2)
+call cut
+fill

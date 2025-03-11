@@ -1,0 +1,56 @@
+
+// Screen after a donation in https://fund.blender.org/
+
+// Background
+lineargrad 0 0 0 h
+colorstop 0 #011023 1 #430F9A
+rect 0 0 w h
+fill
+
+// Stars
+repeat (sqrt(w * h) / 8) {
+	setvar movement (pow(5, randomg(2)) * 10)
+	setvar y (randomg(1) * h - h * mod(t, movement) / movement)
+	if (lt(y, 0)) {
+		setvar y (h + y)
+	}
+
+	circle (randomg(0) * w) y 1.5
+	setrgba 1 1 1 (0.4 + randomg(2) / 2)
+	fill
+}
+
+// Fireworks
+setvar S (mod(t, 2) / 2)
+
+save
+translate
+	(st(0, 1e5 * floor(t / 2)); random(0) * w)
+	(st(0, 1e7 * floor(t / 2)); random(0) * h / 2 + h / 5)
+
+repeat 30 {
+	setvar c (mod(i, 3))
+
+	if (eq(c, 0)) {
+		setcolor #FFB600
+	}
+
+	if (eq(c, 1)) {
+		setcolor #009DFF
+	}
+
+	if (eq(c, 2)) {
+		setcolor #FFFFFF
+	}
+
+	setvar distance (randomg(3) * 100 * log(1 + S * 14) / log(15))
+	setvar angle (randomg(3) * PI * 2 * floor(1 + t / 2))
+
+	circle
+		(sin(angle) * distance)
+		(cos(angle) * distance)
+		(10 * pow(1 - S, 2))
+	fill
+}
+
+restore
