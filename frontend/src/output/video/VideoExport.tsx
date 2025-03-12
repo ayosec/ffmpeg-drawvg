@@ -111,7 +111,7 @@ function ExportProcess({ config, source, onClose }: ExportProcessProps) {
     if (objectURL !== null) {
         content = (
             <div className={outputStyles.results}>
-                <video controls src={ objectURL } />
+                <video loop controls src={ objectURL } />
             </div>
         );
     } else if (failure !== null) {
