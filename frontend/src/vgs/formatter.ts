@@ -23,13 +23,21 @@ export default function format(code: string, caret: number) {
 
     for (const token of tokenize(code)) {
         switch (token.kind) {
-            case "whitespace":
-                if (!hasBlankLine && /\n.*\n/.test(token.lexeme))
+            case "whitespace": {
+                let lexeme = token.lexeme;
+
+                if (lexeme.indexOf(",") !== -1) {
+                    emit(",");
+                    lexeme = lexeme.replace(/.*\S/, "");
+                }
+
+                if (!hasBlankLine && /\n.*\n/.test(lexeme))
                     hasBlankLine = true;
 
-                if (!isSourceBOL && token.lexeme.indexOf("\n") !== -1)
+                if (!isSourceBOL && lexeme.indexOf("\n") !== -1)
                     isSourceBOL = true;
                 break;
+            }
 
             case "keyword":
                 if(hasBlankLine)

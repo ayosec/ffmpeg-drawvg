@@ -63,3 +63,9 @@ test("comments at first line", () => {
     expect(code).toBe("// first line\n\n// second line");
     expect(caret).toBe(0);
 });
+
+test("keep commas", () => {
+    const { code, caret } = format("l 0,1 2 3,,,4,\n\n,\n5\n,\n6,", 1);
+    expect(code).toBe("l 0, 1 2 3, 4,\n\t5,\n\t6,");
+    expect(caret).toBe(1);
+});
