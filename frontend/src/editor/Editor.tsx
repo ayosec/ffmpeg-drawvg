@@ -144,7 +144,13 @@ export default function Editor({ autoFocus }: Props) {
                         }}
                     />
 
-                    { share && <Share source={source} onClose={() => setShare(false)} /> }
+                    { share &&
+                        <Share
+                            name={activeFileName ?? "drawvg"}
+                            source={source}
+                            onClose={() => setShare(false)}
+                        />
+                    }
 
                     { showFiles &&
                         <Files

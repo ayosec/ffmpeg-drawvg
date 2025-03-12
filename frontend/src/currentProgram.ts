@@ -36,7 +36,7 @@ const CURRENT_PROGRAM_KEY = "main/currentProgram";
 const PREFIX_FILE_KEY = "saves/byName/";
 
 function extractCodeFromLocationHash() {
-    const zipRaw = /zip=([^&]+)/.exec(location.hash);
+    const zipRaw = /gzip=([^&]+)/.exec(location.hash);
     if (zipRaw) {
         history.replaceState(null, "", location.href.split("#")[0]);
 

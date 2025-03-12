@@ -1,25 +1,35 @@
-import { deflate } from "pako";
+import { DeflateOptions, deflate } from "pako";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "../base/dialog.module.css";
 import editorStyles from "./editor.module.css";
 
 interface Props {
+    name: string;
     source: string;
     onClose(): void;
 }
 
-function makeHash(source: string) {
+function makeHash(name: string, source: string) {
     // The source is compressed with zlib, and encoded as base64.
     //
     // The original source can be obtained from the URL with:
     //
     //  $ echo "$URL" \
-    //      | perl -pe 's/.*zip=//; s/%(..)/chr(hex($1))/ge' \
+    //      | perl -pe 's/.*gzip=//; s/%(..)/chr(hex($1))/ge' \
     //      | base64 -d \
-    //      | pigz -zdc
+    //      | gzip -dc
 
-    const zip = deflate(source, { level: 9 });
+    const options: DeflateOptions = {
+        level: 9,
+        gzip: true,
+        header: {
+            name: `${name}.txt`,
+            text: true,
+        },
+    };
+
+    const zip = deflate(source, options);
     if ((zip as any).toBase64) {
         return (zip as any).toBase64();
     }
@@ -27,7 +37,7 @@ function makeHash(source: string) {
     return btoa(String.fromCodePoint(...zip));
 }
 
-export default function Share({ source, onClose }: Props) {
+export default function Share({ name, source, onClose }: Props) {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     const inputRef = useRef<HTMLInputElement>(null);
@@ -35,10 +45,11 @@ export default function Share({ source, onClose }: Props) {
     const [ copyFinished, setCopyFinished ] = useState(false);
 
     const shareURL = useMemo(() => {
+        const hash = makeHash(name, source);
         const url = new URL(location.href);
-        url.hash = "zip=" + encodeURIComponent(makeHash(source));
+        url.hash = "gzip=" + encodeURIComponent(hash);
         return url.toString();
-    }, [ source ]);
+    }, [ name, source ]);
 
     useEffect(() => {
         const dialog = dialogRef.current;
