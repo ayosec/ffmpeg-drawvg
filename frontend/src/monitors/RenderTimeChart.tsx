@@ -42,7 +42,7 @@ function HeatMapTimesHeader({ max, min, columns }: { max: number, min: number, c
     headers.push(<span key="end">{formatNumber(max)} ms</span>);
 
     return (
-        <div className={styles.fullRange} aria-label="Render time (milliseconds)">
+        <div className={styles.fullRange} aria-label="Render Time (milliseconds)">
             {headers}
         </div>
     );
@@ -221,7 +221,7 @@ export default function RenderTimeChart({ chunks }: Props) {
 
         return (
             <tr key={row.key}>
-                <td aria-label={`Frames range (${currentFrame} - ${frame - 1})`}>{currentFrame}</td>
+                <td aria-label={`Frames Range (${currentFrame} - ${frame - 1})`}>{currentFrame}</td>
                 {columnNumber(row.min)}
                 {columnNumber(row.sum / row.dataRow.length)}
                 {columnNumber(row.max)}
@@ -235,7 +235,7 @@ export default function RenderTimeChart({ chunks }: Props) {
             <table className={styles.dataRows}>
                 <thead>
                     <tr>
-                        <th aria-label="Number of frames">
+                        <th aria-label="Number of Frames">
                             <span className={styles.frameCount}>
                                 {totalNumberOfFrames}
                             </span>

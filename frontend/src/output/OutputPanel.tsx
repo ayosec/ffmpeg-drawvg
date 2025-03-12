@@ -108,7 +108,7 @@ export default function OutputPanel() {
             <div role="toolbar" className={styles.toolbar}>
                 <div>
                     <Select
-                        title="Frame size"
+                        title="Frame Size"
                         value={[fitRenderView, canvasSize]}
                         valueLabel={canvasSize.join("×")}
                         onChange={configureCanvasSize}
@@ -120,14 +120,14 @@ export default function OutputPanel() {
                 <div>
                     <IconButton
                         Icon={BsFillSkipBackwardFill}
-                        label="Reset playback"
+                        label="Reset Playback"
                         shortcut="ctrl-e"
                         onClick={() => backend.sendAction("ResetPlayback") }
                     />
 
                     <IconButton
                         Icon={IoPlaySkipBack}
-                        label="Previous frame"
+                        label="Previous Frame"
                         shortcut="ctrl-,"
                         onClick={() => {
                             setPlaying(PlaybackStatus.Pause);
@@ -139,7 +139,7 @@ export default function OutputPanel() {
                         ?
                             <IconButton
                                 Icon={IoPause}
-                                label="Pause animation"
+                                label="Pause Animation"
                                 shortcut="ctrl-shift-p"
                                 onClick={() => setPlaying(PlaybackStatus.Pause)}
                             />
@@ -154,7 +154,7 @@ export default function OutputPanel() {
                     }
 
                     <Select
-                        title="Playback speed"
+                        title="Playback Speed"
                         value={playbackSpeed}
                         valueLabel={playbackSpeed + "x"}
                         onChange={setPlaybackSpeed}
@@ -165,7 +165,7 @@ export default function OutputPanel() {
                         ?
                             <IconButton
                                 Icon={IoPause}
-                                label="Pause animation"
+                                label="Pause Animation"
                                 shortcut="ctrl-p"
                                 onClick={() => setPlaying(PlaybackStatus.Pause)}
                             />
@@ -180,7 +180,7 @@ export default function OutputPanel() {
 
                     <IconButton
                         Icon={IoPlaySkipForward}
-                        label="Next frame"
+                        label="Next Frame"
                         shortcut="ctrl-."
                         onClick={() => {
                             setPlaying(PlaybackStatus.Pause);
@@ -192,13 +192,13 @@ export default function OutputPanel() {
                 <div>
                     <IconButton
                         Icon={IoCamera}
-                        label="Export to image"
+                        label="Export to Image"
                         onClick={() => saveToImage(containerRef.current)}
                     />
 
                     <IconButton
                         Icon={IoVideocam}
-                        label="Export to video"
+                        label="Export to Video"
                         onClick={() => setOpenVideoExport(true)}
                     />
                 </div>

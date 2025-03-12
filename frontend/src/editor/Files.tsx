@@ -140,8 +140,8 @@ export default function Files({ onClose }: Props) {
                                         Icon={IoSave}
                                         label={
                                             newFileAction === NewFileAction.CreateNew
-                                                ? "Create a new file"
-                                                : "Save current script"
+                                                ? "Create a New File"
+                                                : "Save Current Script"
                                         }
                                         onClick={() => {
                                             if (newFileAction == NewFileAction.CreateNew)
@@ -155,7 +155,7 @@ export default function Files({ onClose }: Props) {
 
                                     <IconButton
                                         Icon={IoArchive}
-                                        label="Download as a ZIP archive"
+                                        label="Download as a ZIP Archive"
                                         onClick={dowloadZip}
                                     />
                                 </div>
@@ -164,7 +164,7 @@ export default function Files({ onClose }: Props) {
                                     { removeUndoHistory.length > 0 &&
                                         <IconButton
                                             Icon={FaUndo}
-                                            label="Restore removed file"
+                                            label="Restore Removed File"
                                             onClick={() => {
                                                 const lrf = removeUndoHistory[0];
                                                 if (!lrf)

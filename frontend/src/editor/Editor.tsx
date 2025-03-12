@@ -136,7 +136,7 @@ export default function Editor({ autoFocus }: Props) {
 
                     <IconButton
                         Icon={BsTextIndentLeft}
-                        label="Reformat code"
+                        label="Reformat Code"
                         shortcut="ctrl-i"
                         onClick={() => {
                             if (textareaRef.current)
