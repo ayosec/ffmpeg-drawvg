@@ -102,6 +102,10 @@ function getCurrentWord(textarea: HTMLTextAreaElement): CurrentWord|null {
                     case "join":
                         tokenKind = paramName;
                         break;
+
+                    default:
+                        // Do not autocomplete on numeric parameters.
+                        return null;
                 }
             }
 
