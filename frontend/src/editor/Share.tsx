@@ -1,6 +1,8 @@
 import { DeflateOptions, deflate } from "pako";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import base64 from "../utils/base64";
+
 import styles from "../base/dialog.module.css";
 import editorStyles from "./editor.module.css";
 
@@ -30,11 +32,7 @@ function makeHash(name: string, source: string) {
     };
 
     const zip = deflate(source, options);
-    if ((zip as any).toBase64) {
-        return (zip as any).toBase64();
-    }
-
-    return btoa(String.fromCodePoint(...zip));
+    return base64.encode(zip);
 }
 
 export default function Share({ name, source, onClose }: Props) {

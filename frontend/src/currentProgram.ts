@@ -1,6 +1,8 @@
 import { inflate } from "pako";
 import { create } from "zustand";
 
+import base64 from "./utils/base64";
+
 export interface CompilerError {
     programId: number;
     line: number;
@@ -42,15 +44,7 @@ function extractCodeFromLocationHash() {
 
         try {
             const zip = decodeURIComponent(zipRaw[1]);
-
-            let stream;
-            if ((Uint8Array as any).fromBase64) {
-                stream = (Uint8Array as any).fromBase64(zip) as Uint8Array;
-            } else {
-                stream = Uint8Array.from(atob(zip), c => c.charCodeAt(0));
-            }
-
-            const bytes = inflate(stream);
+            const bytes = inflate(base64.decode(zip));
             return new TextDecoder().decode(bytes);
         } catch (error) {
             console.log("Unable to load code from URL.", error);
