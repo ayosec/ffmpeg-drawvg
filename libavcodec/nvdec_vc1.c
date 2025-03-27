@@ -29,7 +29,9 @@
 #include "decode.h"
 #include "vc1.h"
 
-static int nvdec_vc1_start_frame(AVCodecContext *avctx, const uint8_t *buffer, uint32_t size)
+static int nvdec_vc1_start_frame(AVCodecContext *avctx,
+                                 const AVBufferRef *buffer_ref,
+                                 const uint8_t *buffer, uint32_t size)
 {
     VC1Context *v = avctx->priv_data;
     MpegEncContext *s = &v->s;
@@ -84,7 +86,7 @@ static int nvdec_vc1_start_frame(AVCodecContext *avctx, const uint8_t *buffer, u
             .multires          = v->multires,
             .syncmarker        = v->resync_marker,
             .rangered          = v->rangered,
-            .maxbframes        = s->max_b_frames,
+            .maxbframes        = v->max_b_frames,
 
             .panscan_flag      = v->panscanflag,
             .refdist_flag      = v->refdist_flag,

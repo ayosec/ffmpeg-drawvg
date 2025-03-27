@@ -1507,7 +1507,6 @@ static int opt_adrift_threshold(void *optctx, const char *opt, const char *arg)
 }
 #endif
 
-static const char *const alt_bsf[]            = { "absf", "vbsf", NULL };
 static const char *const alt_channel_layout[] = { "ch_layout", NULL};
 static const char *const alt_codec[]          = { "c", "acodec", "vcodec", "scodec", "dcodec", NULL };
 static const char *const alt_filter[]         = { "af", "vf", NULL };
@@ -1719,6 +1718,9 @@ const OptionDef options[] = {
     { "reinit_filter",          OPT_TYPE_INT, OPT_PERSTREAM | OPT_INPUT | OPT_EXPERT,
         { .off = OFFSET(reinit_filters) },
         "reinit filtergraph on input parameter changes", "" },
+    { "drop_changed",          OPT_TYPE_INT, OPT_PERSTREAM | OPT_INPUT | OPT_EXPERT,
+        { .off = OFFSET(drop_changed) },
+        "drop frame instead of reiniting filtergraph on input parameter changes", "" },
     { "filter_complex",         OPT_TYPE_FUNC, OPT_FUNC_ARG | OPT_EXPERT,
         { .func_arg = opt_filter_complex },
         "create a complex filtergraph", "graph_description" },

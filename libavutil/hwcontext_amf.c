@@ -111,6 +111,8 @@ const FormatMap format_map[] =
     { AV_PIX_FMT_YUV420P,       AMF_SURFACE_YUV420P },
     { AV_PIX_FMT_YUYV422,       AMF_SURFACE_YUY2 },
     { AV_PIX_FMT_P010,          AMF_SURFACE_P010 },
+    { AV_PIX_FMT_X2BGR10,       AMF_SURFACE_R10G10B10A2 },
+    { AV_PIX_FMT_RGBAF16,       AMF_SURFACE_RGBA_F16},
 };
 
 enum AMF_SURFACE_FORMAT av_av_to_amf_format(enum AVPixelFormat fmt)
@@ -275,6 +277,9 @@ static int amf_transfer_data_to(AVHWFramesContext *ctx, AVFrame *dst,
     int w = FFMIN(dst->width,  src->width);
     int h = FFMIN(dst->height, src->height);
 
+    if (dst->hw_frames_ctx->data != (uint8_t *)ctx || src->format != ctx->sw_format)
+        return AVERROR(EINVAL);
+
     if (!surface) {
         AVHWDeviceContext   *hwdev_ctx = ctx->device_ctx;
         AVAMFDeviceContext  *amf_device_ctx = (AVAMFDeviceContext *)hwdev_ctx->hwctx;
@@ -316,6 +321,9 @@ static int amf_transfer_data_from(AVHWFramesContext *ctx, AVFrame *dst,
     int w = FFMIN(dst->width,  src->width);
     int h = FFMIN(dst->height, src->height);
     int ret;
+
+    if (src->hw_frames_ctx->data != (uint8_t *)ctx || dst->format != ctx->sw_format)
+        return AVERROR(EINVAL);
 
     ret = surface->pVtbl->Convert(surface, AMF_MEMORY_HOST);
     AMF_RETURN_IF_FALSE(ctx, ret == AMF_OK, AVERROR_UNKNOWN, "Convert(amf::AMF_MEMORY_HOST) failed with error %d\n", AVERROR_UNKNOWN);
