@@ -689,10 +689,11 @@ static int vgs_parse_numeric_argument(
         return ret;
 
     // Convert the lexeme to a NUL-terminated string.
-    if (token.length + 1 < sizeof(stack_buf))
+    if (token.length + 1 < sizeof(stack_buf)) {
         lexeme = stack_buf;
-    else
+    } else {
         lexeme = av_malloc(token.length + 1);
+    }
 
     memcpy(lexeme, token.lexeme, token.length);
     lexeme[token.length] = '\0';
@@ -2052,10 +2053,11 @@ static int vgs_eval(
 
             num = cairo_get_dash_count(state->cairo_ctx);
 
-            if (num + 1 < FF_ARRAY_ELEMS(stack_buf))
+            if (num + 1 < FF_ARRAY_ELEMS(stack_buf)) {
                 dashes = stack_buf;
-            else
+            } else {
                 dashes = av_calloc(num + 1, sizeof(double));
+            }
 
             cairo_get_dash(state->cairo_ctx, dashes, &offset);
 
@@ -2176,10 +2178,11 @@ static int vgs_eval(
         // Reflected control points will be discarded if the executed
         // instruction did not update them, and it is a instruction
         // to modify the path.
-        if (state->rcp.status == RCP_UPDATED)
+        if (state->rcp.status == RCP_UPDATED) {
             state->rcp.status = RCP_VALID;
-        else if (vgs_inst_change_path(statement->inst))
+        } else if (vgs_inst_change_path(statement->inst)) {
             state->rcp.status = RCP_NONE;
+        }
     }
 
     return 0;
