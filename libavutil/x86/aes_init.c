@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2015 Rodger Combs <rodger.combs@gmail.com>
+ *
  * This file is part of FFmpeg.
  *
  * FFmpeg is free software; you can redistribute it and/or
@@ -16,22 +18,19 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#ifndef AVUTIL_DICT_INTERNAL_H
-#define AVUTIL_DICT_INTERNAL_H
+#include <stddef.h>
+#include "libavutil/aes_internal.h"
+#include "libavutil/x86/cpu.h"
 
-#include <stdint.h>
+void ff_aes_decrypt_aesni(AVAES *a, uint8_t *dst, const uint8_t *src,
+                          int count, uint8_t *iv, int rounds);
+void ff_aes_encrypt_aesni(AVAES *a, uint8_t *dst, const uint8_t *src,
+                          int count, uint8_t *iv, int rounds);
 
-#include "dict.h"
+void ff_init_aes_x86(AVAES *a, int decrypt)
+{
+    int cpu_flags = av_get_cpu_flags();
 
-/**
- * Set a dictionary value to an ISO-8601 compliant timestamp string.
- *
- * @param dict pointer to a pointer to a dictionary struct. If *dict is NULL
- *             a dictionary struct is allocated and put in *dict.
- * @param key metadata key
- * @param timestamp unix timestamp in microseconds
- * @return <0 on error
- */
-int avpriv_dict_set_timestamp(AVDictionary **dict, const char *key, int64_t timestamp);
-
-#endif /* AVUTIL_DICT_INTERNAL_H */
+    if (EXTERNAL_AESNI(cpu_flags))
+        a->crypt = decrypt ? ff_aes_decrypt_aesni : ff_aes_encrypt_aesni;
+}
