@@ -213,6 +213,8 @@ static void check_sorted_instructions(void) {
 static void check_script(int is_file, const char* source) {
     int ret;
 
+    AVDictionary *metadata;
+
     struct VGSEvalState state;
     struct VGSParser parser;
     struct VGSProgram program;
@@ -233,6 +235,9 @@ static void check_script(int is_file, const char* source) {
         printf("\n--- %s: %s\n", __func__, source);
     }
 
+    ret = av_dict_parse_string(&metadata, "m.a=1:m.b=2", "=", ":", 0);
+    av_assert0(ret == 0);
+
     vgs_parser_init(&parser, source);
 
     ret = vgs_parse(NULL, &parser, &program, 0);
@@ -252,14 +257,17 @@ static void check_script(int is_file, const char* source) {
         goto exit;
     }
 
+    state.metadata = metadata;
+
     ret = vgs_eval(&state, &program);
     vgs_eval_state_free(&state);
 
-    if (ret != 0) {
+    if (ret != 0)
         printf("%s: vgs_eval = %d\n", __func__, ret);
-    }
 
 exit:
+    av_dict_free(&metadata);
+
     if (is_file)
         av_free((void*)source);
 

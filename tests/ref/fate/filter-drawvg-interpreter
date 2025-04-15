@@ -56,6 +56,8 @@ cairo_set_dash [ -1.0 ] 4.0
 cairo_set_dash [ ] 0.0
 cairo_move_to 1.0 2.0
 cairo_rel_line_to -1.0 -2.0
+cairo_rel_line_to 1.0 3.0
+cairo_rel_line_to nan 0.0
 
 --- check_script: M 0 (1*(t+1)
 av_log[16]: Invalid token '(' at line 1, column 5: Unmatched parenthesis.

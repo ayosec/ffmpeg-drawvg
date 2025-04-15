@@ -112,6 +112,7 @@ enum VGSInstruction {
     INS_ELLIPSE,                ///<  ellipse (cx cy rx ry)
     INS_FILL,                   ///<  fill
     INS_FILL_EO,                ///<  eofill
+    INS_GET_METADATA,           ///<  getmetadata varname key
     INS_HORZ,                   ///<  H (x)
     INS_HORZ_REL,               ///<  h (dx)
     INS_IF,                     ///<  if (condition) { subprogram }
@@ -122,12 +123,12 @@ enum VGSInstruction {
     INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
     INS_NEW_PATH,               ///<  newpath
     INS_PRINT,                  ///<  print (expr)
+    INS_PROC1_ASSIGN,           ///<  proc1 name varname { subprogram }
+    INS_PROC1_CALL,             ///<  call1 name (arg)
+    INS_PROC2_ASSIGN,           ///<  proc2 name varname1 varname2 { subprogram }
+    INS_PROC2_CALL,             ///<  call2 name (arg1 arg2)
     INS_PROC_ASSIGN,            ///<  proc name { subprogram }
     INS_PROC_CALL,              ///<  call name
-    INS_PROC1_ASSIGN,           ///<  proc1 name varname { subprogram }
-    INS_PROC1_CALL,             ///<  call1 name arg
-    INS_PROC2_ASSIGN,           ///<  proc2 name varname1 varname2 { subprogram }
-    INS_PROC2_CALL,             ///<  call2 name arg1 arg2
     INS_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
     INS_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
     INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
@@ -191,6 +192,7 @@ struct VGSParameter {
         PARAM_NUMERIC,
         PARAM_NUMERIC_METADATA,
         PARAM_PROC_NAME,
+        PARAM_RAW_IDENT,
         PARAM_SUBPROGRAM,
         PARAM_VARIADIC,
         PARAM_VAR_NAME,
@@ -247,6 +249,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_CLIP_EO,          "eoclip",         NONE },
     { INS_FILL_EO,          "eofill",         NONE },
     { INS_FILL,             "fill",           NONE },
+    { INS_GET_METADATA,     "getmetadata",    L(V, { PARAM_RAW_IDENT }) },
     { INS_HORZ_REL,         "h",              R(N) },
     { INS_IF,               "if",             L(N, P) },
     { INS_LINE_TO_REL,      "l",              R(N, N) },
@@ -352,15 +355,16 @@ static int vgs_inst_change_path(enum VGSInstruction inst) {
     case INS_BREAK:
     case INS_COLOR_STOP:
     case INS_COLOR_STOP_RGBA:
+    case INS_GET_METADATA:
     case INS_IF:
     case INS_LINEAR_GRAD:
     case INS_PRINT:
-    case INS_PROC_ASSIGN:
-    case INS_PROC_CALL:
     case INS_PROC1_ASSIGN:
     case INS_PROC1_CALL:
     case INS_PROC2_ASSIGN:
     case INS_PROC2_CALL:
+    case INS_PROC_ASSIGN:
+    case INS_PROC_CALL:
     case INS_RADIAL_GRAD:
     case INS_REPEAT:
     case INS_RESET_DASH:
@@ -588,6 +592,7 @@ struct VGSArgument {
         ARG_CONST,
         ARG_EXPR,
         ARG_LITERAL,
+        ARG_METADATA,
         ARG_PROCEDURE_ID,
         ARG_SUBPROGRAM,
         ARG_VARIABLE,
@@ -701,7 +706,7 @@ static int vgs_parse_numeric_argument(
     switch (token.type) {
     case TOKEN_LITERAL:
         arg->type = ARG_LITERAL;
-        arg->literal = strtod(lexeme, &endp);
+        arg->literal = av_strtod(lexeme, &endp);
 
         if (*endp != '\0') {
             vgs_log_invalid_token(log_ctx, parser, &token, "Expected valid number.");
@@ -1006,6 +1011,26 @@ static int vgs_parse_statement(
             break;
         }
 
+
+        case PARAM_RAW_IDENT:
+            ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
+            if (ret != 0)
+                FAIL(EINVAL);
+
+            switch (token.type) {
+            case TOKEN_LITERAL:
+            case TOKEN_WORD:
+                arg.type = ARG_METADATA;
+                arg.metadata = av_strndup(token.lexeme, token.length);
+                break;
+
+            default:
+                vgs_log_invalid_token(log_ctx, parser, &token, "Expected '{'.");
+                FAIL(EINVAL);
+            }
+
+            break;
+
         case PARAM_SUBPROGRAM:
             ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
             if (ret != 0)
@@ -1227,6 +1252,9 @@ struct VGSEvalState {
 
     /// State for each index available for the `randomg` function.
     FFSFC64 random_state[RANDOM_STATES];
+
+    /// Frame metadata, if any.
+    AVDictionary *metadata;
 
     // Reflected Control Points. Used in T and S instructions.
     //
@@ -1759,6 +1787,38 @@ static int vgs_eval(
 
             cairo_fill(state->cairo_ctx);
             break;
+
+        case INS_GET_METADATA: {
+            int user_var;
+            char *key, *endp;
+
+            double value;
+
+            AVDictionaryEntry* entry;
+
+            ASSERT_ARGS(2);
+
+            user_var = statement->args[0].constant;
+            key = statement->args[1].metadata;
+
+            value = NAN;
+
+            av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
+
+            if (state->metadata != NULL && key != NULL) {
+                entry = av_dict_get(state->metadata, key, NULL, 0);
+
+                if (entry != NULL) {
+                    value = av_strtod(entry->value, &endp);
+
+                    if (*endp != '\0')
+                        value = NAN;
+                }
+            }
+
+            state->vars[user_var] = value;
+            break;
+        }
 
         case INS_BREAK:
             state->interrupted = 1;
@@ -2297,6 +2357,8 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     eval_state.vars[VAR_W] = inlink->w;
     eval_state.vars[VAR_H] = inlink->h;
     eval_state.vars[VAR_DURATION] = frame->duration * av_q2d(inlink->time_base);
+
+    eval_state.metadata = frame->metadata;
 
     ret = vgs_eval(&eval_state, &drawvg_ctx->program);
 
