@@ -437,7 +437,9 @@ Advanced options (experts only):
   --enable-hardcoded-tables use hardcoded tables instead of runtime generation
   --disable-safe-bitstream-reader
                            disable buffer boundary checking in bitreaders
-                           (faster, but may crash)
+                           (This disables some security checks and can cause undefined behavior,
+                            crashes and arbitrary code execution, it may be faster, but
+                            should only be used with trusted input)
   --sws-max-filter-size=N  the max filter size swscale uses [$sws_max_filter_size_default]
 
 Optimization options (experts only):
@@ -2562,6 +2564,7 @@ CONFIG_EXTRA="
     bswapdsp
     cabac
     cbs
+    cbs_apv
     cbs_av1
     cbs_h264
     cbs_h265
@@ -2934,6 +2937,7 @@ apng_decoder_select="inflate_wrapper"
 apng_encoder_select="deflate_wrapper llvidencdsp"
 aptx_encoder_select="audio_frame_queue"
 aptx_hd_encoder_select="audio_frame_queue"
+apv_decoder_select="cbs_apv"
 asv1_decoder_select="blockdsp bswapdsp idctdsp"
 asv1_encoder_select="aandcttables bswapdsp fdctdsp pixblockdsp"
 asv2_decoder_select="blockdsp bswapdsp idctdsp"
