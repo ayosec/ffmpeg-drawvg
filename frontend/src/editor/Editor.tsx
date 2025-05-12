@@ -4,11 +4,13 @@ import { BsTextIndentLeft } from "react-icons/bs";
 import { FaKeyboard } from "react-icons/fa";
 import { FaRegFolderOpen } from "react-icons/fa6";
 import { IoLibrary, IoShareSocial } from "react-icons/io5";
+import { MdOutlineHelp } from "react-icons/md";
 
 import * as CompImpl from "./completion.impl";
 import Completion from "./Completion";
 import ExampleGallery from "../gallery/ExampleGallery";
 import Files from "./Files";
+import Help from "../base/Help";
 import Highlights from "./Highlights";
 import IconButton from "../base/IconButton";
 import KeyboardShortcuts from "../base/KeyboardShortcuts";
@@ -51,6 +53,8 @@ export default function Editor({ autoFocus }: Props) {
     const [ keyboardShortcuts, setKeyboardShortcuts ] = useState(false);
 
     const [ exampleGallery, setExampleGallery ] = useState(false);
+
+    const [ help, setHelp ] = useState(false);
 
     const [ completion, setCompletion ] = useState<CompImpl.Props|null>();
 
@@ -169,7 +173,11 @@ export default function Editor({ autoFocus }: Props) {
                     }
 
                     { exampleGallery &&
-                        <ExampleGallery onClose={() => setExampleGallery(false)}  />
+                        <ExampleGallery onClose={() => setExampleGallery(false)} />
+                    }
+
+                    { help &&
+                        <Help onClose={() => setHelp(false)} />
                     }
                 </div>
 
@@ -198,6 +206,13 @@ export default function Editor({ autoFocus }: Props) {
                         label="Keyboard Shortcuts"
                         shortcut="ctrl-k"
                         onClick={() => setKeyboardShortcuts(!keyboardShortcuts)}
+                    />
+
+                    <IconButton
+                        Icon={MdOutlineHelp}
+                        label="Help"
+                        shortcut="ctrl-h"
+                        onClick={() => setHelp(!help)}
                     />
                 </div>
             </div>

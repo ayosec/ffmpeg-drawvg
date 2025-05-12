@@ -75,7 +75,7 @@ function Shortcut({ keys, label }: KeyShortcut ) {
             <td className="kb-shortcut" style={{textAlign: "left"}}>
                 { keys
                     .split("-")
-                    .map((k, i) => <span key={i}>{` ${KEY_NAMES[k] ?? k}`}</span>)
+                    .map((k, i) => <span key={i}>{`${KEY_NAMES[k] ?? k}`}</span>)
                 }
             </td>
         </tr>

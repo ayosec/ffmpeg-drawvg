@@ -88,6 +88,33 @@ html, body, #root {
     }
 }
 
+.block-link {
+    display: block;
+    border: 1.5px solid;
+    color: light-dark(#333, #eee);
+    text-decoration: none;
+    padding: 0.5ch 1ch;
+    margin-bottom: 2ch;
+
+    outline: 0;
+
+    &:focus, &:hover {
+        color: light-dark(#44f, #ddf);
+        background: light-dark(#fff, #000);
+    }
+
+    span.label {
+        display: block;
+        margin-bottom: 0.5ch;
+        font-weight: bold;
+        font-size: 110%;
+    }
+
+    span.desc {
+        font-size: 90%;
+    }
+}
+
 body:has([aria-label]:hover) .tooltip-floating-box {
     display: unset;
 }
