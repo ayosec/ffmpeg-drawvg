@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import ModalWindow from "./ModalWindow";
 
 import styles from "../base/dialog.module.css";
 
@@ -20,39 +20,15 @@ export const DOCS = {
 } as const;
 
 export default function Help({ onClose }: Props) {
-    const dialogRef = useRef<HTMLDialogElement>(null);
-
-    useEffect(() => {
-        const dialog = dialogRef.current;
-        if (dialog === null)
-            return;
-
-        dialog.showModal();
-        dialog.querySelector<HTMLButtonElement>("button:last-child")?.focus();
-    }, []);
-
     return (
-        <dialog
-            ref={dialogRef}
-            className={styles.modal}
-            onClose={onClose}
-        >
+        <ModalWindow title="Help" onClose={onClose}>
+            <HelpItem {...DOCS.Language} />
+            <HelpItem {...DOCS.Playground} />
 
-            <div className={styles.mainLayout}>
-                <div className={styles.front}>
-                    <h1>Help</h1>
-                </div>
-
-                <div className={styles.content}>
-                    <HelpItem {...DOCS.Language} />
-                    <HelpItem {...DOCS.Playground} />
-
-                    <div className={styles.actions}>
-                        <button className={styles.close} onClick={onClose}>Close</button>
-                    </div>
-                </div>
+            <div className={styles.actions}>
+                <button className={styles.close} onClick={onClose}>Close</button>
             </div>
-        </dialog>
+        </ModalWindow>
     );
 }
 

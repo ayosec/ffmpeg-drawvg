@@ -1,6 +1,7 @@
 import { DeflateOptions, deflate } from "pako";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import ModalWindow from "../base/ModalWindow";
 import base64 from "../utils/base64";
 
 import styles from "../base/dialog.module.css";
@@ -36,8 +37,6 @@ function makeHash(name: string, source: string) {
 }
 
 export default function Share({ name, source, onClose }: Props) {
-    const dialogRef = useRef<HTMLDialogElement>(null);
-
     const inputRef = useRef<HTMLInputElement>(null);
 
     const [ copyFinished, setCopyFinished ] = useState(false);
@@ -48,15 +47,6 @@ export default function Share({ name, source, onClose }: Props) {
         url.hash = "gzip=" + encodeURIComponent(hash);
         return url.toString();
     }, [ name, source ]);
-
-    useEffect(() => {
-        const dialog = dialogRef.current;
-        if (dialog === null)
-            return;
-
-        dialog.showModal();
-        dialog.querySelector<HTMLButtonElement>("button:last-child")?.focus();
-    }, []);
 
     useEffect(() => {
         if (copyFinished)
@@ -84,39 +74,25 @@ export default function Share({ name, source, onClose }: Props) {
     }, [ copyFinished, shareURL ]);
 
     return (
-        <dialog
-            ref={dialogRef}
-            className={styles.modal}
-            onClose={onClose}
-        >
-            <div className={styles.mainLayout}>
-                <div className={styles.front}>
-                    <h1>Share</h1>
-                </div>
+        <ModalWindow title="Share" onClose={onClose}>
+            Use this URL to share the current script:
 
-                <div className={styles.content}>
-                    Use this URL to share the current script:
+            <input
+                ref={inputRef}
+                className={editorStyles.shareWidget}
+                readOnly={true}
+                defaultValue={shareURL}
+            />
 
-                    <input
-                        ref={inputRef}
-                        className={editorStyles.shareWidget}
-                        readOnly={true}
-                        defaultValue={shareURL}
-                    />
+            <div className={styles.actions}>
+                <button className={styles.close} onClick={onClose}>Close</button>
 
-                    <div className={styles.actions}>
-                        <button className={styles.close} onClick={onClose}>Close</button>
-
-                        { navigator.clipboard &&
-                            <button onClick={copyHandler}>
-                                { copyFinished ? "Copied!" : "Copy" }
-                            </button>
-                        }
-                    </div>
-
-                </div>
+                { navigator.clipboard &&
+                    <button onClick={copyHandler}>
+                        { copyFinished ? "Copied!" : "Copy" }
+                    </button>
+                }
             </div>
-
-        </dialog>
+        </ModalWindow>
     );
 }

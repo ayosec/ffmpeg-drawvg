@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { FaUndo } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoArchive, IoSave } from "react-icons/io5";
 
 import IconButton from "../base/IconButton";
+import ModalWindow from "../base/ModalWindow";
 import ZipFile from "../utils/zipfiles";
 import useCurrentProgram from "../currentProgram";
 import { downloadBlob } from "../utils/blobs";
@@ -37,8 +38,6 @@ export default function Files({ onClose }: Props) {
     const fileNames = useCurrentProgram(s => s.fileNames);
     const selectFile = useCurrentProgram(s => s.selectFile);
 
-    const dialogRef = useRef<HTMLDialogElement>(null);
-
     const fileAccepted = useRef(false);
 
     const initialFileName = useRef<string|null|undefined>(undefined);
@@ -48,15 +47,6 @@ export default function Files({ onClose }: Props) {
     const [ newFileName, setNewFileName ] = useState("");
 
     const [ removeUndoHistory, setRemoveUndoHistory ] = useState<LastRemovedFile[]>([]);
-
-    useEffect(() => {
-        const dialog = dialogRef.current;
-        if (dialog === null)
-            return;
-
-        dialog.showModal();
-        dialog.querySelector<HTMLElement>("[tabindex]")?.focus();
-    }, []);
 
     if (initialFileName.current === undefined) {
         initialFileName.current = useCurrentProgram.getState().activeFileName;
@@ -121,137 +111,124 @@ export default function Files({ onClose }: Props) {
     const showNewFile = newFile || newFileAction === NewFileAction.Init;
 
     return (
-        <dialog
-            ref={dialogRef}
-            className={styles.modal}
-            onClose={closeDialog}
-        >
-            <div className={styles.mainLayout}>
-                <div className={styles.front}>
-                    <h1>Saved Files</h1>
-                </div>
-
-                <div className={styles.content}>
-                    { !showNewFile &&
-                        <>
-                            <div className={styles.topBar}>
-                                <div>
-                                    <IconButton
-                                        Icon={IoSave}
-                                        label={
-                                            newFileAction === NewFileAction.CreateNew
-                                                ? "Create a New File"
-                                                : "Save Current Script"
-                                        }
-                                        onClick={() => {
-                                            if (newFileAction == NewFileAction.CreateNew)
-                                                useCurrentProgram.getState().setSource("", "");
-                                            else if (initialFileName.current !== undefined)
-                                                selectFile(initialFileName.current);
-
-                                            setNewFile(true);
-                                        }}
-                                    />
-
-                                    <IconButton
-                                        Icon={IoArchive}
-                                        label="Download as a ZIP Archive"
-                                        onClick={dowloadZip}
-                                    />
-                                </div>
-
-                                <div>
-                                    { removeUndoHistory.length > 0 &&
-                                        <IconButton
-                                            Icon={FaUndo}
-                                            label="Restore Removed File"
-                                            onClick={() => {
-                                                const lrf = removeUndoHistory[0];
-                                                if (!lrf)
-                                                    return;
-
-                                                const state = useCurrentProgram.getState();
-                                                state.saveNewFile(lrf.name, lrf.source);
-                                                state.selectFile(lrf.name);
-
-                                                setRemoveUndoHistory(removeUndoHistory.slice(1));
-                                            }}
-                                        />
-                                    }
-                                </div>
-                            </div>
-
-                            <div
-                                tabIndex={0}
-                                className={styles.fileSavesList}
-                                onKeyDown={onKeyDownList}
-
-                            >
-                                { fileNames.map(name =>
-                                    <Entry
-                                        key={name}
-                                        name={name}
-                                        onAccept={acceptFile}
-                                        onDelete={() => {
-                                            const state = useCurrentProgram.getState();
-
-                                            const source = state.getSource(name);
-                                            if (source) {
-                                                setRemoveUndoHistory([
-                                                    { name, source },
-                                                    ...removeUndoHistory,
-                                                ]);
-                                            }
-
-                                            state.deleteFile(name);
-                                        }}
-                                    />)
+        <ModalWindow title="Saved Files" firstFocus="[tabindex]" onClose={closeDialog}>
+            { !showNewFile &&
+                <>
+                    <div className={styles.topBar}>
+                        <div>
+                            <IconButton
+                                Icon={IoSave}
+                                label={
+                                    newFileAction === NewFileAction.CreateNew
+                                        ? "Create a New File"
+                                        : "Save Current Script"
                                 }
-                            </div>
-                        </>
-                    }
+                                onClick={() => {
+                                    if (newFileAction == NewFileAction.CreateNew)
+                                        useCurrentProgram.getState().setSource("", "");
+                                    else if (initialFileName.current !== undefined)
+                                        selectFile(initialFileName.current);
 
-                    { showNewFile &&
-                        <div className={styles.fileSavesNew}>
-                            <div className={styles.help}>
-                                <SaveFileHelp action={newFileAction} />
-                            </div>
-
-                            <input
-                                type="text"
-                                tabIndex={0}
-                                autoFocus={true}
-                                placeholder="Name"
-                                value={newFileName}
-                                onChange={e => setNewFileName(e.target.value)}
-                                onKeyDown={e => {
-                                    if (e.key == "Enter" && newFileName !== "")
-                                        saveNewFile();
+                                    setNewFile(true);
                                 }}
                             />
+
+                            <IconButton
+                                Icon={IoArchive}
+                                label="Download as a ZIP Archive"
+                                onClick={dowloadZip}
+                            />
                         </div>
-                    }
 
-                    <div className={styles.actions}>
                         <div>
-                            <button className={styles.close} onClick={closeDialog}>
-                                { showNewFile ? "Cancel" : "Close" }
-                            </button>
+                            { removeUndoHistory.length > 0 &&
+                                <IconButton
+                                    Icon={FaUndo}
+                                    label="Restore Removed File"
+                                    onClick={() => {
+                                        const lrf = removeUndoHistory[0];
+                                        if (!lrf)
+                                            return;
 
-                            { activeFileName !== initialFileName.current
-                                && !showNewFile
-                                && <button onClick={() => acceptFile()}>Open</button>
-                            }
+                                        const state = useCurrentProgram.getState();
+                                        state.saveNewFile(lrf.name, lrf.source);
+                                        state.selectFile(lrf.name);
 
-                            { showNewFile
-                                && <button disabled={newFileName === ""} onClick={saveNewFile}>Save</button>
+                                        setRemoveUndoHistory(removeUndoHistory.slice(1));
+                                    }}
+                                />
                             }
                         </div>
                     </div>
+
+                    <div
+                        tabIndex={0}
+                        className={styles.fileSavesList}
+                        onKeyDown={onKeyDownList}
+
+                    >
+                        { fileNames.map(name =>
+                            <Entry
+                                key={name}
+                                name={name}
+                                onAccept={acceptFile}
+                                onDelete={() => {
+                                    const state = useCurrentProgram.getState();
+
+                                    const source = state.getSource(name);
+                                    if (source) {
+                                        setRemoveUndoHistory([
+                                            { name, source },
+                                            ...removeUndoHistory,
+                                        ]);
+                                    }
+
+                                    state.deleteFile(name);
+                                }}
+                            />)
+                        }
+                    </div>
+                </>
+            }
+
+            { showNewFile &&
+                <div className={styles.fileSavesNew}>
+                    <div className={styles.help}>
+                        <SaveFileHelp action={newFileAction} />
+                    </div>
+
+                    <input
+                        type="text"
+                        tabIndex={0}
+                        autoFocus={true}
+                        placeholder="Name"
+                        value={newFileName}
+                        onChange={e => setNewFileName(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key == "Enter" && newFileName !== "")
+                                saveNewFile();
+                        }}
+                    />
+                </div>
+            }
+
+            <div className={styles.actions}>
+                <div>
+                    <button className={styles.close} onClick={closeDialog}>
+                        { showNewFile ? "Cancel" : "Close" }
+                    </button>
+
+                    { activeFileName !== initialFileName.current
+                        && !showNewFile
+                        && <button onClick={() => acceptFile()}>Open</button>
+                    }
+
+                    { showNewFile
+                        && <button disabled={newFileName === ""} onClick={saveNewFile}>Save</button>
+                    }
                 </div>
             </div>
-
-        </dialog>
+        </ModalWindow>
     );
 }
 

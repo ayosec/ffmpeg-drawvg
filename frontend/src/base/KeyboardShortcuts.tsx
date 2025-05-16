@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 
+import ModalWindow from "./ModalWindow";
 import { KEY_NAMES } from "./tooltips";
 
 import styles from "../base/dialog.module.css";
@@ -14,8 +15,6 @@ interface KeyShortcut {
 }
 
 export default function KeyboardShortcuts({ onClose }: Props) {
-    const dialogRef = useRef<HTMLDialogElement>(null);
-
     const shortcuts = useMemo(() => {
         const shortcuts: KeyShortcut[] = [];
         for (const el of document.body.querySelectorAll<HTMLElement>("button[data-shortcut]")) {
@@ -31,40 +30,18 @@ export default function KeyboardShortcuts({ onClose }: Props) {
         return shortcuts;
     }, []);
 
-    useEffect(() => {
-        const dialog = dialogRef.current;
-        if (dialog === null)
-            return;
-
-        dialog.showModal();
-        dialog.querySelector<HTMLButtonElement>("button:last-child")?.focus();
-    }, []);
-
     return (
-        <dialog
-            ref={dialogRef}
-            className={styles.modal}
-            onClose={onClose}
-        >
-            <div className={styles.mainLayout}>
-                <div className={styles.front}>
-                    <h1>Keyboard<br />Shortcuts</h1>
-                </div>
+        <ModalWindow title={<h1>Keyboard<br />Shortcuts</h1>} onClose={onClose}>
+            <table>
+                <tbody>
+                    { shortcuts.map(s => <Shortcut key={s.keys} {...s} />) }
+                </tbody>
+            </table>
 
-
-                <div className={styles.content}>
-                    <table>
-                        <tbody>
-                            { shortcuts.map(s => <Shortcut key={s.keys} {...s} />) }
-                        </tbody>
-                    </table>
-
-                    <div className={styles.actions}>
-                        <button className={styles.close} onClick={onClose}>Close</button>
-                    </div>
-                </div>
+            <div className={styles.actions}>
+                <button className={styles.close} onClick={onClose}>Close</button>
             </div>
-        </dialog>
+        </ModalWindow>
     );
 }
 

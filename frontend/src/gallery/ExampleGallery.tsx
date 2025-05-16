@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import Backend from "../backend";
+import ModalWindow from "../base/ModalWindow";
 import useAppLayout, { Layout } from "../base/layout";
 import useCurrentProgram from "../currentProgram";
 
@@ -36,7 +37,7 @@ interface Props {
 };
 
 export default function ExampleGallery({ onClose }: Props) {
-    const dialogRef = useRef<HTMLDialogElement>(null);
+    const windowRef = useRef<HTMLDivElement>(null);
 
     const layout = useAppLayout(s => s.layout);
 
@@ -53,31 +54,23 @@ export default function ExampleGallery({ onClose }: Props) {
 
     const [ selectedItem, setSelectedItem ] = useState(0);
 
-    useEffect(
-        () => {
-            const dialog = dialogRef.current;
-            if (dialog === null)
-                return;
-
-            dialog.showModal();
-
-            return () => {
-                if (renderGroupRef.current !== null) {
-                    renderGroupRef.current.terminate();
-                    renderGroupRef.current = null;
-                }
-            };
-        },
-        [],
-    );
+    useEffect(() => {
+        // Stop workers when dialog is closed.
+        return () => {
+            if (renderGroupRef.current !== null) {
+                renderGroupRef.current.terminate();
+                renderGroupRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(() => {
-        const dialog = dialogRef.current;
+        const win = windowRef.current;
 
-        if (dialog === null)
+        if (win === null)
             return;
 
-        const selected = dialog.getElementsByClassName(galleryStyles.selected)[0];
+        const selected = win.getElementsByClassName(galleryStyles.selected)[0];
         if (selected instanceof HTMLElement)
             selected.focus();
     }, [ selectedItem ]);
@@ -174,28 +167,18 @@ export default function ExampleGallery({ onClose }: Props) {
     }
 
     return (
-        <dialog
-            ref={dialogRef}
-            className={styles.modal}
-            onClose={onClose}
-        >
-            <div className={styles.mainLayout}>
-                <div className={styles.front}>
-                    <h1>Example<br />Gallery</h1>
+        <div ref={windowRef}>
+            <ModalWindow title={<h1>Example<br />Gallery</h1>} onClose={onClose}>
+                <div className={galleryStyles.preview}>
+                    {gridRows}
                 </div>
 
-                <div className={styles.content}>
-                    <div className={galleryStyles.preview}>
-                        {gridRows}
-                    </div>
-
-                    <div className={styles.actions}>
-                        <button className={styles.close} onClick={onClose}>Close</button>
-                        <button onClick={() => openSelection(selectedItem)}>Open</button>
-                    </div>
+                <div className={styles.actions}>
+                    <button className={styles.close} onClick={onClose}>Close</button>
+                    <button onClick={() => openSelection(selectedItem)}>Open</button>
                 </div>
-            </div>
-        </dialog>
+            </ModalWindow>
+        </div>
     );
 }
 
