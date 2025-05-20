@@ -7,6 +7,8 @@ import postcssUrl from "postcss-url";
 
 import React from "react";
 
+import { themeURL } from "./highlight";
+
 interface Props {
     title: string;
     children: React.ReactNode;
@@ -35,7 +37,11 @@ export default function HtmlFile({ title, children }: Props) {
                 <meta charSet="UTF-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>{`FFmpeg - drawvg - ${title}`}</title>
+
                 <style>{CSS}</style>
+
+                <link rel="stylesheet" media="not (prefers-color-scheme: dark)" href={themeURL(false)} />
+                <link rel="stylesheet" media="(prefers-color-scheme: dark)" href={themeURL(true)} />
             </head>
             <body>
                 {children}

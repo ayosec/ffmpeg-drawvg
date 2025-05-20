@@ -103,12 +103,12 @@ section {
         border-radius: 5px;
     }
 
-    pre {
-        padding: 1ex;
+    code.hljs {
+        border: 5px solid var(--theme-code-bg);
         border-radius: 1ex;
     }
 
-    pre, :not(pre) > code {
+    :not(pre) > code {
         color: var(--theme-code-fg);
         background: var(--theme-code-bg);
     }
@@ -137,6 +137,11 @@ a {
 
         color: var(--theme-bg);
         background: var(--theme-links);
+
+        code {
+            color: unset;
+            background: unset;
+        }
     }
 }
 

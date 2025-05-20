@@ -7,7 +7,7 @@
     "dev": "vite --host=0.0.0.0 --clearScreen=false",
     "build": "npm run build:app && npm run build:docs",
     "build:app": "tsc -b && vite build --base /playground/ --outDir node_modules/.dist/playground",
-    "build:docs": "env \"DEST=node_modules/.dist/playground/docs\" tsx docs/render.ts",
+    "build:docs": "env DEST=node_modules/.dist/playground/docs tsx --tsconfig docs/tsconfig.json docs/render.ts",
     "build-backend": "make -C ../backend -j all",
     "lint": "eslint .",
     "test": "vitest --clearScreen=false"
@@ -39,6 +39,7 @@
     "eslint-plugin-react-hooks": "5.0",
     "eslint-plugin-react-refresh": "0.4",
     "globals": "15.14",
+    "highlight.js": "^11.11.1",
     "postcss-nested": "^7.0.2",
     "postcss-url": "^10.1.3",
     "tsx": "^4.19.4",

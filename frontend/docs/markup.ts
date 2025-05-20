@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { Parser, HtmlRenderer, Node } from "commonmark";
 
+import highlight from "./highlight";
+
 export interface Header {
     level: number;
     linkName: string;
@@ -55,6 +57,10 @@ export default function renderMarkup(filename: string): MarkupDocument {
                     event.node.prependChild(link);
                 }
                 break;
+
+            case "code_block":
+                applyHighlight(event.node);
+                break;
         }
     }
 
@@ -63,4 +69,18 @@ export default function renderMarkup(filename: string): MarkupDocument {
         headers,
         html: htmlRenderer.render(nodes),
     };
+}
+
+function applyHighlight(node: Node) {
+    const { info, literal } = node;
+    if (info === null || literal === null)
+        return null;
+
+    const hl = highlight(info, literal.trimEnd());
+
+    const render = new Node("html_block");
+    render.literal = `<pre><code class="hljs">${hl}</code></pre>`
+
+    node.insertBefore(render);
+    node.unlink();
 }

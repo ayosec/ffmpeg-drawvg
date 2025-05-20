@@ -1,10 +1,80 @@
 # Language Reference
 
 This document is a draft to describe the language used by the drawvg filter. If
-the filter is accepted in FFmpeg, please refer to the official documentation in
+the filter is accepted into FFmpeg, please refer to the official documentation in
 <https://ffmpeg.org/documentation.html>.
 
+Internally, the language is known as VGS (*Vector Graphics Script*). In this
+document, the term *drawvg* always refers to the language.
+
+### Introduction
+
+The drawvg language it is not intended to be used as a general purpose language.
+Since its scope is very limited, it prioritizes being concise and easy to write.
+
+For example, using the [Canvas API] we can render a triangle running this code
+in a Web browser:
+
+[Canvas API]: https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API
+
+```javascript
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+ctx.lineWidth = 5;
+
+ctx.beginPath();
+ctx.moveTo(125, 50);
+ctx.lineTo(100, 100);
+ctx.lineTo(150, 100);
+ctx.closePath();
+ctx.stroke();
+```
+
+The same triangle can be written with this script:
+
+```vgs
+setlinewidth 5
+moveto 125 50
+lineto 100 100 150 100
+closepath
+stroke
+```
+
+It can be even shorter using the aliases for `moveto` and `lineto`, as explained
+below:
+
+```vgs
+setlinewidth 5
+M 125 50 L 100 100 150 100 Z
+stroke
+```
+
+Finally, one of the main advantages to use drawvg is to integrate it with
+FFmpeg. In this example, we are using [FFmpeg expressions][ffmpeg-expr] to
+create a triangle covering the whole frame:
+
+```vgs
+// Use `scalexy` to make the frame a 10x10 pixels area.
+// `w` and `h` are the real frame dimensions.
+scalexy (w / 10) (h / 10)
+
+// Draw over the 10x10 area.
+M 5 0
+L 10 10 0 10
+Z
+
+setlinewidth (20 / min(w, h))
+stroke
+```
+
 ## Syntax
+
+The syntax is heavily inspired by languages like [Magick Vector Graphics][MGV]
+and the [`<path>` SVG element][svg-path].
+
+[MGV]: https://imagemagick.org/script/magick-vector-graphics.php
+[svg-path]: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/path
 
 ### Structure
 
@@ -13,6 +83,7 @@ the filter is accepted in FFmpeg, please refer to the official documentation in
 ### Instructions
 
 * Fixed list of names.
+* Short aliases for instructions from SVG.
 * Number of arguments.
 * Some can repeat.
 
@@ -306,3 +377,6 @@ the filter is accepted in FFmpeg, please refer to the official documentation in
 
     v (dy)
 
+
+
+[ffmpeg-expr]: https://ffmpeg.org/ffmpeg-utils.html#Expression-Evaluation

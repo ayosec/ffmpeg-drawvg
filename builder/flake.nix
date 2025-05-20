@@ -33,7 +33,7 @@
           pkgs.jq
           pkgs.meson
           pkgs.ninja
-          pkgs.nodejs_22
+          pkgs.nodejs_20
           pkgs.pkg-config
           pkgs.python3
           pkgs.typescript-language-server
