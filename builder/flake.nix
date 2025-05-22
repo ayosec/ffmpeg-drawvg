@@ -31,9 +31,11 @@
           pixman
           pkgs.ccls
           pkgs.jq
+          pkgs.libwebp
           pkgs.meson
           pkgs.ninja
           pkgs.nodejs_20
+          pkgs.optipng
           pkgs.pkg-config
           pkgs.python3
           pkgs.typescript-language-server

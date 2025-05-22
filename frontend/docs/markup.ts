@@ -4,6 +4,7 @@ import path from "node:path";
 import { Parser, HtmlRenderer, Node } from "commonmark";
 
 import highlight from "./highlight";
+import vgsOutput from "./vgsOutput";
 
 export interface Header {
     level: number;
@@ -16,7 +17,7 @@ interface MarkupDocument {
     html: string;
 }
 
-export default function renderMarkup(filename: string): MarkupDocument {
+export default function renderMarkup(rootDir: string, filename: string): MarkupDocument {
     const fullPath = path.join(import.meta.dirname, filename);
     const source = fs.readFileSync(fullPath, "utf-8");
 
@@ -59,7 +60,7 @@ export default function renderMarkup(filename: string): MarkupDocument {
                 break;
 
             case "code_block":
-                applyHighlight(event.node);
+                applyHighlight(rootDir, event.node);
                 break;
         }
     }
@@ -71,7 +72,7 @@ export default function renderMarkup(filename: string): MarkupDocument {
     };
 }
 
-function applyHighlight(node: Node) {
+function applyHighlight(rootDir: string, node: Node) {
     const { info, literal } = node;
     if (info === null || literal === null)
         return null;
@@ -80,6 +81,9 @@ function applyHighlight(node: Node) {
 
     const render = new Node("html_block");
     render.literal = `<pre><code class="hljs">${hl}</code></pre>`
+
+    if (info === "vgs")
+        render.literal = vgsOutput(rootDir, render.literal, literal);
 
     node.insertBefore(render);
     node.unlink();

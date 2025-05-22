@@ -8,8 +8,8 @@ interface Section {
     items: Header[];
 }
 
-export default function DocView(filename: string): React.ReactNode {
-    const markup = renderMarkup(filename);
+export default function DocView(rootDir: string, filename: string): React.ReactNode {
+    const markup = renderMarkup(rootDir, filename);
 
     const sections: Section[] = [];
     let currentSection: Section | null = null;

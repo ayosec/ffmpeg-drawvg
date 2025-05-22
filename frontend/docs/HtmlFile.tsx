@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import postcss from "postcss";
+import postcssCustomMedia from "postcss-custom-media";
 import postcssNested from "postcss-nested";
 import postcssUrl from "postcss-url";
 
@@ -21,6 +22,7 @@ const CSS = await (
 
         const processor = postcss([
             postcssNested,
+            postcssCustomMedia,
             postcssUrl({url: "inline"}),
         ]);
 

@@ -21,8 +21,6 @@ in a Web browser:
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-ctx.lineWidth = 5;
-
 ctx.beginPath();
 ctx.moveTo(125, 50);
 ctx.lineTo(100, 100);
@@ -31,21 +29,30 @@ ctx.closePath();
 ctx.stroke();
 ```
 
-The same triangle can be written with this script:
+The same triangle can be written with this code in drawvg:
 
 ```vgs
-setlinewidth 5
 moveto 125 50
 lineto 100 100 150 100
 closepath
 stroke
 ```
 
-It can be even shorter using the aliases for `moveto` and `lineto`, as explained
-below:
+It can be even shorter using the aliases for `moveto`, `lineto`, and
+`closepath`, as explained below:
 
 ```vgs
-setlinewidth 5
+M 125 50
+L 100 100 150 100
+Z
+stroke
+```
+
+Both newlines (`U+000A`) and spaces (`U+0020`) can be used to separate items in
+the code. There is no difference between them, so multiple instructions can
+appear in the same line:
+
+```vgs
 M 125 50 L 100 100 150 100 Z
 stroke
 ```
@@ -55,8 +62,12 @@ FFmpeg. In this example, we are using [FFmpeg expressions][ffmpeg-expr] to
 create a triangle covering the whole frame:
 
 ```vgs
-// Use `scalexy` to make the frame a 10x10 pixels area.
-// `w` and `h` are the real frame dimensions.
+// Use `scalexy` to map the frame
+// coordinates to a 10x10 area.
+//
+// `w` and `h` are the original
+// frame dimensions.
+save
 scalexy (w / 10) (h / 10)
 
 // Draw over the 10x10 area.
@@ -64,13 +75,15 @@ M 5 0
 L 10 10 0 10
 Z
 
-setlinewidth (20 / min(w, h))
+// `restore` before `stroke`, so the line
+// width is not affected by the scale.
+restore
 stroke
 ```
 
 ## Syntax
 
-The syntax is heavily inspired by languages like [Magick Vector Graphics][MGV]
+The syntax is heavily inspired by languages like [Magick Vector Graphics][MGV],
 and the [`<path>` SVG element][svg-path].
 
 [MGV]: https://imagemagick.org/script/magick-vector-graphics.php
