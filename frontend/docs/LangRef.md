@@ -91,7 +91,28 @@ and the [`<path>` SVG element][svg-path].
 
 ### Structure
 
-* Words (like bash)
+A drawvg script is composed by a sequence of *instructions*.
+
+An instruction is a name (like `fill` or `lineto`) followed by its arguments.
+Each item in the code (like the instruction name and the arguments) is
+separated by any of the following characters:
+
+| Name            | C Syntax | Unicode  |
+|-----------------|----------|----------|
+| Space           | `" "`    | `U+0020` |
+| Comma           | `","`    | `U+002C` |
+| Newline         | `"\n"`   | `U+000A` |
+| Tabs            | `"\t"`   | `U+0009` |
+| Carriage return | `"\r"`   | `U+000D` |
+
+The beginning of the token indicates how it will be interpreted:
+
+| Beginning                         | Token type                              |
+|-----------------------------------|-----------------------------------------|
+| Two slashes (`//`)                | A comment                               |
+| A digit (`0` to `9`), `+`, or `-` | Number literal                          |
+| Left parenthesis (`(`)            | FFmpeg expression                       |
+| Anything else                     | A name for an instruction, a color, etc |
 
 ### Instructions
 
@@ -101,6 +122,23 @@ and the [`<path>` SVG element][svg-path].
 * Some can repeat.
 
 ### Comments
+
+Comments start with two slashes (`//`), and stop at the end of the line (either
+a `\n`, or the end of the source).
+
+```vgs
+circle 100 100 50  // this is ignored
+fill
+
+// this is also ignored
+```
+
+The `//` part must appear after a space, or at the beginning of the line. If the
+comment is preceded by any non-blank character, the parser will consider `//` as
+part of the token.
+
+For example, in a like like `circle//a b`, the parser fails because it tries
+to use the instruction `circle//a`.
 
 ### Arguments
 

@@ -37,4 +37,4 @@ function writePage(filename: string, elem: React.ReactNode) {
     console.timeLog(timeLog);
 }
 
-writePage("langref.html", DocView(DOCS_DIR, "LangRef.md"));
+writePage("langref.html", await DocView(DOCS_DIR, "LangRef.md"));

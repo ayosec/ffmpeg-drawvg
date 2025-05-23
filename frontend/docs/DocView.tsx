@@ -1,4 +1,4 @@
-import React, { Fragment } from "react";
+import { Fragment } from "react";
 
 import HtmlFile from "./HtmlFile";
 import renderMarkup, { Header } from "./markup";
@@ -8,8 +8,8 @@ interface Section {
     items: Header[];
 }
 
-export default function DocView(rootDir: string, filename: string): React.ReactNode {
-    const markup = renderMarkup(rootDir, filename);
+export default async function DocView(rootDir: string, filename: string) {
+    const markup = await renderMarkup(rootDir, filename);
 
     const sections: Section[] = [];
     let currentSection: Section | null = null;

@@ -22,23 +22,25 @@ const CSS_CLASSES: {[k: string]: string} ={
     "expr": "string",
     "keyword": "title function_",
     "number": "number",
-}
+};
 
 function hlVGS(code: string) {
     const spans = [];
 
     for (const token of tokenize(code)) {
-        let cls = CSS_CLASSES[token.kind];
+        const cls = CSS_CLASSES[token.kind];
 
         const lexeme = token.lexeme
             .replaceAll(/&/g, "&amp;")
             .replaceAll(/</g, "&gt;")
-            .replaceAll(/>/g, "lt;");
+            .replaceAll(/>/g, "&lt;")
+            .replaceAll(/'/g, "&#39;")
+            .replaceAll(/"/g, "&quot;");
 
         if (cls)
-            spans.push(`<span class="hljs-${cls}">${lexeme}</span>`)
+            spans.push(`<span class="hljs-${cls}">${lexeme}</span>`);
         else
-            spans.push(`${lexeme}`)
+            spans.push(`${lexeme}`);
     }
 
     return spans.join("");

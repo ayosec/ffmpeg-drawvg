@@ -96,23 +96,14 @@ section {
         line-height: 1.5;
     }
 
-    & > :is(ul, p, pre) {
+    & > :is(div, p, pre, table, ul) {
         margin-left: 1em;
         overflow-x: auto;
     }
 
-    :not(:is(a, pre)) > code {
-        display: inline-block;
-        padding: 0 5px;
+    & > pre:has(.hljs) {
+        border: 5px solid var(--theme-code-bg);
         border-radius: 5px;
-
-        color: var(--theme-code-fg);
-        background: var(--theme-code-bg);
-    }
-
-    code.hljs {
-        display: block;
-        border-radius: 1ex;
     }
 
     h1 {
@@ -126,6 +117,31 @@ section {
     h3 {
         font-size: var(--theme-font-size);
         border-bottom: 1px solid var(--theme-header-underline);
+    }
+
+    code.hljs {
+        display: block;
+        border-radius: 1ex;
+    }
+
+    :not(:is(a, pre)) > code {
+        display: inline-block;
+        padding: 0 5px;
+        border-radius: 5px;
+
+        color: var(--theme-code-fg);
+        background: var(--theme-code-bg);
+    }
+
+    table {
+        border-collapse: collapse;
+
+        th, td {
+            text-align: left;
+            padding: 5px 10px;
+
+            border: 1px solid var(--theme-header-underline);
+        }
     }
 }
 

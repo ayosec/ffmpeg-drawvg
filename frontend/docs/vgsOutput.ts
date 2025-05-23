@@ -94,7 +94,7 @@ function renderProgram(ffmpegBin: string, code: string, pngPath: string) {
         color=white:s=${PREVIEW_WIDTH}x${PREVIEW_HEIGHT}:r=1,
         format=bgr0,
         drawvg=file=${tmpName}
-    `
+    `;
 
     return (
         JOBS.launch([
