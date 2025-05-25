@@ -17,7 +17,7 @@ const vgsOutput: (rootDir: string, render: string, code: string) => string = (
         const FFMPEG_BIN = process.env.FFMPEG_BIN;
 
         if (PLAYGROUND_URL === undefined || FFMPEG_BIN === undefined)
-            return (_a, _b, code) => code;
+            return (_a, _b, code) => `<pre>${code}</pre>`;
 
         return (rootDir, render, code) => (
             renderVGS(rootDir, PLAYGROUND_URL, FFMPEG_BIN, render, code)

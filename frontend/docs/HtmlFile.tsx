@@ -3,12 +3,15 @@ import path from "node:path";
 
 import postcss from "postcss";
 import postcssCustomMedia from "postcss-custom-media";
+import postcssDiscardComments from "postcss-discard-comments";
+import postcssImport from "postcss-import";
 import postcssNested from "postcss-nested";
+import postcssNormalizeWhitespace from "postcss-normalize-whitespace";
 import postcssUrl from "postcss-url";
 
 import React from "react";
 
-import { themeURL } from "./highlight";
+import { highlightThemeCSS } from "./highlight";
 
 interface Props {
     title: string;
@@ -21,9 +24,12 @@ const CSS = await (
         const source = fs.readFileSync(filename, "utf8");
 
         const processor = postcss([
+            postcssImport({ resolve: highlightThemeCSS }),
             postcssNested,
             postcssCustomMedia,
-            postcssUrl({url: "inline"}),
+            postcssUrl({ url: "inline" }),
+            postcssDiscardComments({ removeAll: true }),
+            postcssNormalizeWhitespace,
         ]);
 
         const result = await processor.process(source, { from: filename });
@@ -41,9 +47,6 @@ export default function HtmlFile({ title, children }: Props) {
                 <title>{`FFmpeg - drawvg - ${title}`}</title>
 
                 <style>{CSS}</style>
-
-                <link rel="stylesheet" media="not (prefers-color-scheme: dark)" href={themeURL(false)} />
-                <link rel="stylesheet" media="(prefers-color-scheme: dark)" href={themeURL(true)} />
             </head>
             <body>
                 {children}
