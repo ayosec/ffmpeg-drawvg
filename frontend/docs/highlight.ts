@@ -7,6 +7,7 @@ import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 
 import tokenize from "@frontend/vgs/tokenizer";
+import { parseColor } from "@frontend/utils/colors";
 
 hljs.registerLanguage("javascript", javascript);
 
@@ -40,7 +41,7 @@ export async function highlightThemeCSS(id: string): Promise<string> {
         throw "Invalid response for " + url;
     }
 
-    const data = await response.arrayBuffer()
+    const data = await response.arrayBuffer();
     fs.writeFileSync(fileName, new DataView(data));
 
     return fileName;
@@ -75,9 +76,21 @@ function hlVGS(code: string) {
 
         if (cls)
             spans.push(`<span class="hljs-${cls}">${lexeme}</span>`);
+        else if (token.kind === "color")
+            spans.push(previewColor(lexeme));
         else
             spans.push(`${lexeme}`);
+
     }
 
     return spans.join("");
+}
+
+function previewColor(lexeme: string) {
+    const color = parseColor(lexeme);
+    if (color === undefined)
+        return lexeme;
+
+    const style = `color: ${color.fg}; background: ${color.bg};`;
+    return `<span class="preview-color" style="${style}">${lexeme}</span>`;
 }

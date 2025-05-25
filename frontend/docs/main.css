@@ -124,7 +124,6 @@ section {
 
     code.hljs {
         display: block;
-        border-radius: 1ex;
     }
 
     :not(:is(a, pre)) > code {
@@ -181,6 +180,8 @@ a {
     display: grid;
     padding: 5px;
     gap: 5px;
+    border-radius: 5px;
+
     background: var(--theme-code-bg);
 
     .code {
@@ -193,14 +194,16 @@ a {
         pre {
             margin: 0;
         }
+
+        .preview-color {
+            display: inline-block;
+        }
     }
 
     .actions a {
         display: inline-block;
 
-        margin: 1ex;
         padding: 1ex 1.5ex;
-
         border: 1px solid var(--theme-play-fg);
 
         color: var(--theme-play-fg);
