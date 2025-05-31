@@ -3,7 +3,7 @@ RUN_CLOSURE ?= 0
 FFMPEG_ROOT ?= ../FFmpeg
 
 AVUTIL_SOURCES = avstring.c eval.c mathematics.c mem.c parseutils.c reverse.c time.c
-PLAY_SOURCES = interpreter.c logs.c math.c
+PLAY_SOURCES = interpreter.c logs.c av_mocks.c
 
 DEPENDENCIES = cairo
 
