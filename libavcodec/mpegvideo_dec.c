@@ -80,36 +80,19 @@ int ff_mpeg_update_thread_context(AVCodecContext *dst,
 {
     MpegEncContext *const s1 = src->priv_data;
     MpegEncContext *const s  = dst->priv_data;
-    int ret;
+    int ret = 0;
 
     if (dst == src)
         return 0;
 
     av_assert0(s != s1);
 
-    // FIXME can parameters change on I-frames?
-    // in that case dst may need a reinit
-    if (!s->context_initialized) {
-        void *private_ctx = s->private_ctx;
-        int err;
-        memcpy(s, s1, sizeof(*s));
-
-        s->context_initialized   = 0;
-        s->context_reinit        = 0;
-        s->avctx                 = dst;
-        s->private_ctx           = private_ctx;
-
-        if (s1->context_initialized) {
-            if ((err = ff_mpv_common_init(s)) < 0)
-                return err;
-        }
-    }
-
     if (s->height != s1->height || s->width != s1->width || s->context_reinit) {
         s->height = s1->height;
         s->width  = s1->width;
         if ((ret = ff_mpv_common_frame_size_change(s)) < 0)
             return ret;
+        ret = 1;
     }
 
     s->quarter_sample       = s1->quarter_sample;
@@ -139,7 +122,7 @@ int ff_mpeg_update_thread_context(AVCodecContext *dst,
     memcpy(&s->progressive_sequence, &s1->progressive_sequence,
            (char *) &s1->first_field + sizeof(s1->first_field) - (char *) &s1->progressive_sequence);
 
-    return 0;
+    return ret;
 }
 
 av_cold int ff_mpv_decode_close(AVCodecContext *avctx)
@@ -440,13 +423,6 @@ av_cold void ff_mpeg_flush(AVCodecContext *avctx)
 
     s->pp_time = 0;
 }
-
-void ff_mpv_report_decode_progress(MpegEncContext *s)
-{
-    if (s->pict_type != AV_PICTURE_TYPE_B && !s->partitioned_frame && !s->er.error_occurred)
-        ff_thread_progress_report(&s->cur_pic.ptr->progress, s->mb_y);
-}
-
 
 static inline int hpel_motion_lowres(MpegEncContext *s,
                                      uint8_t *dest, const uint8_t *src,
@@ -834,7 +810,7 @@ static inline void MPV_motion_lowres(MpegEncContext *s,
         }
         break;
     default:
-        av_assert2(0);
+        av_unreachable("No other mpegvideo MV types exist");
     }
 }
 
@@ -984,8 +960,8 @@ void mpv_reconstruct_mb_internal(MpegEncContext *s, int16_t block[12][64],
         }
 
         /* add dct residue */
-        if (!(IS_MPEG12_H261(s) || s->msmpeg4_version != MSMP4_UNUSED ||
-              (s->codec_id == AV_CODEC_ID_MPEG4 && !s->mpeg_quant))) {
+        if (is_mpeg12 != DEFINITELY_MPEG12_H261 && s->dct_unquantize_inter) {
+            // H.263, H.263+, H.263I, FLV, RV10, RV20 and MPEG-4 with MPEG-2 quantization
             add_dequant_dct(s, block[0], 0, dest_y                          , dct_linesize, s->qscale);
             add_dequant_dct(s, block[1], 1, dest_y              + block_size, dct_linesize, s->qscale);
             add_dequant_dct(s, block[2], 2, dest_y + dct_offset             , dct_linesize, s->qscale);
@@ -997,6 +973,10 @@ void mpv_reconstruct_mb_internal(MpegEncContext *s, int16_t block[12][64],
                 add_dequant_dct(s, block[5], 5, dest_cr, uvlinesize, s->chroma_qscale);
             }
         } else if (is_mpeg12 == DEFINITELY_MPEG12_H261 || lowres_flag || (s->codec_id != AV_CODEC_ID_WMV2)) {
+            // H.261, MPEG-1, MPEG-2, MPEG-4 with H.263 quantization,
+            // MSMP4V1-3 and WMV1.
+            // Also RV30, RV40 and the VC-1 family when performing error resilience,
+            // but all blocks are skipped in this case.
             add_dct(s, block[0], 0, dest_y                          , dct_linesize);
             add_dct(s, block[1], 1, dest_y              + block_size, dct_linesize);
             add_dct(s, block[2], 2, dest_y + dct_offset             , dct_linesize);

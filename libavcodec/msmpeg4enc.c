@@ -221,7 +221,8 @@ static int msmpeg4_encode_picture_header(MPVMainEncContext *const m)
 
     find_best_tables(ms);
 
-    align_put_bits(&s->pb);
+    put_bits_assume_flushed(&s->pb);
+
     put_bits(&s->pb, 2, s->c.pict_type - 1);
 
     put_bits(&s->pb, 5, s->c.qscale);
@@ -349,7 +350,7 @@ static void msmpeg4v2_encode_motion(MPVEncContext *const s, int val)
         /* zero vector; corresponds to ff_mvtab[0] */
         put_bits(&s->pb, 1, 0x1);
     } else {
-        bit_size = s->c.f_code - 1;
+        bit_size = s->f_code - 1;
         range = 1 << bit_size;
         if (val <= -64)
             val += 64;
