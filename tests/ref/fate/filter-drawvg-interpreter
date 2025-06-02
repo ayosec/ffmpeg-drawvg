@@ -42,6 +42,13 @@ cairo_curve_to 50.0 66.7 60.0 66.7 70.0 50.0
 cairo_curve_to 80.0 33.3 90.0 33.3 100.0 50.0
 cairo_curve_to 120.0 100.0 140.0 0.0 200.0 50.0
 cairo_set_fill_rule 0
+cairo_fill_preserve
+cairo_set_fill_rule 1
+cairo_fill_preserve
+cairo_stroke_preserve
+cairo_set_fill_rule 0
+cairo_clip_preserve
+cairo_set_fill_rule 0
 cairo_fill
 cairo_set_fill_rule 1
 cairo_fill

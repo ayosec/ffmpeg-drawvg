@@ -58,6 +58,12 @@ stroke
 // Curves. The next line should be compatible with SVG's <path>.
 M 10,50 Q 25,25 40,50 t 30,0 30,0 c 20 50 40 -50 100 0
 
+// Preserve
+preserve fill
+preserve eofill
+preserve stroke
+preserve clip
+
 // Fill/clip
 fill eofill
 clip eoclip

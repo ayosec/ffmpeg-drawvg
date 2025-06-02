@@ -94,9 +94,11 @@ static void update_current_point(const char *func, double x, double y) {
 
 MOCK_FN_5(cairo_arc);
 MOCK_FN_0(cairo_clip);
+MOCK_FN_0(cairo_clip_preserve);
 MOCK_FN_0(cairo_close_path);
 MOCK_FN_6(cairo_curve_to);
 MOCK_FN_0(cairo_fill);
+MOCK_FN_0(cairo_fill_preserve);
 MOCK_FN_2(cairo_line_to);
 MOCK_FN_2(cairo_move_to);
 MOCK_FN_0(cairo_new_path);

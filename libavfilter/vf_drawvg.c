@@ -122,6 +122,7 @@ enum VGSInstruction {
     INS_MOVE_TO,                ///<  M, moveto (x y)
     INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
     INS_NEW_PATH,               ///<  newpath
+    INS_PRESERVE,               ///<  preserve
     INS_PRINT,                  ///<  print (expr)
     INS_PROC1_ASSIGN,           ///<  proc1 name varname { subprogram }
     INS_PROC1_CALL,             ///<  call1 name (arg)
@@ -152,7 +153,6 @@ enum VGSInstruction {
     INS_SET_RGBA,               ///<  setrgba (r g b a)
     INS_SET_VAR,                ///<  setvar (varname value)
     INS_STROKE,                 ///<  stroke
-    INS_STROKE_PRESERVE,        ///<  pstroke
     INS_S_CURVE_TO,             ///<  S (x2 y2 x y)
     INS_S_CURVE_TO_REL,         ///<  s (dx2 dy2 dx dy)
     INS_TRANSLATE,              ///<  translate (tx ty)
@@ -258,11 +258,11 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_MOVE_TO_REL,      "m",              R(N, N) },
     { INS_MOVE_TO,          "moveto",         R(N, N) },
     { INS_NEW_PATH,         "newpath",        NONE },
+    { INS_PRESERVE,         "preserve",       NONE },
     { INS_PRINT,            "print",          { { PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } } },
     { INS_PROC_ASSIGN,      "proc",           L({ PARAM_PROC_NAME }, P) },
     { INS_PROC1_ASSIGN,     "proc1",          L({ PARAM_PROC_NAME }, V, P) },
     { INS_PROC2_ASSIGN,     "proc2",          L({ PARAM_PROC_NAME }, V, V, P) },
-    { INS_STROKE_PRESERVE,  "pstroke",        NONE },
     { INS_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
     { INS_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
     { INS_CURVE_TO_REL,     "rcurveto",       R(N, N, N, N, N, N) },
@@ -1238,6 +1238,10 @@ struct VGSEvalState {
     /// Register if `break` was called in a subprogram.
     int interrupted;
 
+    /// Next call to `[eo]fill`, `[eo]clip`, or `stroke`, should use
+    /// the `_preserve` function.
+    int preserve_path;
+
     /// Subprograms associated to each procedure identifier.
     struct VGSProcedure *procedures;
 
@@ -1607,6 +1611,16 @@ static int vgs_eval(
 
 #define ASSERT_ARGS(n) av_assert0(statement->args_count == n)
 
+#define MAY_PRESERVE(funcname) \
+    do {                                           \
+        if (state->preserve_path) {                \
+            state->preserve_path = 0;              \
+            funcname##_preserve(state->cairo_ctx); \
+        } else {                                   \
+            funcname(state->cairo_ctx);            \
+        }                                          \
+    } while(0)
+
     double numerics[MAX_INSTRUCTION_PARAMS];
 
     double cx, cy; // Current point.
@@ -1664,7 +1678,6 @@ static int vgs_eval(
             case INS_RESTORE:
             case INS_SAVE:
             case INS_STROKE:
-            case INS_STROKE_PRESERVE:
                 cairo_set_source(state->cairo_ctx, state->pattern_builder);
                 cairo_pattern_destroy(state->pattern_builder);
                 state->pattern_builder = NULL;
@@ -1712,7 +1725,7 @@ static int vgs_eval(
                     CAIRO_FILL_RULE_EVEN_ODD
             );
 
-            cairo_clip(state->cairo_ctx);
+            MAY_PRESERVE(cairo_clip);
             break;
 
         case INS_CLOSE_PATH:
@@ -1785,7 +1798,7 @@ static int vgs_eval(
                     CAIRO_FILL_RULE_EVEN_ODD
             );
 
-            cairo_fill(state->cairo_ctx);
+            MAY_PRESERVE(cairo_fill);
             break;
 
         case INS_GET_METADATA: {
@@ -1872,6 +1885,11 @@ static int vgs_eval(
         case INS_NEW_PATH:
             ASSERT_ARGS(0);
             cairo_new_path(state->cairo_ctx);
+            break;
+
+        case INS_PRESERVE:
+            ASSERT_ARGS(0);
+            state->preserve_path = 1;
             break;
 
         case INS_PRINT: {
@@ -2178,12 +2196,7 @@ static int vgs_eval(
 
         case INS_STROKE:
             ASSERT_ARGS(0);
-            cairo_stroke(state->cairo_ctx);
-            break;
-
-        case INS_STROKE_PRESERVE:
-            ASSERT_ARGS(0);
-            cairo_stroke_preserve(state->cairo_ctx);
+            MAY_PRESERVE(cairo_stroke);
             break;
 
         case INS_S_CURVE_TO:
