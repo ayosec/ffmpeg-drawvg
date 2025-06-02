@@ -1884,7 +1884,7 @@ static int vgs_eval(
 
         case INS_NEW_PATH:
             ASSERT_ARGS(0);
-            cairo_new_path(state->cairo_ctx);
+            cairo_new_sub_path(state->cairo_ctx);
             break;
 
         case INS_PRESERVE:
