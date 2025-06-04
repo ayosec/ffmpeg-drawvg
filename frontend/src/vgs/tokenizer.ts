@@ -35,11 +35,10 @@ export default function* tokenize(code: string): Generator<Token, undefined, und
 
     const RULES: Rule[] = [
         { pattern: /(,|\s)+/g, kind: "whitespace" },
-        { pattern: /-?0[xX][a-fA-F0-9]+(p-?[0-9]+)?/g, kind: "number" },
-        { pattern: /-?[0-9]+(\.[0-9]*)?(e[0-9]*)?/g, kind: "number" },
+        { pattern: /[+-]?[0-9][^\s,]*/g, kind: "number" },
         { pattern: /\w+@[0-9]*(\.[0-9]*)?/g, kind: "color" },
         { pattern: /#[a-fA-F0-9]+(@\d*\.?\d*)?/g, kind: "color" },
-        { pattern: /\w+/g, kind: "word" },
+        { pattern: /\w\S*/g, kind: "word" },
         { pattern: /\/\/.*/g, kind: "comment" }
     ];
 
