@@ -42,7 +42,7 @@ proc rocket {
 		setlinejoin miter
 
 		setcolor #204060
-		pstroke
+		preserve stroke
 
 		if body {
 			setcolor white
@@ -88,7 +88,7 @@ proc rocket {
 	circle 0 0 3
 	setcolor #0040A0
 	setlinewidth 1
-	pstroke
+	preserve stroke
 	setcolor #00AAFF
 	fill
 }
