@@ -25,6 +25,7 @@
 
 #include "libavutil/avassert.h"
 #include "libavutil/avstring.h"
+#include "libavutil/bswap.h"
 #include "libavutil/eval.h"
 #include "libavutil/internal.h"
 #include "libavutil/macros.h"
@@ -106,8 +107,9 @@ enum VGSInstruction {
     INS_CLIP_EO,                ///<  eoclip
     INS_CLOSE_PATH,             ///<  Z, z, closepath
     INS_COLOR_STOP,             ///<  colorstop (offset color)
-    INS_COLOR_STOP_RGBA,        ///<  colorstoprgba (offset r g b a)
     INS_CURVE_TO,               ///<  C, curveto (x1 y1 x2 y2 x y)
+    INS_DEF_HSLA,               ///<  defhsla (varname h s l a)
+    INS_DEF_RGBA,               ///<  defrgba (varname r g b a)
     INS_CURVE_TO_REL,           ///<  c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
     INS_ELLIPSE,                ///<  ellipse (cx cy rx ry)
     INS_FILL,                   ///<  fill
@@ -243,8 +245,9 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_CLIP,             "clip",           NONE },
     { INS_CLOSE_PATH,       "closepath",      NONE },
     { INS_COLOR_STOP,       "colorstop",      R(N, { PARAM_COLOR }) },
-    { INS_COLOR_STOP_RGBA,  "colorstoprgba",  R(N, N, N, N, N) },
     { INS_CURVE_TO,         "curveto",        R(N, N, N, N, N, N) },
+    { INS_DEF_HSLA,         "defhsla",        L(V, N, N, N, N) },
+    { INS_DEF_RGBA,         "defrgba",        L(V, N, N, N, N) },
     { INS_ELLIPSE,          "ellipse",        R(N, N, N, N) },
     { INS_CLIP_EO,          "eoclip",         NONE },
     { INS_FILL_EO,          "eofill",         NONE },
@@ -354,7 +357,8 @@ static int vgs_inst_change_path(enum VGSInstruction inst) {
     switch (inst) {
     case INS_BREAK:
     case INS_COLOR_STOP:
-    case INS_COLOR_STOP_RGBA:
+    case INS_DEF_HSLA:
+    case INS_DEF_RGBA:
     case INS_GET_METADATA:
     case INS_IF:
     case INS_LINEAR_GRAD:
@@ -589,6 +593,7 @@ next_token:
 struct VGSArgument {
     enum {
         ARG_COLOR = 1,
+        ARG_COLOR_VAR,
         ARG_CONST,
         ARG_EXPR,
         ARG_LITERAL,
@@ -913,6 +918,20 @@ static int vgs_parse_statement(
                 FAIL(EINVAL);
 
             arg.type = ARG_COLOR;
+
+            for (int i = VAR_U0; i < VAR_COUNT; i++) {
+                if (parser->var_names[i] == NULL)
+                    break;
+
+                if (vgs_token_is_string(&token, parser->var_names[i])) {
+                    arg.type = ARG_COLOR_VAR;
+                    arg.variable = i;
+                    break;
+                }
+            }
+
+            if (arg.type == ARG_COLOR_VAR)
+                break;
 
             ret = av_parse_color(arg.color, token.lexeme, token.length, log_ctx);
             if (ret != 0) {
@@ -1544,7 +1563,14 @@ static void rounded_rect(
     cairo_close_path(c);
 }
 
-static cairo_pattern_t *pattern_create_hsla(double h, double s, double l, double a) {
+static void hsl2rgb(
+    double h,
+    double s,
+    double l,
+    double *pr,
+    double *pg,
+    double *pb
+) {
     // https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
 
     double r, g, b, chroma, x, h1;
@@ -1600,7 +1626,19 @@ static cairo_pattern_t *pattern_create_hsla(double h, double s, double l, double
 
     x = l - chroma / 2;
 
-    return cairo_pattern_create_rgba(r + x, g + x, b + x, a);
+    *pr = r + x;
+    *pg = g + x;
+    *pb = b + x;
+}
+
+// Convert a color in 4 components, between 0.0 and 1.0,
+// to a 0xRRGGBBAA value.
+static uint32_t vgs_color_value(double r, double g, double b, double a) {
+#define C(v, o) ((uint32_t)(av_clipd(v, 0, 1) * 255) << o)
+
+    return C(r, 24) | C(g, 16) | C(b, 8) | C(a, 0);
+
+#undef C
 }
 
 // Execute the cairo functions for the given script.
@@ -1622,6 +1660,7 @@ static int vgs_eval(
     } while(0)
 
     double numerics[MAX_INSTRUCTION_PARAMS];
+    double colors[MAX_INSTRUCTION_PARAMS][4];
 
     double cx, cy; // Current point.
 
@@ -1646,9 +1685,26 @@ static int vgs_eval(
         state->vars[VAR_CY] = cy;
 
         for (int arg = 0; arg < statement->args_count; arg++) {
+            uint8_t color[4];
+
             const struct VGSArgument *a = &statement->args[arg];
 
             switch (a->type) {
+            case ARG_COLOR:
+            case ARG_COLOR_VAR:
+                if (a->type == ARG_COLOR) {
+                    memcpy(color, a->color, sizeof(color));
+                } else {
+                    uint32_t c = av_be2ne32((uint32_t)state->vars[a->variable]);
+                    memcpy(color, &c, sizeof(color));
+                }
+
+                colors[arg][0] = (double)(color[0]) / 255.0,
+                colors[arg][1] = (double)(color[1]) / 255.0,
+                colors[arg][2] = (double)(color[2]) / 255.0,
+                colors[arg][3] = (double)(color[3]) / 255.0;
+                break;
+
             case ARG_EXPR:
                 numerics[arg] = av_expr_eval(a->expr, state->vars, state);
                 break;
@@ -1743,27 +1799,10 @@ static int vgs_eval(
             cairo_pattern_add_color_stop_rgba(
                 state->pattern_builder,
                 numerics[0],
-                statement->args[1].color[0] / 255.0,
-                statement->args[1].color[1] / 255.0,
-                statement->args[1].color[2] / 255.0,
-                statement->args[1].color[3] / 255.0
-            );
-            break;
-
-        case INS_COLOR_STOP_RGBA:
-            if (state->pattern_builder == NULL) {
-                av_log(state->log_ctx, AV_LOG_ERROR, "colorstop with no active gradient.\n");
-                break;
-            }
-
-            ASSERT_ARGS(5);
-            cairo_pattern_add_color_stop_rgba(
-                state->pattern_builder,
-                numerics[0],
-                numerics[1],
-                numerics[2],
-                numerics[3],
-                numerics[4]
+                colors[1][0],
+                colors[1][1],
+                colors[1][2],
+                colors[1][3]
             );
             break;
 
@@ -1781,6 +1820,29 @@ static int vgs_eval(
                 numerics[5]
             );
             break;
+
+        case INS_DEF_HSLA:
+        case INS_DEF_RGBA: {
+            int user_var;
+            double r, g, b;
+
+            ASSERT_ARGS(5);
+
+            user_var = statement->args[0].variable;
+
+            av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
+
+            if (statement->inst == INS_DEF_HSLA) {
+                hsl2rgb(numerics[1], numerics[2], numerics[3], &r, &g, &b);
+            } else {
+                r = numerics[1];
+                g = numerics[2];
+                b = numerics[3];
+            }
+
+            state->vars[user_var] = (double)vgs_color_value(r, g, b, numerics[4]);
+            break;
+        }
 
         case INS_ELLIPSE:
             ASSERT_ARGS(4);
@@ -2100,10 +2162,10 @@ static int vgs_eval(
                 cairo_pattern_destroy(state->pattern_builder);
 
             state->pattern_builder = cairo_pattern_create_rgba(
-                statement->args[0].color[0] / 255.0,
-                statement->args[0].color[1] / 255.0,
-                statement->args[0].color[2] / 255.0,
-                statement->args[0].color[3] / 255.0
+                colors[0][0],
+                colors[0][1],
+                colors[0][2],
+                colors[0][3]
             );
             break;
 
@@ -2155,32 +2217,25 @@ static int vgs_eval(
         }
 
         case INS_SET_HSLA:
+        case INS_SET_RGBA: {
+            double r, g, b;
+
             ASSERT_ARGS(4);
 
             if (state->pattern_builder != NULL)
                 cairo_pattern_destroy(state->pattern_builder);
 
-            state->pattern_builder = pattern_create_hsla(
-                numerics[0],
-                numerics[1],
-                numerics[2],
-                numerics[3]
-            );
+            if (statement->inst == INS_SET_HSLA) {
+                hsl2rgb(numerics[0], numerics[1], numerics[2], &r, &g, &b);
+            } else {
+                r = numerics[0];
+                g = numerics[1];
+                b = numerics[2];
+            }
+
+            state->pattern_builder = cairo_pattern_create_rgba(r, g, b, numerics[3]);
             break;
-
-        case INS_SET_RGBA:
-            ASSERT_ARGS(4);
-
-            if (state->pattern_builder != NULL)
-                cairo_pattern_destroy(state->pattern_builder);
-
-            state->pattern_builder = cairo_pattern_create_rgba(
-                numerics[0],
-                numerics[1],
-                numerics[2],
-                numerics[3]
-            );
-            break;
+        }
 
         case INS_SET_VAR: {
             int user_var;
