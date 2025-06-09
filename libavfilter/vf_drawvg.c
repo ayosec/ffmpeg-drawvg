@@ -78,18 +78,15 @@ static const char *const vgs_default_vars[] = {
 // Functions used in expressions.
 
 static const char *const vgs_func1_names[] = {
-    "getvar",
     "pathlen",
     "randomg",
     NULL,
 };
 
-static double vgs_fn_getvar(void*, double);
 static double vgs_fn_pathlen(void*, double);
 static double vgs_fn_randomg(void*, double);
 
 static double (*const vgs_func1_impls[])(void *, double) = {
-    vgs_fn_getvar,
     vgs_fn_pathlen,
     vgs_fn_randomg,
     NULL,
@@ -1291,23 +1288,6 @@ struct VGSEvalState {
         double quad_y;
     } rcp;
 };
-
-// Function `getvar(i)` for `av_expr_eval`.
-//
-// Return the value of the `VAR_U<i>` variable.
-static double vgs_fn_getvar(void *data, double arg) {
-    int var;
-    const struct VGSEvalState *state = (struct VGSEvalState *)data;
-
-    if (!isfinite(arg))
-        return NAN;
-
-    var = (int)arg;
-    if (var >= 0 && var < USER_VAR_COUNT)
-        return state->vars[VAR_U0 + var];
-
-    return NAN;
-}
 
 // Function `pathlen(n)` for `av_expr_eval`.
 //
