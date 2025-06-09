@@ -2535,6 +2535,7 @@ HAVE_LIST="
     $TOOLCHAIN_FEATURES
     $TYPES_LIST
     gzip
+    ioctl_posix
     libdrm_getfb2
     makeinfo
     makeinfo_html
@@ -2547,7 +2548,6 @@ HAVE_LIST="
     opencl_videotoolbox
     perl
     pod2man
-    posix_ioctl
     texi2html
     xmllint
     zlib_gzip
@@ -2608,7 +2608,6 @@ CONFIG_EXTRA="
     iamfdec
     iamfenc
     idctdsp
-    iirfilter
     inflate_wrapper
     intrax8
     iso_media
@@ -2919,7 +2918,7 @@ wmv2dsp_select="qpeldsp"
 # decoders / encoders
 aac_decoder_select="adts_header mpeg4audio sinewin"
 aac_fixed_decoder_select="adts_header mpeg4audio"
-aac_encoder_select="audio_frame_queue iirfilter lpc sinewin"
+aac_encoder_select="audio_frame_queue lpc sinewin"
 aac_latm_decoder_select="aac_decoder aac_latm_parser"
 ac3_decoder_select="ac3_parser ac3dsp bswapdsp fmtconvert"
 ac3_fixed_decoder_select="ac3_parser ac3dsp bswapdsp"
@@ -7279,7 +7278,7 @@ xmllint --version  > /dev/null 2>&1 && enable xmllint   || disable xmllint
 check_headers linux/fb.h
 check_headers linux/videodev2.h
 test_code cc linux/videodev2.h "struct v4l2_frmsizeenum vfse; vfse.discrete.width = 0;" && enable_sanitized struct_v4l2_frmivalenum_discrete
-test_code cc sys/ioctl.h "int ioctl(int, int, ...)" && enable posix_ioctl
+test_code cc sys/ioctl.h "int ioctl(int, int, ...)" && enable ioctl_posix
 
 # check V4L2 codecs available in the API
 if enabled v4l2_m2m; then
@@ -7493,7 +7492,7 @@ fi
 
 enabled amf &&
     check_cpp_condition amf "AMF/core/Version.h" \
-        "(AMF_VERSION_MAJOR << 48 | AMF_VERSION_MINOR << 32 | AMF_VERSION_RELEASE << 16 | AMF_VERSION_BUILD_NUM) >= 0x0001000400230000"
+        "(AMF_VERSION_MAJOR << 48 | AMF_VERSION_MINOR << 32 | AMF_VERSION_RELEASE << 16 | AMF_VERSION_BUILD_NUM) >= 0x0001000400240000"
 
 # Funny iconv installations are not unusual, so check it after all flags have been set
 if enabled libc_iconv; then
