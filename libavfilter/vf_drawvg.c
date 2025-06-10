@@ -2291,6 +2291,18 @@ static int vgs_eval(
         } else if (vgs_inst_change_path(statement->inst)) {
             state->rcp.status = RCP_NONE;
         }
+
+        // Check for errors in cairo.
+        if (cairo_status(state->cairo_ctx) != CAIRO_STATUS_SUCCESS) {
+            av_log(
+                state->log_ctx,
+                AV_LOG_ERROR,
+                "Error in cairo context: %s\n",
+                cairo_status_to_string(cairo_status(state->cairo_ctx))
+            );
+
+            return AVERROR(EINVAL);
+        }
     }
 
     return 0;

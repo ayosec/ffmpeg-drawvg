@@ -127,6 +127,10 @@ cairo_bool_t cairo_get_dash_count(cairo_t *cr) {
     return 1;
 }
 
+cairo_status_t cairo_status(cairo_t *cr) {
+    return CAIRO_STATUS_SUCCESS;
+}
+
 void cairo_get_dash(cairo_t *cr, double *dashes, double *offset) {
     // Return a dummy value to verify that it is included in
     // the next call to `cairo_set_dash`.
