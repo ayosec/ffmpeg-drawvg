@@ -6,12 +6,22 @@ import { tmpdir } from "node:os";
 
 import RunQueue from "./RunQueue";
 
-const PREVIEW_WIDTH = 320;
+interface Asset {
+    uri: string;
+    path: string;
+}
+
+interface Loop {
+    duration: number;
+    fps: number;
+}
+
+const PREVIEW_WIDTH = 240;
 const PREVIEW_HEIGHT = 240;
 
 const JOBS = new RunQueue();
 
-const vgsOutput: (rootDir: string, render: string, code: string) => string = (
+const vgsOutput: (rootDir: string, render: string, code: string, options: string[]) => string = (
     function getPreview() {
         const PLAYGROUND_URL = process.env.PLAYGROUND_URL;
         const FFMPEG_BIN = process.env.FFMPEG_BIN;
@@ -19,8 +29,8 @@ const vgsOutput: (rootDir: string, render: string, code: string) => string = (
         if (PLAYGROUND_URL === undefined || FFMPEG_BIN === undefined)
             return (_a, _b, code) => `<pre>${code}</pre>`;
 
-        return (rootDir, render, code) => (
-            renderVGS(rootDir, PLAYGROUND_URL, FFMPEG_BIN, render, code)
+        return (rootDir, render, code, options) => (
+            renderVGS(rootDir, PLAYGROUND_URL, FFMPEG_BIN, render, code, options)
         );
     }
 )();
@@ -31,37 +41,57 @@ function renderVGS(
     ffmpegBin: string,
     render: string,
     code: string,
+    options: string[],
 ) {
     const shareURL = playgroundURL + "#gzip=" + urlHash(code);
 
-    const outputNames = makeOutputNames(code);
-    const png = outputNames("png");
-    const webp = outputNames("webp");
+    const outputNames = makeOutputNames(rootDir, code);
 
-    renderProgram(ffmpegBin, code, path.join(rootDir, png))?.then(() => {
-        makeWebp(path.join(rootDir, png), path.join(rootDir, webp));
-    });
+    const loopDuration = getLoopDuration(options);
+
+    let output;
+    if (loopDuration === undefined) {
+        const png = outputNames("png");
+        const webp = outputNames("webp");
+
+        renderImageFromProgram(ffmpegBin, code, png.path)?.then(() => {
+            makeWebp(png.path, webp.path);
+        });
+
+        output = `
+            <picture>
+                <source
+                    type="image/webp"
+                    srcset="${webp.uri}"
+                />
+                <img
+                    alt="Render of drawvg script"
+                    src="${png.uri}"
+                    loading="lazy"
+                    width="${PREVIEW_WIDTH}"
+                    height="${PREVIEW_HEIGHT}"
+                />
+            </picture>
+        `;
+    } else {
+        const vp9 = outputNames("vp9.webm");
+        renderVideoFromProgram(ffmpegBin, code, vp9.path, loopDuration);
+
+        output = `
+            <video muted loop controls>
+                <source src="${vp9.uri}" type="video/webm" />
+            </video>
+        `;
+    }
 
     return `
         <div class="vgs-output">
             <div class="code">${render}</div>
 
-            <div class="output">
-                <picture style="min-width:${PREVIEW_WIDTH}px;min-height:${PREVIEW_HEIGHT}px;">
-                    <source
-                        type="image/webp"
-                        srcset="${webp}"
-                    />
-                    <img
-                        alt="Output of the drawvg program"
-                        src="${png}"
-                        loading="lazy"
-                    />
-                </picture>
-            </div>
+            <div class="output">${output}</div>
 
             <div class="actions">
-                <a class="playground" href="${shareURL}" target="_blank">Playground</a>
+                <a class="playground" href="${shareURL}" target="_blank">Play</a>
             </div>
         </div>
     `;
@@ -74,18 +104,28 @@ function urlHash(code: string): string {
     return encodeURIComponent(gzipped.toString("base64"));
 }
 
-function makeOutputNames(code: string) {
-    const codeHash = hash("sha256", code, "base64url").substring(0, 16);
-    return (suffix: string) => `./outputs/vgs-${codeHash}.${suffix}`;
-}
+function makeOutputNames(rootDir: string, code: string): (s: string) => Asset {
+    const OUTPUT = "outputs";
 
-function renderProgram(ffmpegBin: string, code: string, pngPath: string) {
-    if (fs.existsSync(pngPath))
-        return;
+    const dirname = path.join(rootDir, OUTPUT);
 
-    const dirname = path.dirname(pngPath);
     if (!fs.existsSync(dirname))
         fs.mkdirSync(dirname);
+
+    const codeHash = hash("sha256", code, "base64url").substring(0, 16);
+
+    return function(suffix: string) {
+        const uri = `./${OUTPUT}/vgs-${codeHash}.${suffix}`;
+        return {
+            uri,
+            path: path.join(rootDir, uri),
+        };
+    };
+}
+
+function renderImageFromProgram(ffmpegBin: string, code: string, pngPath: string) {
+    if (fs.existsSync(pngPath))
+        return;
 
     const tmpName = `${tmpdir()}/drawvg-${randomBytes(16).toString("base64url")}`;
     fs.writeFileSync(tmpName, code);
@@ -114,6 +154,50 @@ function makeWebp(pngPath: string, webpPath: string) {
         return;
 
     JOBS.launch(["cwebp", "-lossless", pngPath, "-o", webpPath]);
+}
+
+function getLoopDuration(options: string[]): Loop|undefined {
+    for (const option of options) {
+        const m = /^loop\[(\d+)(@\d+)?\]$/.exec(option);
+        if (m) {
+            return {
+                duration: +m[1],
+                fps: m[2] ? +(m[2].substring(1)) : 60,
+            };
+        }
+    }
+}
+
+function renderVideoFromProgram(
+    ffmpegBin: string,
+    code: string,
+    outputPath: string,
+    loopDuration: Loop,
+) {
+
+    if (fs.existsSync(outputPath))
+        return;
+
+    const tmpName = `${tmpdir()}/drawvg-${randomBytes(16).toString("base64url")}`;
+    fs.writeFileSync(tmpName, code);
+
+    const filter = `
+        color=white:s=${PREVIEW_WIDTH}x${PREVIEW_HEIGHT}:r=${loopDuration.fps},
+        format=bgr0,
+        drawvg=file=${tmpName},
+        format=yuv420p
+    `;
+
+    return JOBS.launch([
+        ffmpegBin,
+        "-v", "warning",
+        "-hide_banner",
+        "-f", "lavfi",
+        "-i", filter,
+        "-to", `${loopDuration.duration}`,
+        "-c:v", "libvpx-vp9",
+        outputPath,
+    ]);
 }
 
 export default vgsOutput;

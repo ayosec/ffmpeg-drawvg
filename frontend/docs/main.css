@@ -1,8 +1,8 @@
 @import "@highlight/github.css" (not (prefers-color-scheme: dark));
 @import "@highlight/github-dark.css" (prefers-color-scheme: dark);
 
-@custom-media --small-viewport screen and (max-width: 1000px);
-@custom-media --regular-viewport screen and not (max-width: 1000px);
+@custom-media --small-viewport screen and (max-width: 950px);
+@custom-media --regular-viewport screen and not (max-width: 950px);
 
 * {
     box-sizing: border-box;
@@ -20,8 +20,25 @@ body {
 }
 
 
-main {
-    display: flex;
+@media (--regular-viewport) {
+    main {
+        display: grid;
+        grid-template-columns: min-content 1fr;
+    }
+
+    aside {
+        position: sticky;
+        top: 0;
+
+        height: 100vh;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-gutter: stable;
+    }
+
+    section {
+        overflow-x: auto;
+    }
 }
 
 aside {
@@ -79,34 +96,47 @@ aside {
         white-space: nowrap;
         text-decoration: none;
     }
-
-    @media (--regular-viewport) {
-        position: sticky;
-        top: 0;
-
-        height: 100vh;
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-gutter: stable;
-    }
 }
 
 section {
-    flex: 1;
     padding: 1em;
 
     p, li {
         line-height: 1.5;
     }
 
-    & > :is(div, p, pre, table, ul) {
-        margin-left: 1em;
-        overflow-x: auto;
+    li p {
+        margin: 0;
     }
 
-    & > pre:has(.hljs) {
+    & > :is(div, p, pre, table, ul, h4) {
+        overflow-x: auto;
+
+        @media (--regular-viewport) {
+            &:not(ul) {
+                margin-left: 1em;
+            }
+        }
+    }
+
+    @media (--small-viewport) {
+        & > ul {
+            padding-left: 3ex;
+        }
+    }
+
+    pre.standalone {
         border: 5px solid var(--theme-code-bg);
         border-radius: 5px;
+
+        &:has(.signature-command) {
+            border: 0;
+
+            code {
+                background: unset;
+                padding: 0;
+            }
+        }
     }
 
     h1 {
@@ -117,22 +147,78 @@ section {
         border-bottom: 1px solid var(--theme-header-underline);
     }
 
-    h3 {
-        font-size: var(--theme-font-size);
+    h3, h4 {
         border-bottom: 1px solid var(--theme-header-underline);
     }
 
     code.hljs {
         display: block;
+
+        .error {
+            text-decoration: underline wavy red 1px;
+            text-decoration-skip-ink: none;
+        }
+
+        .mark {
+            background: var(--theme-hl-mark-bg);
+        }
+
+        .signature-command {
+            font-weight: bold;
+        }
+
+        .signature-argument {
+            margin: 0 0.3ex;
+            font-style: italic;
+        }
+
+        .command-implicit {
+            font-style: italic;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+
+            &:hover {
+                color: var(--theme-bg);
+                background: var(--theme-links);
+            }
+        }
+
+        &:hover a {
+            text-decoration: underline;
+            text-decoration-color: color-mix(in srgb, currentcolor 30%, transparent);
+        }
+
+        /* Color for output text in `console` snippets */
+        &:has(.hljs-meta + .language-bash) {
+            color: #555;
+
+            .language-bash {
+                color: #24292e;
+            }
+
+            @media (prefers-color-scheme: dark) {
+                color: #AAA;
+
+                .language-bash {
+                    color: #c9d1d9;
+                }
+            }
+        }
     }
 
     :not(:is(a, pre)) > code {
-        display: inline-block;
         padding: 0 5px;
         border-radius: 5px;
 
         color: var(--theme-code-fg);
         background: var(--theme-code-bg);
+    }
+
+    a[href^="#cmd_"]:has(> code:first-child:last-child):not(:hover) {
+        --theme-links: var(--theme-cmd-fg);
     }
 
     table {
@@ -143,6 +229,52 @@ section {
             padding: 5px 10px;
 
             border: 1px solid var(--theme-header-underline);
+
+            color: var(--theme-fg);
+            background: var(--theme-bg);
+        }
+    }
+
+    .example {
+        & > * { margin: 1em; }
+
+        color: var(--theme-example-fg);
+        background: var(--theme-example-bg);
+
+        border: 1px solid var(--theme-header-underline);
+
+        &:has(> .vgs-output:first-child:last-child) {
+            background: var(--theme-code-bg);
+        }
+
+        &::before {
+            display: block;
+
+            content: "Example";
+            font-weight: bold;
+
+            padding: 0.5ex 2ex;
+            border-style: solid;
+            border-color: var(--theme-header-underline);
+            border-width: 0 0 1px 0;
+
+            color: var(--theme-fg);
+            background: var(--theme-bg);
+        }
+
+        @media screen {
+            @supports (margin: calc(0.5ex - 1lh)) {
+                &, & > :first-child {
+                    margin-top: 2em;
+                }
+
+                &::before {
+                    position: absolute;
+                    border-width: 1px;
+                    margin-top: calc(0.5ex - 1lh);
+                    margin-left: 1ex;
+                }
+            }
         }
     }
 }
@@ -189,7 +321,6 @@ a {
         height: 100%;
 
         flex-direction: column;
-        align-content: space-between;
 
         pre {
             margin: 0;
@@ -235,13 +366,6 @@ a {
         display: block;
         border-radius: 5px;
 
-        background: repeating-linear-gradient(
-            135deg,
-            var(--theme-code-bg) 10px,
-            var(--theme-bg) 15px,
-            var(--theme-code-bg) 20px
-        );
-
         img {
             /* Needed to remove the gap under the image. */
             vertical-align: middle;
@@ -254,14 +378,18 @@ a {
 
         .code {
             grid-area: 1 / 1;
-        }
 
-        .actions {
-            grid-area: 2 / 1;
+            pre, code {
+                height: 100%;
+            }
         }
 
         .output {
             grid-area: 1 / 2 / 3 / 2;
+        }
+
+        .actions {
+            grid-area: 2 / 1;
         }
     }
 
@@ -269,16 +397,25 @@ a {
         grid-template-columns: 1fr min-content;
 
         .code {
-            grid-area: 1 / 1 / 1 / 3;
-        }
-
-        .actions {
-            grid-area: 3 / 2 / 3 / 3;
+            grid-area: 1;
+            overflow-x: auto;
         }
 
         .output {
-            grid-area: 2 / 1 / 2 / 3;
+            grid-area: 2;
             overflow-x: auto;
+
+            display: flex;
+            justify-content: center;
+
+            img, video {
+                max-width: 100%;
+                height: auto;
+            }
+        }
+
+        .actions {
+            grid-area: 3;
         }
     }
 }
@@ -298,26 +435,51 @@ a {
     }
 }
 
+@media print {
+    #showTOC, aside, video {
+        display: none;
+    }
+}
+
 /* Highlight when user jumps to a section */
 :target {
     scroll-margin-top: 10vh;
 }
 
-h1, h2, h3 {
+h2, h3 {
     padding: 0.25ex;
+    margin-top: 3em;
+}
 
+h2, h3, h4 {
     &:has(:target) {
-        animation: 1s ease-in bg-highlight;
+        @media not (prefers-reduced-motion) {
+            animation: 1.5s ease-in bg-highlight;
+        }
+    }
+
+    &:hover > a[name][href]:first-child::before {
+        content: "§";
+        display: inline-block;
+        position: absolute;
+        margin-left: -1ch;
+        padding-right: 1ch;
+
+        color: var(--theme-links);
     }
 }
 
 @keyframes bg-highlight {
     from {
-        background: rgba(250, 250, 150, 0.5);
+        background: var(--theme-bg-highlight);
+    }
+
+    75% {
+        background: var(--theme-bg-highlight);
     }
 
     to {
-        background: rgba(250, 250, 150, 0);
+        background: rgba(127, 127, 127, 0);
     }
 }
 
@@ -335,13 +497,24 @@ h1, h2, h3 {
 
     --theme-links: #007;
 
+    --theme-cmd-fg: #6F42C1;
+
+    --theme-hl-error-fg: #000;
+    --theme-hl-error-bg: #fee;
+    --theme-hl-mark-bg: #DFD;
+
     --theme-toc-bg: #eee;
     --theme-show-toc-bg: #ccc;
 
     --theme-play-fg: #037;
     --theme-play-bg: #fff;
 
+    --theme-example-fg: #000;
+    --theme-example-bg: #fafafa;
+
     --theme-header-underline: #bbb;
+
+    --theme-bg-highlight: #9DF;
 
     @media (prefers-color-scheme: dark) {
         --theme-fg: #fff;
@@ -350,7 +523,13 @@ h1, h2, h3 {
         --theme-code-fg: #fff;
         --theme-code-bg: #333;
 
-        --theme-links: #aaf;
+        --theme-links: #AAF;
+
+        --theme-cmd-fg: #D2A8FF;
+
+        --theme-hl-error-fg: #eee;
+        --theme-hl-error-bg: #311;
+        --theme-hl-mark-bg: #040;
 
         --theme-toc-bg: #222;
         --theme-show-toc-bg: #333;
@@ -358,6 +537,11 @@ h1, h2, h3 {
         --theme-play-fg: #9cf;
         --theme-play-bg: #000;
 
+        --theme-example-fg: #eee;
+        --theme-example-bg: #222;
+
         --theme-header-underline: #555;
+
+        --theme-bg-highlight: #024;
     }
 }

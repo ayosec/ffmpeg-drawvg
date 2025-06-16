@@ -7,6 +7,7 @@ import postcssDiscardComments from "postcss-discard-comments";
 import postcssImport from "postcss-import";
 import postcssNested from "postcss-nested";
 import postcssNormalizeWhitespace from "postcss-normalize-whitespace";
+import postcssReporter from "postcss-reporter";
 import postcssUrl from "postcss-url";
 
 import React from "react";
@@ -30,6 +31,7 @@ const CSS = await (
             postcssUrl({ url: "inline" }),
             postcssDiscardComments({ removeAll: true }),
             postcssNormalizeWhitespace,
+            postcssReporter({ throwError: true }),
         ]);
 
         const result = await processor.process(source, { from: filename });

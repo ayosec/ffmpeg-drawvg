@@ -42,9 +42,11 @@ export default class RunQueue {
             this.logFile = makeLogFile();
 
         const child = spawn(program, args, {
-            timeout: 60000,
+            timeout: 120000,
             killSignal: "SIGKILL",
         });
+
+        this.logFile.write(`[${child.pid}] ${JSON.stringify([program, ...args])}\n`);
 
         this.runningJobs++;
 
