@@ -113,10 +113,10 @@ av_log[16]: Invalid token 'v11' at line 1, column 130: Too many user variables. 
 check_script: vgs_parse = -22
 
 --- check_script: call a
-av_log[16]: Missing procedure for 'a'
+av_log[16]: Missing body for procedure 'a'
 
 --- check_script: proc a { call b } call a
-av_log[16]: Missing procedure for 'b'
+av_log[16]: Missing body for procedure 'b'
 
 --- check_script: M 0 (1 + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n)
 cairo_move_to 0.0 101.0

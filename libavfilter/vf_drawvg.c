@@ -2001,7 +2001,7 @@ static int vgs_eval(
             proc = &state->procedures[proc_id];
             if (proc->program == NULL) {
                 const char *proc_name = state->proc_names[proc_id];
-                av_log(state->log_ctx, AV_LOG_ERROR, "Missing procedure for '%s'\n", proc_name);
+                av_log(state->log_ctx, AV_LOG_ERROR, "Missing body for procedure '%s'\n", proc_name);
             } else {
                 int ret;
                 double current_vars[MAX_PROC_ARGS] = { 0 };
