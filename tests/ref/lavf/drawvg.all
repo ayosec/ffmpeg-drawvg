@@ -37,6 +37,7 @@ scale 1
 scalexy 2 3
 translate 4 5
 rotate 6
+resetmatrix
 
 // Basic shapes
 rect 1 2 3 4

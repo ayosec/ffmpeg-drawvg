@@ -99,6 +99,7 @@ MOCK_FN_0(cairo_close_path);
 MOCK_FN_6(cairo_curve_to);
 MOCK_FN_0(cairo_fill);
 MOCK_FN_0(cairo_fill_preserve);
+MOCK_FN_0(cairo_identity_matrix);
 MOCK_FN_2(cairo_line_to);
 MOCK_FN_2(cairo_move_to);
 MOCK_FN_0(cairo_new_path);

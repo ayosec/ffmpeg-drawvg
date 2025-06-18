@@ -16,6 +16,7 @@ cairo_scale 1.0 1.0
 cairo_scale 2.0 3.0
 cairo_translate 4.0 5.0
 cairo_rotate 6.0
+cairo_identity_matrix
 cairo_rectangle 1.0 2.0 3.0 4.0
 cairo_save
 cairo_translate 1.0 2.0

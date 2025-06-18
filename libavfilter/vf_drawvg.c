@@ -136,6 +136,7 @@ enum VGSInstruction {
     INS_REPEAT,                 ///<  repeat (count) { subprogram }
     INS_RESET_CLIP,             ///<  resetclip
     INS_RESET_DASH,             ///<  resetdash
+    INS_RESET_MATRIX,           ///<  resetmatrix
     INS_RESTORE,                ///<  restore
     INS_ROTATE,                 ///<  rotate (angle)
     INS_ROUNDEDRECT,            ///<  roundedrect (x y width height radius)
@@ -270,6 +271,7 @@ struct VGSInstructionDecl vgs_instructions[] = {
     { INS_REPEAT,           "repeat",         L(N, P) },
     { INS_RESET_CLIP,       "resetclip",      NONE },
     { INS_RESET_DASH,       "resetdash",      NONE },
+    { INS_RESET_MATRIX,     "resetmatrix",    NONE },
     { INS_RESTORE,          "restore",        NONE },
     { INS_LINE_TO_REL,      "rlineto",        R(N, N) },
     { INS_MOVE_TO_REL,      "rmoveto",        R(N, N) },
@@ -369,6 +371,7 @@ static int vgs_inst_change_path(enum VGSInstruction inst) {
     case INS_RADIAL_GRAD:
     case INS_REPEAT:
     case INS_RESET_DASH:
+    case INS_RESET_MATRIX:
     case INS_SET_COLOR:
     case INS_SET_DASH:
     case INS_SET_DASH_OFFSET:
@@ -2064,6 +2067,10 @@ static int vgs_eval(
 
         case INS_RESET_DASH:
             cairo_set_dash(state->cairo_ctx, NULL, 0, 0);
+            break;
+
+        case INS_RESET_MATRIX:
+            cairo_identity_matrix(state->cairo_ctx);
             break;
 
         case INS_RECT:
