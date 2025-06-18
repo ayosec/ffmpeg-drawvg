@@ -208,6 +208,14 @@ export default function OutputPanel() {
                 ref={containerRef}
                 data-fit-render={fitRenderView ? "1" : "0"}
                 className={styles.renderView}
+                onClick={e => {
+                    setPlaying(playing === PlaybackStatus.Pause
+                        ? PlaybackStatus.Forward
+                        : PlaybackStatus.Pause
+                    );
+
+                    e.preventDefault();
+                }}
             >
                 <RenderView size={canvasSize} />
             </div>
