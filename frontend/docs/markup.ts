@@ -51,11 +51,11 @@ export default async function renderMarkup(rootDir: string, filename: string): P
                 }
 
                 let needAnchor = false;
-                const content = token.tokens?.map(t => (<any>t).text).join("") ?? "";
+                const content = (token.tokens?.map(t => (<any>t).text).join("") ?? "")
+                    .replace(/<.*?>/g, "");  // Remove HTML tags
 
                 if (!linkName) {
                     linkName = content
-                        .replace(/<.*?>/g, "")  // Remove HTML tags
                         .replace(/\W+/g, "_")   // Remove non-word characters.
                         .toLowerCase() + `_${++headerCount}`;
                     needAnchor = true;

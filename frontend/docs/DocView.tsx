@@ -51,7 +51,7 @@ export default async function DocView(rootDir: string, filename: string) {
 
                         {
                             sections.map((section, i) =>
-                                <details open key={i}>
+                                <details key={i} open data-title={section.title}>
                                     <summary>{section.title}</summary>
                                     {
                                         section.items.map((item, i) =>

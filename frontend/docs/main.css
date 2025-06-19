@@ -86,6 +86,10 @@ aside {
           /* Rotate icon in <summary> when <details> is closed. */
           transform: rotate(-90deg);
         }
+
+        &[data-title="Commands"] a {
+            font-family: monospace;
+        }
     }
 
     a {
@@ -160,7 +164,8 @@ section {
         }
 
         .mark {
-            background: var(--theme-hl-mark-bg);
+            text-decoration: underline var(--theme-hl-mark-bg) 0.5ex;
+            text-decoration-skip-ink: none;
         }
 
         .signature-command {
@@ -501,7 +506,7 @@ h2, h3, h4 {
 
     --theme-hl-error-fg: #000;
     --theme-hl-error-bg: #fee;
-    --theme-hl-mark-bg: #DFD;
+    --theme-hl-mark-bg: #9D9;
 
     --theme-toc-bg: #eee;
     --theme-show-toc-bg: #ccc;
@@ -529,7 +534,7 @@ h2, h3, h4 {
 
         --theme-hl-error-fg: #eee;
         --theme-hl-error-bg: #311;
-        --theme-hl-mark-bg: #040;
+        --theme-hl-mark-bg: #484;
 
         --theme-toc-bg: #222;
         --theme-show-toc-bg: #333;

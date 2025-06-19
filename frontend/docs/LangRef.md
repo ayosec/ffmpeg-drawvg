@@ -175,13 +175,13 @@ newpath rect 10 20 30 40 setcolor teal fill
 Most commands in [!svg-path] are also present in drawvg. For some of them, there
 is an alias to a longer name:
 
-* `rcurveto` to `c` .
-* `curveto` to `C`.
-* `rlineto` to `l`.
-* `lineto` to `L`.
-* `rmoveto` to `m`.
-* `moveto` to `M`.
-* `closepath` to `Z`, `z` .
+* `curveto` for `C`.
+* `rcurveto` for `c`.
+* `lineto` for `L`.
+* `rlineto` for `l`.
+* `moveto` for `M`.
+* `rmoveto` for `m`.
+* `closepath` for `Z`, `z`.
 
 Other commands only exist in a single-letter form:
 
@@ -190,6 +190,9 @@ Other commands only exist in a single-letter form:
 * `S`, `s`
 * `V`, `v`
 * `T`, `t`
+
+This makes it possible to use a path in SVG to create the same shape in a drawvg
+script.
 
 #### <a name="implicit-commands"></a>Implicit Commands
 
@@ -265,7 +268,7 @@ expressions.
 
 #### Number Literals
 
-A number literal is an item in the script that represent a constant value. Any
+A number literal is an item in the script that represents a constant value. Any
 item that starts with a decimal digit (between `0` and `9`), a `-` or a `+`, is
 interpreted as a number literal.
 
@@ -358,8 +361,9 @@ rect (0) 0 (w) h
 :::
 
 It is possible to create a variable with the same name of a command, and then
-use it as an argument. In the previous example, <code>h</code> is both a
-variable (frame height) and a command (`h`).
+use it as an argument. In the previous example, the item <code>h</code> is a
+reference to a variable (frame height), but in other contexts it may be a
+command (`h`).
 
 For [implicit commands], the parser prioritizes commands over variable names
 when it has to determine if the command is reused.
@@ -367,8 +371,8 @@ when it has to determine if the command is reused.
 ::: {.example}
 
 In this example, the variable <code>c</code> is used as the first argument in
-two calls to `l`. Only the first one is valid, because in the second one, the
-parsers tries to create a call to the `c` command.
+two calls to `l`. However, only the first one is valid, because in the second
+call the parser recognizes `c` as a command.
 
 ```vgs,ignore,error[2:8:1]
 setvar c 5
@@ -385,14 +389,14 @@ l c 10 (c) 15
 
 :::
 
-#### Colors
+#### <a name="args-colors"></a>Colors
 
-The color to fill and stroke paths can be set with `setcolor`. Its argument has
-the same syntax for colors in FFmpeg:
+The color to stroke and to fill paths can be set with `setcolor`. Its argument
+has the same syntax for colors in FFmpeg:
 
-* A [color name recognized][ffmpeg-colors].
+* A [predefined color name][ffmpeg-colors].
 * In `#RRGGBB` format.
-* Optionally, a `@a` suffix can be added to set the alpha value, where `a`
+* Optionally, an `@a` suffix can be added to set the alpha value, where `a`
   is a number between `0` and `1`.
 
 [ffmpeg-colors]: https://ffmpeg.org/ffmpeg-utils.html#Color
@@ -403,12 +407,18 @@ The color can be a variable name. In that case, its value is interpreted as a
 ::: {.example}
 
 ```vgs
-circle 75 100 50 setcolor #FF0000 fill
+circle 75 100 50
+setcolor #FF0000
+fill
 
+circle 125 100 50
 setvar CustomGreen 0x90EEAAFF
-circle 125 100 50 setcolor CustomGreen fill
+setcolor CustomGreen
+fill
 
-circle 175 100 50 setcolor blue@0.5 fill
+circle 175 100 50
+setcolor blue@0.5
+fill
 ```
 
 :::
@@ -433,8 +443,8 @@ setlinecap round
 A path is a complex shape, composed by lines and curves, that can be used to
 fill a region, to stroke an outline, or to establish a clip region.
 
-In order to draw anything on top of a video frame, we have to define a path, and
-then use `stroke` or `fill`.
+In order to draw anything on top of a video frame, first we have to define a
+path, and then use `stroke` or `fill`.
 
 The [tutorial on paths in MDN][mdn-paths] is a good introduction to the topic.
 It is focused on [!svg-path], but the same concepts can be applied in drawvg.
@@ -510,7 +520,7 @@ A path is defined by adding lines, curves, or basic shapes.
 
 Single-letter commands are taken from [!svg-path].
 
-#### Fill
+#### <a name="fill-rules"></a>Fill
 
 The region within the shape defined by a path can be filled with `fill` or
 `eofill`. Each command uses a different [fill rule][fill-rules]:
@@ -576,7 +586,7 @@ stroke
 #### Clip
 
 A [clip region](https://en.wikipedia.org/wiki/Clipping_(computer_graphics)) can
-be established with `clip` and `eofill`.
+be established with `clip` and `eoclip`.
 
 If there is an active clip region, the new clip region will be the intersection
 between the existing one and the path. `resetclip` reset the clip region to the
@@ -644,7 +654,7 @@ in [!ffmpeg-expr]:
 | <code>t</code> | Timestamp, in seconds.               |
 | `duration`     | Duration, in seconds, of the frame.  |
 
-#### User Variables
+#### <a name="user-variables"></a>User Variables
 
 New variables can be created with the `setvar` command. It associates a name
 with a numeric value.
@@ -677,9 +687,9 @@ Currently, a script can contain only 10 different variable names, but this
 limit can be modified in the future.
 
 
-### Colors
+### <a name="patterns"></a>Patterns
 
-The pattern for fill/stroke operations can be either a solid color or a
+The pattern for fill and stroke operations can be either a solid color, or a
 gradient.
 
 * Solid colors.
@@ -690,7 +700,8 @@ gradient.
     * `lineargrad`
     * `radialgrad`
 
-The pattern is not cleared after used in a fill/stroke operation.
+The pattern is not cleared after being used in a fill or stroke operation, but
+it is replaced by any command that sets a new pattern.
 
 #### Gradients
 
@@ -736,6 +747,7 @@ variable is used, its value is interpreted as a `0xRRGGBBAA` code.
 setvar someblue 0x1020FF7F
 
 setcolor someblue
+
 rect 30 30 120 120
 fill
 
@@ -764,7 +776,10 @@ fill
 :::
 
 `defrgba` and `defhsla` compute the `0xRRGGBBAA` value for a color given its
-color components, either in sRGB or HSL color spaces.
+color components:
+
+* For `defrgba`: *red*, *green*, *blue*, and *alpha*.
+* For `defhsla`: *hue*, *saturation*, *lightness*, and *alpha*.
 
 Each color component must be in range `0` to `1`, except *hue*, which is `0` to
 `360`.
@@ -786,60 +801,62 @@ fill
 
 :::
 
-### Transformations
+### <a name="transformations"></a>Transformations
 
-The coordinates for each command can be scaled, rotated, and translate, by using
-the following commands:
+The coordinates for each command can be scaled, rotated, and translated, by
+using the following commands:
 
 * `rotate`
 * `scale`
 * `scalexy`
 * `translate`
 
-The transformation is applied when the command is executed. They have no effect
-on the existing path, only on the next operations.
+The transformations are applied when the command is executed. They have no
+effect on the existing path, only on the new segments added to it.
+
+They are done by updating the
+[current transformation matrix](https://www.cairographics.org/manual/cairo-Transformations.html)
+in the Cairo context. To reset the matrix to its original state, before any
+transformation, use `resetmatrix`.
+
+The transform origin for scale and rotation is initially at `0, 0`, but it can
+be adjusted with `translate`.
+
 
 ::: {.example}
 
 ```vgs
-save
-
 // Map (0, 0) as the center of the frame.
 translate (w / 2) (h / 2)
 
 // Scale the space as if the frame is 1x1 pixel.
 scalexy w h
 
-// Draw 3 lines with the same arguments,
+// Draw multiple lines with the same arguments,
 // but each one on a different rotation.
-M -0.25 0 H 0.25
+repeat 10 {
+    rotate (PI / 10)
+    M -0.25 0
+    H 0.25
+}
 
-rotate (PI / 4)
-M -0.25 0 H 0.25
+// Reset transformations, so the scale does not
+// affect stroke.
+resetmatrix
 
-rotate (PI / 2)
-M -0.25 0 H 0.25
-
-// Restore before stroke, so the scale
-// does not affect line width.
-restore
 stroke
 ```
 
 :::
 
-The transformations are done by updating the
-[current transformation matrix](https://www.cairographics.org/manual/cairo-Transformations.html).
-
-### State Stack
+### <a name="state-stack"></a>State Stack
 
 The state of a drawvg script contains all parameters used for drawing
 operations, like the current color, the transformation matrix, the stroke
 configuration, etc.
 
 The `save` command pushes a snapshot of the state to an internal stack. Later,
-`restore` pops the latest state from the stack, and uses that snapshot as the
-new state.
+`restore` pops the latest snapshot from the stack, and uses it as the new state.
 
 The parameters that can be saved and restored are:
 
@@ -850,6 +867,7 @@ The parameters that can be saved and restored are:
     * `setcolor`
     * `sethsla`
 * Transformation matrix.
+    * `resetmatrix`
     * `rotate`
     * `scale`
     * `scalexy`
@@ -862,8 +880,9 @@ The parameters that can be saved and restored are:
     * `setlinewidth`
 * Clip region
     * `clip`
+    * `resetclip`
 
-### Frame Metadata
+### <a name="frame-metadata"></a>Frame Metadata
 
 Some FFmpeg filters add metadata to frames. The command `getmetadata` can read
 metadata items containing a numeric value, and store it in a variable that can
@@ -924,7 +943,7 @@ block is not executed.
 
 [loop counter]: https://en.wikipedia.org/wiki/For_loop#Loop_counters
 
-#### Comparison and Logical Operators
+#### <a name="comp-operators"></a>Comparison and Logical Operators
 
 [!ffmpeg-expr] only supports arithmetic operators (like `+` for addition).
 Comparison operators (like `!=`) are supported via functions, while logical
@@ -970,7 +989,8 @@ if (gt(x, y) * not(eq(z, 1))) {
 
 `break` causes a `repeat` loop to be terminated immediately.
 
-If it is executed outside a `repeat` block, it terminates the whole script.
+If it is executed outside a `repeat` block, it terminates the whole script, or
+the current procedure.
 
 ::: {.example}
 
@@ -999,13 +1019,13 @@ stroke
 
 :::
 
-### Procedures
+### <a name="procedures"></a>Procedures
 
-Procedures associate a name with a block that can be called later. Its main
-purpose is to reuse a group of commands in different places of a script.
+A procedure is a name associated with a block that can be executed multiple
+times.
 
-A procedure can have zero, one, or two arguments. They can be defined with
-`proc`, `proc1`, or `proc2`, depending on how many arguments are wanted.
+It can have zero, one, or two arguments. It is defined with `proc`, `proc1`, or
+`proc2`, depending on how many arguments are required.
 
 ```vgs,ignore
 proc p0 {
@@ -1021,8 +1041,8 @@ proc1 p1 arg1 arg2 {
 }
 ```
 
-Depending on the number of arguments, they can be called with `call`, `call1`,
-or `call2`.
+Depending on the number of arguments, they are called with `call`, `call1`, or
+`call2`.
 
 ```vgs,ignore
 call p0
@@ -1032,8 +1052,8 @@ call1 p1 (value1)
 call2 p2 (value1) (value2)
 ```
 
-The arguments (like `arg1` in the previous example) are stored as regular
-variables.
+The arguments (like `arg1` or `arg2` in the previous examples) are accessed as
+regular variables.
 
 When the procedure returns, the value of the variable for each argument is
 restored to the value before calling the procedure. Changes in other variables
@@ -1096,6 +1116,23 @@ proc2 zigzag color y {
 call2 zigzag 0x40C0FFFF 60
 call2 zigzag 0x00AABBFF 120
 call2 zigzag 0x20F0B7FF 180
+```
+
+:::
+
+The body of the procedure must be defined with `proc` *before* using `call`.
+
+::: {.example}
+
+In this example, when the procedure `notyet` is called, its body has not yet defined,
+so the execution fails with the error `Missing body for procedure 'notyet'`.
+
+```vgs,ignore,error[1:6:6]
+call notyet
+
+proc notyet {
+    // ...
+}
 ```
 
 :::
@@ -1219,7 +1256,7 @@ The circle in every frame is at a different position, but always on the diagonal
 line of the frame. This happens because the values for the coordinates X and Y
 are identical, since both number generators use the same seed.
 
-To distribute the circles over the entire frame we need different seeds for each
+To distribute the circles over the whole frame we need different seeds for each
 expression. This can be achieved by writing a non-zero value (like `0xF0F0`) to
 the internal variable of one of expressions, but only when its value is `0`:
 
@@ -1265,7 +1302,7 @@ The `randomg(idx)` function, which is specific to drawvg scripts, is similar to
 * All frames have the same seed.
 * The state is shared between expressions.
 
-The parameter `idx` has two functions:
+The parameter `idx` has two uses:
 
 * The last two bits are the index of an internal state, so it is possible to
   have 4 different number generators.
@@ -1290,9 +1327,9 @@ There are 4 calls to `randomg`:
 2. The second call has the same behaviour: it initializes the state at index `0`
    with the value `0xFF0`.
 
-3. The third uses `0xAA1` uses index `1`. Since that state is already
-   initialized, the rest of the `0xAA1` value is ignored, and it returns the
-   next number after the `0xFF1` seed.
+3. The third call has the argument `0xAA1`, and it uses index `1`. Since that
+   state is already initialized (with the seed `0xFF1`), the value `0xAA1` is
+   ignored, and it returns the next number.
 
 ::: {.example}
 
@@ -1337,8 +1374,8 @@ preferable to use it only when necessary.
 
 #### Function <code>print</code>
 
-The function `print(t)` writes the value of <code>t</code>. It also returns
-<code>t</code>, so it can be used in the middle of another expression.
+The function `print(t)` writes the value of <code>t</code>, and returns its
+argument.
 
 ::: {.example}
 
@@ -1377,7 +1414,7 @@ $ ffmpeg \
 
 :::
 
-#### Command `print`
+#### <a name="command-print"></a>Command `print`
 
 The command `print` accepts an arbitrary number of arguments, and for each one
 it writes:
@@ -1433,16 +1470,61 @@ $ ffmpeg \
 ### `arc`
 
 ```signature
-arc cx cy radius angle1 angle2 **
+arc xc yc radius angle1 angle2 **
 ```
 
-TODO
+Adds a circular arc of the given `radius` to the current path. The arc is
+centered at `xc, yc`, begins at `angle1` and proceeds in the direction of
+increasing angles to end at `angle2`.
+
+If there is a [current point], a line is added from it to the beginning of the
+arc. If this is not desired, use `newpath` before `arc` to clear the
+[current point].
+
+See the documentation of the
+[`cairo_arc`](https://www.cairographics.org/manual/cairo-Paths.html#cairo-arc)
+function for more details.
+
+::: {.example}
+
+```vgs
+arc 120 120 60 0 (3 * PI / 2)
+stroke
+```
+
+:::
 
 ### `arcn`
 
 ```signature
-arcn cx cy radius angle1 angle2 **
+arcn xc yc radius angle1 angle2 **
 ```
+
+
+Similar to `arc`, but it differs in the direction of the arc between the two
+angles.
+
+See the documentation of the
+[`cairo_arc_negative`](https://www.cairographics.org/manual/cairo-Paths.html#cairo-arc-negative)
+function for more details.
+
+::: {.example}
+
+In this example, both `arc` and `arcn` have the same angles, but they render
+different arcs:
+
+```vgs
+arc  120  90 60 (PI / 2) 0
+
+newpath
+arcn 120 150 60 (PI / 2) 0
+
+stroke
+```
+
+`newpath` is needed to prevent a line between the two arcs.
+
+:::
 
 ### `break`
 
@@ -1450,23 +1532,82 @@ arcn cx cy radius angle1 angle2 **
 break
 ```
 
+`break` terminates the execution of the innermost block, either a `repeat` loop
+or a procedure.
+
+If it is used outside of a `repeat` / `proc` block, it terminates the script
+for the current frame.
+
+### `call`
+
+```signature
+call name
+```
+
+Invokes a procedure defined by `proc`.
+
+See the [Procedures] section above for more details.
+
+[Procedures]: #procedures
+
+### `call1`
+
+```signature
+call1 name arg
+```
+
+Invokes a procedure defined by `proc1`, passing `arg` as its argument.
+
+See the [Procedures] section above for more details.
+
+### `call2`
+
+```signature
+call2 name arg1 arg2
+```
+
+Invokes a procedure defined by `proc2`, passing `arg1` and `arg2` as its
+arguments.
+
+See the [Procedures] section above for more details.
+
 ### `circle`
 
 ```signature
-circle cx cy radius **
+circle xc yc radius **
 ```
 
-### `clip`
+Adds a circle of the given `radius` to the current path. The circle is centered
+at `xc, yc`. The [current point] is cleared before and after adding the circle.
+
+This is a convenience wrapper for `arc`. A call to `circle` is equivalent to:
+
+```vgs,ignore
+newpath
+arc xc yc radius (0) (2 * PI)
+newpath
+```
+
+### `clip`, `eoclip`
 
 ```signature
-clip
+clip, eoclip
 ```
 
-### `eoclip`
+Establishes a new clip region by intersecting the current clip region with the
+current path as it would be filled by `fill` or `eofill`.
 
-```signature
-eoclip
-```
+`eoclip` uses the [even–odd rule][rule-even-odd]. See [fill rules] for more
+details.
+
+[fill rules]: #fill-rules
+
+The path is cleared after updating the clip region, unless the `preserve`
+command is used before `clip` or `eoclip`.
+
+See the documentation of the
+[`cairo_clip`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-clip)
+function for more details.
 
 ### `Z`, `z`, `closepath`
 
@@ -1474,11 +1615,82 @@ eoclip
 Z, z, closepath
 ```
 
+Adds a line segment to the path from the [current point] to the beginning of the
+current sub-path, and closes this sub-path. The beginning is set by any of the
+*move* commands (`M`, `m`, `moveto`, `rmoveto`).
+
+See the documentation of the
+[`cairo_close_path`](https://www.cairographics.org/manual/cairo-Paths.html#cairo-close-path)
+function for more details.
+
+
 ### `colorstop`
 
 ```signature
 colorstop offset color **
 ```
+
+Adds a color stop to a gradient pattern.
+
+`offset` is a value between `0` and `1`, and it specifies the location along the
+gradient's control vector.
+
+This command must be executed after `lineargrad` or `radialgrad`.
+
+Color stops can be added in any number of calls to `colorstop`. In the next
+example, the 3 blocks define the same gradient:
+
+```vgs,ignore,nocolorwords
+// 1
+colorstop 0.0 red
+colorstop 0.5 green
+colorstop 1.0 blue
+
+// 2
+colorstop 0 red 0.5 green
+colorstop 1 blue
+
+// 3
+colorstop 0 red 0.5 green 1 blue
+```
+
+See the documentation of the
+[`cairo_pattern_add_color_stop_rgba`](https://www.cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-add-color-stop-rgba)
+function for more details.
+
+::: {.example}
+
+In this example, color stops are added in a `repeat` loop.
+
+```vgs
+lineargrad 0 0 w h
+
+repeat 6 {
+    defhsla s (i * 60) 0.8 0.5 1
+    colorstop (i / 5) s
+}
+
+rect 0 0 w h
+fill
+```
+
+It is possible to avoid transitions between color stops by repeating the same
+color in two stops:
+
+```vgs,mark[6:5:9],mark[6:15:13]
+lineargrad 0 0 w h
+
+repeat 6 {
+    defhsla s (i * 60) 0.8 0.5 1
+    colorstop (i / 5) s
+    colorstop ((i + 1) / 5) s
+}
+
+rect 0 0 w h
+fill
+```
+
+:::
 
 ### `C`, `curveto`
 
@@ -1486,11 +1698,38 @@ colorstop offset color **
 C, curveto x1 y1 x2 y2 x y **
 ```
 
+Draw a cubic Bézier curve from the [current point] to the *end point* specified
+by `x, y`. The *start control point* is specified by `x1, y1` and the *end
+control point* is specified by `x2, y2`.
+
+The behaviour is identical to the <code>C</code> command in [!svg-path]. For
+more details, see [!mdncubicbeziercurve], and the [!mdntutorialcurve].
+
+[!mdncubicbeziercurve]: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d#cubic_b%C3%A9zier_curve "Cubic Bézier Curve on MDN"
+[!mdntutorialcurve]: https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch/Paths#curve_commands "Curve Commands section of the Paths tutorial on MDN"
+
+::: {.example}
+
+```vgs
+moveto 20 20
+
+curveto
+    0 (h / 2)           // start control point
+    w (h / 2)           // end control point
+    (w - 20) (h - 20)   // end point
+
+stroke
+```
+
+:::
+
 ### `c`, `rcurveto`
 
 ```signature
 c, rcurveto dx1 dy1 dx2 dy2 dx dy **
 ```
+
+Like `curveto`, but the coordinates are relative to the [current point].
 
 ### `defhsla`
 
@@ -1498,11 +1737,25 @@ c, rcurveto dx1 dy1 dx2 dy2 dx dy **
 defhsla varname h s l a
 ```
 
+Similar to `sethsla`, but instead of establishing the color for stroke and fill
+operations, the computed color is stored as a `0xRRGGBBAA` value in the variable
+`varname`.
+
+`varname` can then be used as a color for `setcolor` and `colorstop`.
+
+See `sethsla` for more details on how the color is computed.
+
 ### `defrgba`
 
 ```signature
 defrgba varname r g b a
 ```
+
+Computes a color from the *red*, *green*, *blue*, and *alpha* components, and
+assigns it to the variable `varname` as a `0xRRGGBBAA` value.
+
+All components are values between `0` and `1`. Values outside that range are
+clamped to it.
 
 ### `ellipse`
 
@@ -1510,17 +1763,36 @@ defrgba varname r g b a
 ellipse cx cy rx ry **
 ```
 
-### `fill`
+Adds an ellipse to the current path. Similar to `circle`, but it is possible to
+use different radius for both axes.
 
-```signature
-fill
+::: {.example}
+
+```vgs
+ellipse 120 120 75 50
+stroke
 ```
 
-### `eofill`
+:::
+
+### `fill`, `eofill`
 
 ```signature
-eofill
+fill, eofill
 ```
+
+Fill the current path, using the [current pattern](#patterns) (either a solid
+color or a gradient).
+
+`eofill` uses the [even–odd rule][rule-even-odd]. See [fill rules] for more
+details.
+
+The path is cleared after the operation, unless the `preserve` command is used
+before `fill` or `eofill`.
+
+See the documentation of the
+[`cairo_fill`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-fill)
+function for more details.
 
 ### `getmetadata`
 
@@ -1528,11 +1800,24 @@ eofill
 getmetadata varname key
 ```
 
+Get the value of a metadata entry created by another filter, and assign it to
+the variable `varname`.
+
+If there is no metadata entry for `key`, or its value is not a number, `varname`
+is set to [`NaN`][nan].
+
+See the [Frame Metadata](#frame-metadata) section above for an example.
+
 ### `H`, `h`
 
 ```signature
 H, h x **
 ```
+
+Draw a horizontal line from the [current point] to <code>x</code>.
+
+The coordinate for `H` is absolute, and for `h` it is relative to the
+[current point].
 
 ### `if`
 
@@ -1540,11 +1825,24 @@ H, h x **
 if condition { block }
 ```
 
+Executes a block if the value of `condition` is not zero, and a finite
+number (unlike [`NaN`][nan]).
+
+See the [Comparison and Logical Operators](#comp-operators) section above for
+more details on how to write conditional expressions.
+
 ### `lineargrad`
 
 ```signature
 lineargrad x0 y0 x1 y1
 ```
+
+Set the [current pattern](#patterns) to a new linear gradient, along the line
+from the coordinates `x0, y0` to `x1, y1`.
+
+This gradient can be used for stroke and fill operations.
+
+Use `colorstop` to set the color for each position in the gradient.
 
 ### `L`, `lineto`
 
@@ -1552,13 +1850,19 @@ lineargrad x0 y0 x1 y1
 L, lineto x y **
 ```
 
+Draw a line from the [current point] to the coordinates at `x, y`.
+
+See the documentation of the
+[`cairo_line_to`](https://www.cairographics.org/manual/cairo-Paths.html#cairo-line-to)
+function for more details.
+
 ### `l`, `rlineto`
 
 ```signature
 l, rlineto dx dy **
 ```
 
-TODO: line from [current point].
+Like `lineto`, but the coordinates are relative to the [current point].
 
 ### `M`, `moveto`
 
@@ -1566,17 +1870,45 @@ TODO: line from [current point].
 M, moveto x y **
 ```
 
+Begin a new sub-path, and set the [current point] to `x, y`.
+
 ### `m`, `rmoveto`
 
 ```signature
 m, rmoveto dx dy **
 ```
 
+Like `moveto`, but the coordinates are relative to the [current point].
+
 ### `newpath`
 
 ```signature
 newpath
 ```
+
+Begin a new sub-path. Like `moveto`, but there is no [current point] after it.
+
+::: {.example}
+
+In the next example, `newpath` is used in the path on the right to prevent the
+line connecting both arcs.
+
+```vgs
+setlinewidth 3
+
+setcolor skyblue
+arcn 70 90 20 0 (PI)
+arc 70 150 20 0 (PI)
+stroke
+
+setcolor seagreen
+arcn 170 90 20 0 (PI)
+newpath
+arc 170 150 20 0 (PI)
+stroke
+```
+
+:::
 
 ### `preserve`
 
@@ -1606,10 +1938,10 @@ different colors.
 ```vgs
 circle (w / 2) (h / 2) (w / 3)
 
-setlinewidth 10
 setcolor skyblue
 preserve fill
 
+setlinewidth 10
 setcolor seagreen
 stroke
 ```
@@ -1641,29 +1973,9 @@ clip
 print expr **
 ````
 
-### `proc1`
+Print its arguments to the FFmpeg log.
 
-```signature
-proc1 name varname { block }
-```
-
-### `call1`
-
-```signature
-call1 name arg
-```
-
-### `proc2`
-
-```signature
-proc2 name varname1 varname2 { block }
-```
-
-### `call2`
-
-```signature
-call2 name arg1 arg2
-```
+See the [Command <code>print</code>](#command-print) section above for more details.
 
 ### `proc`
 
@@ -1671,17 +1983,122 @@ call2 name arg1 arg2
 proc name { block }
 ```
 
-### `call`
+Assign a block to the procedure `name`. The procedure can be called multiple
+times with the `call` command.
 
-```signature
-call name
+The block for a procedure can be reassigned by other calls to `proc`. In such
+case, `call` invokes the last assigned block.
+
+::: {.example}
+
+In this example, the procedure `example` has two different blocks.
+
+```vgs,ignore
+proc example {
+    // block1
+}
+
+call example    // executes block1
+
+proc example {
+    // block2
+}
+
+call example    // executes block2
 ```
 
-### `Q`, `q`
+:::
+
+The execution returns to the caller when the last command of the block is
+executed, but it can be interrupted early with `break`.
+
+All changes performed in the procedure (setting variables, modifying colors,
+adding segments to the path, etc) are preserved when it terminates.
+
+### `proc1`
+
+```signature
+proc1 name varname { block }
+```
+
+Like `proc`, but the procedure can receive 1 argument. It must be called with
+`call1`.
+
+The argument is stored in the variable `varname`. The variable is updated when
+the procedure is called, and its value is restored when the procedure returns.
+
+::: {.example}
+
+In the next example, the variable `A` has the value `0` before calling the
+procedure `P`. During the execution of `P`, `A` is `1`, but after it, `A` is `0`
+again.
+
+```vgs,ignore
+setvar A 0
+
+proc1 P A {
+    print A
+}
+
+print A
+call1 P 1
+print A
+```
+
+It writes the following messages:
+
+```console
+[7:7] A = 0.000000
+[4:8] A = 1.000000
+[9:7] A = 0.000000
+```
+
+:::
+
+### `proc2`
+
+```signature
+proc2 name varname1 varname2 { block }
+```
+
+Like `proc1`, but the procedure can receive 2 arguments. It must be called with
+`call2`.
+
+### `Q`
 
 ```signature
 Q x1 y1 x y
 ```
+
+Draw a quadratic Bézier curve from the [current point] to the *end point*
+specified by `x, y`. The *control point* is specified by `x1, y1`.
+
+The behaviour is identical to the <code>Q</code> command in [!svg-path]. For
+more details, see [!mdnquadbeziercurve], and the [!mdntutorialcurve].
+
+[!mdnquadbeziercurve]: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d#quadratic_b%C3%A9zier_curve "Quadratic Bézier curve on MDN"
+
+::: {.example}
+
+```vgs
+moveto 20 20
+
+Q
+    0 h                 // control point
+    (w - 20) (h - 20)   // end point
+
+stroke
+```
+
+:::
+
+### `q`
+
+```signature
+q dx1 dy1 dx dy
+```
+
+Like `Q`, but the coordinates are relative to the [current point].
 
 ### `radialgrad`
 
@@ -1689,11 +2106,69 @@ Q x1 y1 x y
 radialgrad cx0 cy0 radius0 cx1 cy1 radius1
 ```
 
+Creates a new radial gradient between the two circles defined by
+`cx0 cy0 radius0` and `cx1 cy1 radius1`. Each set of arguments is the
+coordinates of the center and the radius.
+
+This gradient can be used for stroke and fill operations.
+
+Use `colorstop` to set the color for each position in the gradient.
+
+::: {.example}
+
+The animation in the next example shows how the two circles defined in the
+`radialgrad` arguments interact with each other.
+
+The red circle represent the circle for the `cx0 cy0 radius0` arguments, and the
+yellow circle is the one for the `cx1 cy1 radius1` arguments.
+
+```vgs,loop[8]
+setvar cx0 (mod(t * 30, w))
+setvar cy0 120
+setvar radius0 20
+
+setvar cx1 120
+setvar cy1 120
+setvar radius1 70
+
+radialgrad
+    cx0 cy0 radius0
+    cx1 cy1 radius1
+
+colorstop
+    0 lightblue
+    1 darkblue
+
+// Fill the frame with the gradient.
+rect 0 0 w h
+fill
+
+// Draw inner circle.
+circle cx0 cy0 radius0
+setcolor red
+stroke
+
+// Draw outer circle.
+circle cx1 cy1 radius1
+setcolor yellow
+stroke
+```
+
+:::
+
 ### `rect`
 
 ```signature
 rect x y width height
 ```
+
+Adds a rectangle of the given size (`width` × `height`), at position `x, y`, to
+the current path. The [current point] is cleared before and after adding the
+rectangle.
+
+See the documentation of the
+[`cairo_rectangle`](https://www.cairographics.org/manual/cairo-Paths.html#cairo-rectangle)
+function for more details.
 
 ### `repeat`
 
@@ -1701,11 +2176,26 @@ rect x y width height
 repeat count { block }
 ```
 
+Executes a block the number of times indicated by `count`.
+
+In each iteration, the variable `i` is used as a [loop counter]. It takes the
+values from `0` to `count - 1`. When the loop is terminated, the variable
+is restored to the value before starting the loop.
+
+If `count` is less than `1`, or it is not a finite number (like [`NaN`][nan]),
+the block is not executed.
+
 ### `resetclip`
 
 ```signature
 resetclip
 ```
+
+Reset the current clip region to its original state, covering the whole frame.
+
+See the documentation of the
+[`cairo_reset_clip`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-reset-clip)
+function for more details.
 
 ### `resetdash`
 
@@ -1713,11 +2203,34 @@ resetclip
 resetdash
 ```
 
+Disable the dash pattern to be used by `stroke`. This reverts any change made by
+`setdash` and `setdashoffset`.
+
+It calls
+[`cairo_set_dash`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-dash)
+with `num_dashes` set to `0`.
+
+### `resetmatrix`
+
+```signature
+resetmatrix
+```
+
+Resets the current [transformation matrix](#transformations).
+
 ### `restore`
 
 ```signature
 restore
 ```
+
+Restores the state saved by a preceding call to `save`.
+
+For more details, see the [!state-stack] section above, and the
+[`cairo_restore`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-restore)
+function.
+
+[!state-stack]: #state-stack "State Stack"
 
 ### `rotate`
 
@@ -1725,11 +2238,63 @@ restore
 rotate angle
 ```
 
+Modifies the current [transformation matrix](#transformations) by rotating the
+user-space axes by `angle` radians.
+
+See the documentation of the
+[`cairo_rotate`](https://www.cairographics.org/manual/cairo-Transformations.html#cairo-rotate)
+function for more details.
+
+::: {.example}
+
+In this example:
+
+* `scalexy` maps the coordinates to a 1x1 frame.
+* `translate` put `0, 0` at the center of the frame.
+* `rotate` rotates 45°.
+* `resetmatrix` reverts the transformations before `stroke`, so the line width
+  is not affected by the scale.
+
+```vgs
+scalexy w h
+translate 0.5 0.5
+rotate (PI / 4)
+rect -0.25 -0.25 0.5 0.5
+resetmatrix
+stroke
+```
+
+:::
+
 ### `roundedrect`
 
 ```signature
 roundedrect x y width height radius **
 ```
+
+Like `rect`, but a circular arc is used for the corners.
+
+::: {.example}
+
+The next example shows the same rectangle, with different values for the corner
+radius.
+
+The radius is computed by multiplying `i` (the [loop counter]) by `4.5`. This
+number is chosen to make the last shape a perfect circle.
+
+```vgs
+repeat 9 {
+    roundedrect
+        (mod(i, 3) * 80 + 5)     // x
+        (floor(i / 3) * 80 + 5)  // y
+        70 70                    // size
+        (i * 4.5)                // radius
+}
+
+stroke
+```
+
+:::
 
 ### `save`
 
@@ -1737,10 +2302,24 @@ roundedrect x y width height radius **
 save
 ```
 
+Saves a copy of the current state on an internal stack. This copy can be
+restored later with `restore`.
+
+For more details, see the [!state-stack] section above, and the
+[`cairo_save`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-save)
+function.
+
 ### `scale`
 
 ```signature
-scale s
+scale sxy
+```
+
+Similar to `scalexy`, but the same value is used for both axes. It is equivalent
+to:
+
+```vgs,ignore
+scalexy sxy sxy
 ```
 
 ### `scalexy`
@@ -1749,11 +2328,26 @@ scale s
 scalexy sx sy
 ```
 
+Modifies the current [transformation matrix](#transformations) by scaling the X
+and Y user-space axes by `sx` and `sy` respectively.
+
+See the documentation of the
+[`cairo_scale`](https://www.cairographics.org/manual/cairo-Transformations.html#cairo-scale)
+function for more details.
+
+See `rotate` for an example on combining multiple transformations.
+
+
 ### `setcolor`
 
 ```signature
 setcolor color
 ```
+
+Set a solid color as the [current pattern](#patterns) for stroke and fill
+operations
+
+See the [Colors](#args-colors) section above for more details.
 
 ### `setdash`
 
@@ -1761,17 +2355,71 @@ setcolor color
 setdash length **
 ```
 
+Sets the dash pattern to be used by `stroke`.
+
+Each call to `setdash` adds a length to the pattern, alternating between *on*
+and *off* portions of the stroke.
+
+After a call to `setdash`, `resetdash` is needed either to create a new pattern,
+or to discard the current one.
+
+See the documentation of the
+[`cairo_set_dash`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-dash)
+function for more details.
+
 ### `setdashoffset`
 
 ```signature
 setdashoffset offset
 ```
 
+Set the offset into the dash pattern at which the stroke should start.
+
+`setdash` must be called *before* `setdashoffset`.
+
+See the documentation of the
+[`cairo_set_dash`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-dash)
+function for more details.
+
+::: {.example}
+
+The next animation shows the effect of `setdashoffset` when its argument changes
+over time.
+
+```vgs,loop[4]
+scalexy w h
+M 0.5 1
+curveto 0 0.5, 1 0.5, 0.5 0
+resetmatrix
+
+setdash 20 5 // 20 on, 5 off
+setdashoffset (t * 100)
+
+setlinewidth 20
+stroke
+```
+
+:::
+
 ### `sethsla`
 
 ```signature
 sethsla h s l a
 ```
+
+Set the [current pattern](#patterns) to a solid color, given the *hue*,
+*saturation*, and *lightness*, and *alpha* components.
+
+<code>h</code> is the *hue*, a value between `0` and `359`. Negative values are
+clamped to `0`, and values greater than `359` are interpreted as modulo 360.
+
+<code>s</code> (*saturation*), <code>l</code> (*lightness*), and <code>a</code>
+(*alpha*), are values between `0` and `1`.
+
+The conversion to RGB is implemented according to the
+[formulae from Wikipedia][hsl2rg].
+
+[hsl2rg]: https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB
 
 ### `setlinecap`
 
@@ -1868,11 +2516,40 @@ M 70 160 l 50 50 50 -50 stroke
 setlinewidth width
 ```
 
+Set the line width for `stroke`.
+
+`width` is affected by the [transformation matrix](#transformations).
+
+To specify a width that is not affected by other transformations, `resetmatrix`
+can be used between `save` / `restore`:
+
+```vgs,ignore
+save
+
+resetmatrix
+setlinewidth 1
+stroke
+
+// Restore matrix after stroke.
+restore
+```
+
+
+See the documentation of the
+[`cairo_set_line_width`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-line-width)
+function for more details.
+
 ### `setrgba`
 
 ```signature
 setrgba r g b a
 ```
+
+Set the [current pattern](#patterns) to a solid color, given the *red*, *green*,
+*blue*, and *alpha* components.
+
+All components are values between `0` and `1`. Values outside that range are
+clamped to it.
 
 ### `setvar`
 
@@ -1880,11 +2557,25 @@ setrgba r g b a
 setvar varname value
 ```
 
+Set the variable `varname` to `value`.
+
+See the [User Variables](#user-variables) section above for more details.
+
 ### `stroke`
 
 ```signature
 stroke
 ```
+
+Strokes the current path according to the current line width, line join, line
+cap, and dash settings.
+
+The path is cleared after the operation, unless the `preserve` command is used
+before `stroke`.
+
+See the documentation of the
+[`cairo_stroke`](https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-stroke)
+function for more details.
 
 ### `S`, `s`
 
@@ -1892,11 +2583,46 @@ stroke
 S, s x2 y2 x y **
 ```
 
+Draw a smooth cubic Bézier curve from the [current point] to the *end point*
+specified by `x, y`. The *end control point* is specified by `x2, y2`.
+
+The *start control point* is the reflection of the *end control point* of the
+previous curve command about the *current point*.
+
+The behaviour is identical to the <code>S</code> command in [!svg-path]. For
+more details, see [!mdncubicbeziercurve], and the [!mdntutorialcurve].
+
+`s` is like `S`, but the coordinates are relative to the [current point].
+
+::: {.example}
+
+```vgs
+M 20 120
+
+c 25 -50, 25 50, 50 0
+
+repeat 3 {
+    s 20 50, 50 0
+}
+
+setlinewidth 5
+stroke
+```
+
+:::
+
 ### `translate`
 
 ```signature
 translate tx ty
 ```
+
+Modifies the current [transformation matrix](#transformations) by translating
+the user-space origin by `tx, ty`.
+
+See the documentation of the
+[`cairo_translate`](https://www.cairographics.org/manual/cairo-Transformations.html#cairo-translate)
+function for more details.
 
 ### `T`, `t`
 
@@ -1904,12 +2630,43 @@ translate tx ty
 T, t x y **
 ```
 
+Draw a smooth quadratic Bézier curve from the [current point] to the *end point*
+specified by `x, y`.
+
+The *control point* is the reflection of the *control point* of the previous
+curve command about the *current point*.
+
+The behaviour is identical to the <code>T</code> command in [!svg-path]. For
+more details, see [!mdnquadbeziercurve], and the [!mdntutorialcurve].
+
+`t` is like `T`, but the coordinates are relative to the [current point].
+
+::: {.example}
+
+```vgs
+M 20 120
+
+q 10 -20 20 0
+
+repeat 9 {
+    t 20 0
+}
+
+stroke
+```
+
+:::
+
 ### `V`, `v`
 
 ```signature
-V, v x **
+V, v y **
 ```
 
+Draw a vertical line from the [current point] to <code>y</code>.
+
+The coordinate for `V` is absolute, and for `v` it is relative to the
+[current point].
 
 
 [!ffmpeg-expr]: https://ffmpeg.org/ffmpeg-utils.html#Expression-Evaluation "FFmpeg expressions"
