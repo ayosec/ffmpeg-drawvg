@@ -140,7 +140,7 @@ export default function OutputPanel() {
                             <IconButton
                                 Icon={IoPause}
                                 label="Pause Animation"
-                                shortcut="ctrl-shift-p"
+                                shortcut="ctrl-shift- "
                                 onClick={() => setPlaying(PlaybackStatus.Pause)}
                             />
                         :
@@ -148,7 +148,7 @@ export default function OutputPanel() {
                                 Icon={IoPlay}
                                 iconStyle={{transform: "scaleX(-1)"}}
                                 label="Play Backwards"
-                                shortcut="ctrl-shift-p"
+                                shortcut="ctrl-shift- "
                                 onClick={() => setPlaying(PlaybackStatus.Backwards)}
                             />
                     }
@@ -166,14 +166,14 @@ export default function OutputPanel() {
                             <IconButton
                                 Icon={IoPause}
                                 label="Pause Animation"
-                                shortcut="ctrl-p"
+                                shortcut="ctrl- "
                                 onClick={() => setPlaying(PlaybackStatus.Pause)}
                             />
                         :
                             <IconButton
                                 Icon={IoPlay}
                                 label="Play Forwards"
-                                shortcut="ctrl-p"
+                                shortcut="ctrl- "
                                 onClick={() => setPlaying(PlaybackStatus.Forward)}
                             />
                     }

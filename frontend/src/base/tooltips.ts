@@ -1,5 +1,6 @@
 // Replace some hard-to-see keys with the full name.
 export const KEY_NAMES: {[key:string]: string} = {
+    " ": "space",
     ",": "comma",
     ".": "period",
 };

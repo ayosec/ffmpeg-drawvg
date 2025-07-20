@@ -166,17 +166,17 @@ it highlights that `w` is the `width` argument:
 
 There are some global shortcuts that can be used anywhere:
 
-| Key                                         | Handler | Action                           |
-|---------------------------------------------|---------|----------------------------------|
-| <kbd>Ctrl</kbd><kbd>S</kbd>                 | Editor  | Open the [Files](#files) dialog. |
-| <kbd>Ctrl</kbd><kbd>H</kbd>                 | Editor  | Open the Help dialog.            |
-| <kbd>Ctrl</kbd><kbd>K</kbd>                 | Editor  | Open the Shortcuts dialog.       |
-| <kbd>Ctrl</kbd><kbd>I</kbd>                 | Editor  | Reformat Code.                   |
-| <kbd>Ctrl</kbd><kbd>E</kbd>                 | Player  | Rewind Animation.                |
-| <kbd>Ctrl</kbd><kbd>Comma</kbd>             | Player  | Previous Frame.                  |
-| <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>P</kbd> | Player  | Play Backwards.                  |
-| <kbd>Ctrl</kbd><kbd>P</kbd>                 | Player  | Play Forwards.                   |
-| <kbd>Ctrl</kbd><kbd>Period</kbd>            | Player  | Next Frame.                      |
+| Key                                             | Handler | Action                           |
+|-------------------------------------------------|---------|----------------------------------|
+| <kbd>Ctrl</kbd><kbd>S</kbd>                     | Editor  | Open the [Files](#files) dialog. |
+| <kbd>Ctrl</kbd><kbd>H</kbd>                     | Editor  | Open the Help dialog.            |
+| <kbd>Ctrl</kbd><kbd>K</kbd>                     | Editor  | Open the Shortcuts dialog.       |
+| <kbd>Ctrl</kbd><kbd>I</kbd>                     | Editor  | Reformat Code.                   |
+| <kbd>Ctrl</kbd><kbd>E</kbd>                     | Player  | Rewind Animation.                |
+| <kbd>Ctrl</kbd><kbd>Comma</kbd>                 | Player  | Previous Frame.                  |
+| <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd> | Player  | Play Backwards.                  |
+| <kbd>Ctrl</kbd><kbd>Space</kbd>                 | Player  | Play Forwards.                   |
+| <kbd>Ctrl</kbd><kbd>Period</kbd>                | Player  | Next Frame.                      |
 
 
 ### <a name="files"></a>Saved Files
@@ -302,7 +302,7 @@ The playback can be managed by the following actions:
 * <a name="player-forwards"></a>**Start the animation.**
 
     Click on ![Play](./icon-play-forwards.svg) or press
-    <kbd>Ctrl</kbd><kbd>P</kbd>.
+    <kbd>Ctrl</kbd><kbd>Space</kbd>.
 
     If there is an animation running, this action will pause it instead.
 
@@ -312,7 +312,7 @@ The playback can be managed by the following actions:
 * <a name="player-backwards"></a>**Start a backwards animation.**
 
     Click on ![Play Backwards](./icon-play-backwards.svg) or press
-    <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>P</kbd>.
+    <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Space</kbd>.
 
     To animate backwards, the values for the <code>n</code> and <code>t</code>
     variables are decremented in each frame.
