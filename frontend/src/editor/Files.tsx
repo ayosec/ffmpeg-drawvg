@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 
 import { FaUndo } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi2";
-import { IoArchive, IoSave } from "react-icons/io5";
+import { IoArchive, IoSave, IoWarning } from "react-icons/io5";
 
 import IconButton from "../base/IconButton";
 import ModalWindow from "../base/ModalWindow";
@@ -279,13 +279,16 @@ function SaveFileHelp({ action }: { action: NewFileAction }) {
                 </p>
 
                 <p>
-                    If you clear your browser data, or if you are using private/incognito mode,
-                    the files will be lost.
-                </p>
-
-                <p>
                     Your saved files will appear in this dialog window the next time you open it.
                 </p>
+
+                <div className={styles.warning}>
+                    <div><IoWarning /></div>
+                    <p>
+                        If you clear your browser data, or if you are using private/incognito mode,
+                        the files will be lost.
+                    </p>
+                </div>
             </>;
     }
 }

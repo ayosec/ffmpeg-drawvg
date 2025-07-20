@@ -2605,7 +2605,6 @@ repeat 3 {
     s 20 50, 50 0
 }
 
-setlinewidth 5
 stroke
 ```
 
@@ -2646,7 +2645,7 @@ more details, see [!mdnquadbeziercurve], and the [!mdntutorialcurve].
 ```vgs
 M 20 120
 
-q 10 -20 20 0
+q 10 -20, 20 0
 
 repeat 9 {
     t 20 0

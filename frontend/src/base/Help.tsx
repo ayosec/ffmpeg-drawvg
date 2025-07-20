@@ -9,12 +9,12 @@ interface Props {
 export const DOCS = {
     Language: {
         label: "Language Reference",
-        href: "TODO",
+        href: "langref",
         desc: "Syntax and instructions supported by drawvg.",
     },
     Playground: {
         label: "Playground Help",
-        href: "TODO",
+        href: "manual",
         desc: "A guide to the features of this playground.",
     },
 } as const;
@@ -35,7 +35,7 @@ export default function Help({ onClose }: Props) {
 function HelpItem({ label, href, desc }: { label: string, href: string, desc: string }) {
     return (
         <a
-            href={href}
+            href={`${import.meta.env.BASE_URL}docs/${href}.html`}
             target="_blank"
             className="block-link"
             rel="noopener noreferrer"

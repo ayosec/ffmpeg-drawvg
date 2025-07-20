@@ -23,7 +23,7 @@ const JOBS = new RunQueue();
 
 const vgsOutput: (rootDir: string, render: string, code: string, options: string[]) => string = (
     function getPreview() {
-        const PLAYGROUND_URL = process.env.PLAYGROUND_URL;
+        const PLAYGROUND_URL = process.env.PLAYGROUND_URL ?? "..";
         const FFMPEG_BIN = process.env.FFMPEG_BIN;
 
         if (PLAYGROUND_URL === undefined || FFMPEG_BIN === undefined)

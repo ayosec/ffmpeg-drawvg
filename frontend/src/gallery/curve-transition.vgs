@@ -21,7 +21,7 @@ proc cut {
 call cut
 
 if phase1 {
-	setdash (pathlen(0) * tp) 1e6
+	setdash (max(0.01, pathlen(0) * tp)) 1e6
 }
 
 stroke

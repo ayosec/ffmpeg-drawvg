@@ -20,7 +20,11 @@ interface MarkupDocument {
     html: string;
 }
 
-export default async function renderMarkup(rootDir: string, filename: string): Promise<MarkupDocument> {
+export default async function renderMarkup(
+    rootDir: string,
+    filename: string,
+    langRefName: string,
+): Promise<MarkupDocument> {
     const fullPath = path.join(import.meta.dirname, filename);
     const source = fs.readFileSync(fullPath, "utf-8");
 
@@ -77,7 +81,7 @@ export default async function renderMarkup(rootDir: string, filename: string): P
             }
 
             case "code":
-                applyHighlight(rootDir, token);
+                applyHighlight(rootDir, token, langRefName);
                 break;
 
             case "link":
@@ -103,7 +107,7 @@ export default async function renderMarkup(rootDir: string, filename: string): P
                     if ((<any>token).vgsUseForHeader) {
                         html = html.replace(">", ` id="${ref}">`);
                     } else {
-                        html = `<a href="#${ref}">${html}</a>`;
+                        html = `<a href="${langRefName}#${ref}">${html}</a>`;
                     }
 
                     token.type = "html";
@@ -120,7 +124,7 @@ export default async function renderMarkup(rootDir: string, filename: string): P
     return { headers, html };
 }
 
-function applyHighlight(rootDir: string, token: Token) {
+function applyHighlight(rootDir: string, token: Token, langRefName: string) {
     const { text, lang } = <Tokens.Code>token;
     if (lang === undefined || lang === "")
         return;
@@ -131,6 +135,7 @@ function applyHighlight(rootDir: string, token: Token) {
         langParts[0],
         text.trimEnd(),
         langParts.indexOf("nocolorwords") === -1,
+        langRefName,
         findSpanOpts(langParts),
     );
 

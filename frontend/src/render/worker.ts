@@ -303,6 +303,8 @@ function draw(timestamp?: number) {
     if (data == null)
         return;
 
+    const renderTime = performance.now() - startTime;
+
     gl.texImage2D(
         gl.TEXTURE_2D,
         0,
@@ -312,8 +314,6 @@ function draw(timestamp?: number) {
         gl.UNSIGNED_BYTE,
         data.get(),
     );
-
-    const renderTime = performance.now() - startTime;
 
     data.free();
 

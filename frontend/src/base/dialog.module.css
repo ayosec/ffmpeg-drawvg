@@ -211,6 +211,21 @@
     }
 }
 
+.warning {
+    display: flex;
+
+    svg {
+        width: 3ex;
+        height: 3ex;
+        fill: light-dark(#e60, #f70);
+    }
+
+    p {
+        margin-top: 0;
+        margin-left: 0.5ch;
+    }
+}
+
 @media (max-width: 800px) {
     .mainLayout {
         flex-direction: column;

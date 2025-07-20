@@ -8,8 +8,8 @@ interface Section {
     items: Header[];
 }
 
-export default async function DocView(rootDir: string, filename: string) {
-    const markup = await renderMarkup(rootDir, filename);
+export default async function DocView(rootDir: string, filename: string, langRefName: string) {
+    const markup = await renderMarkup(rootDir, filename, langRefName);
 
     const sections: Section[] = [];
     let currentSection: Section | null = null;

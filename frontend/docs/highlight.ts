@@ -16,7 +16,7 @@ import { parseColor } from "@frontend/utils/colors";
 
 hljs.registerLanguage("bash", (api) => {
     const base = bash(api);
-    (<any>base).keywords.built_in.push("ffmpeg", "ffplay", "ffprobe", "grep");
+    (<any>base).keywords.built_in.push("ffmpeg", "ffplay", "ffprobe", "grep", "gzip", "perl");
     return base;
 });
 
@@ -70,11 +70,12 @@ export default function highlight(
     language: string,
     code: string,
     useColorWords: boolean,
+    langRefName: string,
     marks: MarkSpan[]
 ) {
     switch (language) {
         case "vgs":
-            return hlVGS(code, useColorWords, marks);
+            return hlVGS(code, useColorWords, langRefName, marks);
 
         case "signature":
             return signature(code);
@@ -92,7 +93,7 @@ const CSS_CLASSES: { [k: string]: string } = {
     "subprogram": "type",
 };
 
-function hlVGS(code: string, useColorWords: boolean, marks: MarkSpan[]) {
+function hlVGS(code: string, useColorWords: boolean, langRefName: string, marks: MarkSpan[]) {
     const spans = [];
 
     for (const token of tokenize(code)) {
@@ -127,7 +128,7 @@ function hlVGS(code: string, useColorWords: boolean, marks: MarkSpan[]) {
         let htmlLexeme = htmlEscape(lexemeText);
 
         if (token.kind === "keyword" && Instructions.has(token.lexeme))
-            htmlLexeme = `<a href="#${commandLinkFor(token.lexeme)}">${htmlLexeme}</a>`;
+            htmlLexeme = `<a href="${langRefName}#${commandLinkFor(token.lexeme)}">${htmlLexeme}</a>`;
 
         if (cls) {
             spans.push(`<span class="hljs-${cls}">${htmlLexeme}</span>`);

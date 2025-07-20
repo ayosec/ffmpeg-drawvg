@@ -242,15 +242,14 @@ export default function Configure({ size, setConfig, onClose }: ConfigureProps) 
                     <Param label="Size">
                         <select
                             name="size"
-                            defaultValue="1024x768"
+                            defaultValue="640x360"
                             onChange={e => {
                                 setShowCustomSize(e.target.value === "custom");
                             }}
                         >
                             <option value="custom">Custom</option>
                             <option>320x240</option>
-                            <option>640x480</option>
-                            <option>800x600</option>
+                            <option>640x360</option>
                             <option>1024x768</option>
                             <option>1920x1080</option>
                         </select>

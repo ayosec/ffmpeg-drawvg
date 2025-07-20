@@ -37,4 +37,31 @@ function writePage(filename: string, elem: React.ReactNode) {
     console.timeLog(timeLog);
 }
 
-writePage("langref.html", await DocView(DOCS_DIR, "LangRef.md"));
+// Render pages.
+const LANGREF_NAME = "langref.html";
+
+DocView(DOCS_DIR, "LangRef.md", "").then(html => writePage(LANGREF_NAME, html));
+DocView(DOCS_DIR, "Manual.md", LANGREF_NAME).then(html => writePage("manual.html", html));
+
+// Copy SVG files.
+const ASSETS = path.join(import.meta.dirname, "assets");
+for (const filename of fs.readdirSync(ASSETS)) {
+    if (filename.startsWith("."))
+        continue;
+
+    const src = path.join(ASSETS, filename);
+    const srcStat = fs.statSync(src);
+
+    const dest = path.join(DOCS_DIR, filename);
+
+    if (fs.existsSync(dest)) {
+        const destStat = fs.statSync(dest);
+
+        if (Math.floor(destStat.mtimeMs / 1000) === Math.floor(srcStat.mtimeMs / 1000))
+            continue;
+    }
+
+    console.log("[COPY]", filename);
+    fs.copyFileSync(src, dest);
+    fs.utimesSync(dest, srcStat.atimeMs / 1000, srcStat.mtimeMs / 1000);
+}
