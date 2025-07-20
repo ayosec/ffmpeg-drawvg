@@ -145,10 +145,10 @@ function onMouseEnterTimeRange(event: React.MouseEvent<HTMLSpanElement>) {
 export default function RenderTimeChart({ chunks }: Props) {
     const [ sizes, setContainerRef ] = useTableRects();
 
-    const numRows = Math.max(2, Math.floor(sizes.tbody / Math.max(1, sizes.row)));
+    const numRows = Math.floor(sizes.tbody / Math.max(1, sizes.row));
 
     const totalNumberOfSamples = chunks.reduce((a, c) => c.data.length + a,  0);
-    const rowSize = Math.max(totalNumberOfSamples / numRows, 5);
+    const rowSize = Math.max(totalNumberOfSamples / Math.max(1, numRows), 5);
 
     // Process data to determine the data in each row.
 
@@ -230,9 +230,17 @@ export default function RenderTimeChart({ chunks }: Props) {
         );
     });
 
+    const dataTableStyles: React.CSSProperties = {};
+
+    if (numRows < 1)
+        dataTableStyles.visibility = "hidden";
+
     return (
         <div ref={setContainerRef} aria-live="off" className={styles.renderTime}>
-            <table className={styles.dataRows}>
+            <table
+                style={dataTableStyles}
+                className={styles.dataRows}
+            >
                 <thead>
                     <tr>
                         <th aria-label="Number of Samples">
