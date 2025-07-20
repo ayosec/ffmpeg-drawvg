@@ -46,7 +46,7 @@
         white-space: nowrap;
     }
 
-    .frameCount {
+    .samplesCount {
         display: block;
         font-size: 0.6rem;
         text-align: center;

@@ -297,7 +297,7 @@ export default function MonitorsPanel({ renderOutput }: Props) {
 
             limitSetting = (
                 <Select
-                    title="Frames Limit"
+                    title="Samples Limit"
                     key="setRenderTimeLimit"
                     optionsAlign="right"
                     value={content.renderTimeLimit}

@@ -56,7 +56,7 @@ function* dataRows(rowSize: number, chunks: RenderTimeChunk[]) {
     // items, and other rows will have `57`.
 
     let nextFullRow = rowSize;
-    let totalFrames = 0;
+    let totalSamples = 0;
 
     let dataRow = [];
     let key = undefined;
@@ -66,11 +66,11 @@ function* dataRows(rowSize: number, chunks: RenderTimeChunk[]) {
             key = chunk.uniqueId;
 
         for (const renderTime of chunk.data) {
-            totalFrames++;
+            totalSamples++;
             dataRow.push(renderTime);
 
-            if (totalFrames >= nextFullRow) {
-                yield { key: `${key}-${totalFrames}`, dataRow };
+            if (totalSamples >= nextFullRow) {
+                yield { key: `${key}-${totalSamples}`, dataRow };
 
                 nextFullRow += rowSize;
                 dataRow = [];
@@ -79,7 +79,7 @@ function* dataRows(rowSize: number, chunks: RenderTimeChunk[]) {
     }
 
     if (dataRow.length > 0)
-        yield { key: `${key}-${totalFrames}`, dataRow };
+        yield { key: `${key}-${totalSamples}`, dataRow };
 }
 
 function useTableRects() {
@@ -147,8 +147,8 @@ export default function RenderTimeChart({ chunks }: Props) {
 
     const numRows = Math.max(2, Math.floor(sizes.tbody / Math.max(1, sizes.row)));
 
-    const totalNumberOfFrames = chunks.reduce((a, c) => c.data.length + a,  0);
-    const rowSize = Math.max(totalNumberOfFrames / numRows, 5);
+    const totalNumberOfSamples = chunks.reduce((a, c) => c.data.length + a,  0);
+    const rowSize = Math.max(totalNumberOfSamples / numRows, 5);
 
     // Process data to determine the data in each row.
 
@@ -178,10 +178,10 @@ export default function RenderTimeChart({ chunks }: Props) {
     const globalRange = globalMax - globalMin + 0.01;
     const heatMapStep = globalRange / sizes.heatMapColumns;
 
-    let frame = 0;
+    let sample = 0;
     const tbody = rows.map(row => {
-        const currentFrame = frame;
-        frame += row.dataRow.length + 1;
+        const currentSample = sample;
+        sample += row.dataRow.length + 1;
 
         const heat = Array(sizes.heatMapColumns).fill(0);
 
@@ -221,7 +221,7 @@ export default function RenderTimeChart({ chunks }: Props) {
 
         return (
             <tr key={row.key}>
-                <td aria-label={`Frames Range (${currentFrame} - ${frame - 1})`}>{currentFrame}</td>
+                <td aria-label={`Samples Range (${currentSample} - ${sample - 1})`}>{currentSample}</td>
                 {columnNumber(row.min)}
                 {columnNumber(row.sum / row.dataRow.length)}
                 {columnNumber(row.max)}
@@ -235,9 +235,9 @@ export default function RenderTimeChart({ chunks }: Props) {
             <table className={styles.dataRows}>
                 <thead>
                     <tr>
-                        <th aria-label="Number of Frames">
-                            <span className={styles.frameCount}>
-                                {totalNumberOfFrames}
+                        <th aria-label="Number of Samples">
+                            <span className={styles.samplesCount}>
+                                {totalNumberOfSamples}
                             </span>
                         </th>
                         <th>Min.</th>
