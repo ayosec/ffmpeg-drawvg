@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import ModalWindow from "./ModalWindow";
 import { KEY_NAMES } from "./tooltips";
+import { capitalize } from "../utils/strings";
 
 import styles from "../base/dialog.module.css";
 
@@ -52,7 +53,7 @@ function Shortcut({ keys, label }: KeyShortcut ) {
             <td className="kb-shortcut" style={{textAlign: "left"}}>
                 { keys
                     .split("-")
-                    .map((k, i) => <span key={i}>{`${KEY_NAMES[k] ?? k}`}</span>)
+                    .map((k, i) => <span key={i}>{capitalize(KEY_NAMES[k] ?? k)}</span>)
                 }
             </td>
         </tr>
