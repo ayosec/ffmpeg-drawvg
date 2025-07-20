@@ -87,10 +87,15 @@ export default function Share({ name, source, onClose }: Props) {
             <div className={styles.actions}>
                 <button className={styles.close} onClick={onClose}>Close</button>
 
-                { navigator.clipboard &&
-                    <button onClick={copyHandler}>
-                        { copyFinished ? "Copied!" : "Copy" }
-                    </button>
+                { navigator.clipboard
+                    ?
+                        <button onClick={copyHandler}>
+                            { copyFinished ? "Copied!" : "Copy" }
+                        </button>
+                    :
+                        <button disabled aria-label="Clipboard not available">
+                            Copy
+                        </button>
                 }
             </div>
         </ModalWindow>
