@@ -1,3 +1,7 @@
+import Help from "../base/Help";
+import tokenize from "../vgs/tokenizer";
+import { Instructions } from "@backend/syntax";
+
 export default function keyMapHandler(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.altKey || event.ctrlKey || event.metaKey)
         return;
@@ -75,6 +79,43 @@ export default function keyMapHandler(event: React.KeyboardEvent<HTMLTextAreaEle
                 }
 
                 return;
+
+            case "F1": {
+                let lastInst = null;
+
+                const pos = textarea.selectionStart;
+
+                // Open the reference for the current command.
+                for (const token of tokenize(textarea.value)) {
+                    let isInst = false;
+
+                    if (token.kind === "keyword" && Instructions.has(token.lexeme)) {
+                        lastInst = token;
+                        isInst = true;
+                    }
+
+                    if (token.offset + token.lexeme.length > pos) {
+                        let inst = null;
+
+                        if (isInst) {
+                            inst = token.lexeme;
+                        } else if (token.kind === "whitespace" && token.line === lastInst?.line) {
+                            inst = lastInst.lexeme;
+                        } else if (token.param) {
+                            inst = token.param?.inst;
+                        }
+
+                        if (inst) {
+                            const url = Help.docURL("Language") + "#cmd_" + inst;
+                            window.open(url, "_blank");
+                        }
+
+                        break;
+                    }
+                }
+
+                break;
+            }
 
             default:
                 return;
