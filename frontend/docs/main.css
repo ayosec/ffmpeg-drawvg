@@ -449,6 +449,10 @@ a {
                 border-left: 0.5lh solid currentcolor;
             }
         }
+
+        @media print {
+            display: none;
+        }
     }
 
     .output picture {
@@ -505,6 +509,14 @@ a {
 
         .actions {
             grid-area: 3;
+        }
+    }
+
+    @media print {
+        background: unset;
+
+        .code, .output img, .output video {
+            border: 1px solid #777;
         }
     }
 }
