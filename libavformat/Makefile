@@ -247,6 +247,7 @@ OBJS-$(CONFIG_G726_DEMUXER)              += g726.o
 OBJS-$(CONFIG_G726_MUXER)                += rawenc.o
 OBJS-$(CONFIG_G726LE_DEMUXER)            += g726.o
 OBJS-$(CONFIG_G726LE_MUXER)              += rawenc.o
+OBJS-$(CONFIG_G728_DEMUXER)              += g728dec.o
 OBJS-$(CONFIG_G729_DEMUXER)              += g729dec.o
 OBJS-$(CONFIG_GDV_DEMUXER)               += gdv.o
 OBJS-$(CONFIG_GENH_DEMUXER)              += genh.o
@@ -380,7 +381,7 @@ OBJS-$(CONFIG_MOV_DEMUXER)               += mov.o mov_chan.o mov_esds.o \
 OBJS-$(CONFIG_MOV_MUXER)                 += movenc.o \
                                             movenchint.o mov_chan.o rtp.o \
                                             movenccenc.o movenc_ttml.o rawutils.o \
-                                            dovi_isom.o evc.o cbs.o cbs_av1.o
+                                            apv.o dovi_isom.o evc.o cbs.o cbs_av1.o cbs_apv.o
 OBJS-$(CONFIG_MP2_MUXER)                 += rawenc.o
 OBJS-$(CONFIG_MP3_DEMUXER)               += mp3dec.o replaygain.o
 OBJS-$(CONFIG_MP3_MUXER)                 += mp3enc.o rawenc.o id3v2enc.o
@@ -638,7 +639,7 @@ OBJS-$(CONFIG_WEBM_CHUNK_MUXER)          += webm_chunk.o
 OBJS-$(CONFIG_WEBP_MUXER)                += webpenc.o
 OBJS-$(CONFIG_WEBVTT_DEMUXER)            += webvttdec.o subtitles.o
 OBJS-$(CONFIG_WEBVTT_MUXER)              += webvttenc.o
-OBJS-$(CONFIG_WHIP_MUXER)                += whip.o avc.o http.o srtp.o tls_openssl.o
+OBJS-$(CONFIG_WHIP_MUXER)                += whip.o avc.o http.o srtp.o
 OBJS-$(CONFIG_WSAUD_DEMUXER)             += westwood_aud.o
 OBJS-$(CONFIG_WSAUD_MUXER)               += westwood_audenc.o
 OBJS-$(CONFIG_WSD_DEMUXER)               += wsddec.o rawdec.o

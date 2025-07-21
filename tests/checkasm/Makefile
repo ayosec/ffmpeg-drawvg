@@ -18,7 +18,7 @@ AVCODECOBJS-$(CONFIG_LLVIDDSP)          += llviddsp.o
 AVCODECOBJS-$(CONFIG_LLVIDENCDSP)       += llviddspenc.o
 AVCODECOBJS-$(CONFIG_LPC)               += lpc.o
 AVCODECOBJS-$(CONFIG_ME_CMP)            += motion.o
-AVCODECOBJS-$(CONFIG_MPEGVIDEOENC)      += mpegvideoencdsp.o
+AVCODECOBJS-$(CONFIG_MPEGVIDEOENCDSP)   += mpegvideoencdsp.o
 AVCODECOBJS-$(CONFIG_VC1DSP)            += vc1dsp.o
 AVCODECOBJS-$(CONFIG_VP8DSP)            += vp8dsp.o
 AVCODECOBJS-$(CONFIG_VIDEODSP)          += videodsp.o
@@ -52,7 +52,9 @@ AVCODECOBJS-$(CONFIG_VVC_DECODER)       += vvc_alf.o vvc_mc.o vvc_sao.o
 CHECKASMOBJS-$(CONFIG_AVCODEC)          += $(AVCODECOBJS-yes)
 
 # libavfilter tests
+AVFILTEROBJS-$(CONFIG_SCENE_SAD)         += scene_sad.o
 AVFILTEROBJS-$(CONFIG_AFIR_FILTER) += af_afir.o
+AVFILTEROBJS-$(CONFIG_BLACKDETECT_FILTER) += vf_blackdetect.o
 AVFILTEROBJS-$(CONFIG_BLEND_FILTER) += vf_blend.o
 AVFILTEROBJS-$(CONFIG_BWDIF_FILTER)      += vf_bwdif.o
 AVFILTEROBJS-$(CONFIG_COLORSPACE_FILTER) += vf_colorspace.o

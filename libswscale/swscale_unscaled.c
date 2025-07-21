@@ -806,7 +806,7 @@ static void packed16togbra16(const uint8_t *src, int srcStride,
                 }
             }
         }
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < 4 && dst[i]; i++)
             dst[i] += dstStride[i] >> 1;
     }
 }
@@ -878,7 +878,7 @@ static void packed30togbra10(const uint8_t *src, int srcStride,
             }
             break;
         }
-        for (i = 0; i < 4; i++)
+        for (i = 0; i < 4 && dst[i]; i++)
             dst[i] += dstStride[i] >> 1;
     }
 }
@@ -912,7 +912,7 @@ static int Rgb16ToPlanarRgb16Wrapper(SwsInternal *c, const uint8_t *const src[],
         return srcSliceH;
     }
 
-    for(i=0; i<4; i++) {
+    for (i = 0; i < 4 && dst[i]; i++) {
         dst2013[i] += stride2013[i] * srcSliceY / 2;
         dst1023[i] += stride1023[i] * srcSliceY / 2;
     }
@@ -2567,6 +2567,8 @@ void ff_get_unscaled_swscale(SwsInternal *c)
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP12) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP14) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP16) ||
+        IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP10MSB) ||
+        IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRP12MSB) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRAP10) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRAP12) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_GBRAP14) ||
@@ -2595,7 +2597,9 @@ void ff_get_unscaled_swscale(SwsInternal *c)
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_YUV444P10) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_YUV444P12) ||
         IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_YUV444P14) ||
-        IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_YUV444P16))
+        IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_YUV444P16) ||
+        IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_YUV444P10MSB) ||
+        IS_DIFFERENT_ENDIANESS(srcFormat, dstFormat, AV_PIX_FMT_YUV444P12MSB))
         c->convert_unscaled = bswap_16bpc;
 
     /* bswap 32 bits per pixel/component formats */

@@ -323,6 +323,7 @@ External library support:
   --enable-mediafoundation enable encoding via MediaFoundation [auto]
   --disable-metal          disable Apple Metal framework [autodetect]
   --enable-libmysofa       enable libmysofa, needed for sofalizer filter [no]
+  --enable-ohcodec         enable OpenHarmony Codec support [no]
   --enable-openal          enable OpenAL 1.1 capture support [no]
   --enable-opencl          enable OpenCL processing [no]
   --enable-opengl          enable OpenGL rendering [no]
@@ -381,10 +382,10 @@ Toolchain options:
   --target-samples=DIR     path to samples directory on target
   --tempprefix=PATH        force fixed dir/prefix instead of mktemp for checks
   --toolchain=NAME         set tool defaults according to NAME
-                           (gcc-asan, clang-asan, gcc-msan, clang-msan,
-                           gcc-tsan, clang-tsan, gcc-usan, clang-usan,
-                           valgrind-massif, valgrind-memcheck,
-                           msvc, icl, gcov, llvm-cov, hardened)
+                           (<tool>[-sanitizer[-...]], e.g. clang-asan-ubsan
+                           tools: gcc, clang, msvc, icl, gcov, llvm-cov,
+                                  valgrind-memcheck, valgrind-massif, hardened
+                           sanitizers: asan, fuzz, lsan, msan, tsan, ubsan)
   --nm=NM                  use nm tool NM [$nm_default]
   --ar=AR                  use archive tool AR [$ar_default]
   --as=AS                  use assembler AS [$as_default]
@@ -1999,6 +2000,7 @@ EXTERNAL_LIBRARY_LIST="
     libzvbi
     lv2
     mediacodec
+    ohcodec
     openal
     opengl
     openssl
@@ -2500,6 +2502,7 @@ TYPES_LIST="
     kCVImageBufferTransferFunction_ITU_R_2020
     kCVImageBufferTransferFunction_SMPTE_ST_428_1
     kVTQPModulationLevel_Default
+    SecPkgContext_KeyingMaterialInfo
     socklen_t
     struct_addrinfo
     struct_group_source_req
@@ -2632,6 +2635,7 @@ CONFIG_EXTRA="
     mpegvideo
     mpegvideodec
     mpegvideoenc
+    mpegvideoencdsp
     msmpeg4dec
     msmpeg4enc
     mss34dsp
@@ -2871,6 +2875,7 @@ w32threads_deps="atomics_native"
 threads_if_any="$THREADS_LIST"
 
 # subsystems
+cbs_apv_select="cbs"
 cbs_av1_select="cbs"
 cbs_h264_select="cbs"
 cbs_h265_select="cbs"
@@ -2909,7 +2914,7 @@ mpeg_er_select="error_resilience"
 mpegaudio_select="mpegaudiodsp mpegaudioheader"
 mpegvideo_select="blockdsp hpeldsp idctdsp videodsp"
 mpegvideodec_select="h264chroma mpegvideo mpeg_er"
-mpegvideoenc_select="aandcttables fdctdsp me_cmp mpegvideo pixblockdsp"
+mpegvideoenc_select="aandcttables fdctdsp me_cmp mpegvideo mpegvideoencdsp pixblockdsp"
 msmpeg4dec_select="h263_decoder"
 msmpeg4enc_select="h263_encoder"
 vc1dsp_select="h264chroma qpeldsp startcode"
@@ -2961,7 +2966,7 @@ cook_decoder_select="audiodsp sinewin"
 cri_decoder_select="mjpeg_decoder"
 cscd_decoder_suggest="zlib"
 dds_decoder_select="texturedsp"
-dirac_decoder_select="dirac_parse dwt golomb mpegvideoenc qpeldsp videodsp"
+dirac_decoder_select="dirac_parse dwt golomb mpegvideoencdsp qpeldsp videodsp"
 dnxhd_decoder_select="blockdsp idctdsp"
 dnxhd_encoder_select="blockdsp fdctdsp idctdsp mpegvideoenc pixblockdsp videodsp"
 dvvideo_decoder_select="dvprofile idctdsp"
@@ -3108,7 +3113,7 @@ shorten_decoder_select="bswapdsp"
 sipr_decoder_select="lsp celp_math"
 smvjpeg_decoder_select="mjpeg_decoder"
 snow_decoder_select="dwt h264qpel rangecoder videodsp"
-snow_encoder_select="dwt h264qpel hpeldsp me_cmp mpegvideoenc rangecoder videodsp"
+snow_encoder_select="dwt h264qpel hpeldsp me_cmp mpegvideoencdsp rangecoder videodsp"
 sonic_decoder_select="golomb rangecoder"
 sonic_encoder_select="golomb rangecoder"
 sonic_ls_encoder_select="golomb rangecoder"
@@ -3117,7 +3122,7 @@ speedhq_decoder_select="blockdsp idctdsp"
 speedhq_encoder_select="mpegvideoenc"
 srgc_decoder_select="inflate_wrapper"
 svq1_decoder_select="hpeldsp"
-svq1_encoder_select="hpeldsp me_cmp mpegvideoenc"
+svq1_encoder_select="hpeldsp me_cmp mpegvideoencdsp"
 svq3_decoder_select="golomb h264dsp h264parse h264pred hpeldsp tpeldsp videodsp"
 svq3_decoder_suggest="zlib"
 tak_decoder_select="audiodsp"
@@ -3362,6 +3367,8 @@ thumbnail_cuda_filter_deps_any="cuda_nvcc cuda_llvm"
 transpose_npp_filter_deps="ffnvcodec libnpp"
 overlay_cuda_filter_deps="ffnvcodec"
 overlay_cuda_filter_deps_any="cuda_nvcc cuda_llvm"
+pad_cuda_filter_deps="ffnvcodec"
+pad_cuda_filter_deps_any="cuda_nvcc cuda_llvm"
 sharpen_npp_filter_deps="ffnvcodec libnpp"
 
 ddagrab_filter_deps="d3d11va IDXGIOutput1 DXGI_OUTDUPL_FRAME_INFO"
@@ -3406,13 +3413,16 @@ h264_mf_encoder_deps="mediafoundation"
 h264_mmal_decoder_deps="mmal"
 h264_nvenc_encoder_deps="nvenc"
 h264_nvenc_encoder_select="atsc_a53"
+h264_oh_decoder_deps="ohcodec"
+h264_oh_decoder_select="h264_mp4toannexb_bsf"
+h264_oh_encoder_deps="ohcodec"
 h264_omx_encoder_deps="omx"
 h264_qsv_decoder_select="h264_mp4toannexb_bsf qsvdec"
 h264_qsv_encoder_select="atsc_a53 qsvenc"
 h264_rkmpp_decoder_deps="rkmpp"
 h264_rkmpp_decoder_select="h264_mp4toannexb_bsf"
 h264_vaapi_encoder_select="atsc_a53 cbs_h264 vaapi_encode"
-h264_vulkan_encoder_select="cbs_h264 vulkan_encode"
+h264_vulkan_encoder_select="atsc_a53 cbs_h264 vulkan_encode"
 h264_v4l2m2m_decoder_deps="v4l2_m2m h264_v4l2_m2m"
 h264_v4l2m2m_decoder_select="h264_mp4toannexb_bsf"
 h264_v4l2m2m_encoder_deps="v4l2_m2m h264_v4l2_m2m"
@@ -3428,6 +3438,9 @@ hevc_mediacodec_encoder_select="extract_extradata_bsf hevc_metadata"
 hevc_mf_encoder_deps="mediafoundation"
 hevc_nvenc_encoder_deps="nvenc"
 hevc_nvenc_encoder_select="atsc_a53"
+hevc_oh_decoder_deps="ohcodec"
+hevc_oh_decoder_select="hevc_mp4toannexb_bsf"
+hevc_oh_encoder_deps="ohcodec"
 hevc_qsv_decoder_select="hevc_mp4toannexb_bsf qsvdec"
 hevc_qsv_encoder_select="hevcparse qsvenc"
 hevc_rkmpp_decoder_deps="rkmpp"
@@ -3477,6 +3490,7 @@ vp8_vaapi_encoder_deps="VAEncPictureParameterBufferVP8"
 vp8_vaapi_encoder_select="vaapi_encode"
 vp8_v4l2m2m_decoder_deps="v4l2_m2m vp8_v4l2_m2m"
 vp8_v4l2m2m_encoder_deps="v4l2_m2m vp8_v4l2_m2m"
+vp9_amf_decoder_deps="amf"
 vp9_cuvid_decoder_deps="cuvid"
 vp9_mediacodec_decoder_deps="mediacodec"
 vp9_mediacodec_encoder_deps="mediacodec"
@@ -3853,7 +3867,7 @@ tcp_protocol_select="network"
 tls_protocol_deps_any="gnutls openssl schannel securetransport libtls mbedtls"
 tls_protocol_select="tcp_protocol"
 # TODO: Support libtls, mbedtls, and gnutls.
-dtls_protocol_deps_any="openssl"
+dtls_protocol_deps_any="openssl schannel"
 dtls_protocol_select="udp_protocol"
 udp_protocol_select="network"
 udplite_protocol_select="network"
@@ -4602,16 +4616,16 @@ set >> $logfile
 
 test -n "$valgrind" && toolchain="valgrind-memcheck"
 
-enabled ossfuzz && ! echo $CFLAGS | grep -q -- "-fsanitize="  && ! echo $CFLAGS | grep -q -- "-fcoverage-mapping" &&{
-    add_cflags  -fsanitize=address,undefined -fsanitize-coverage=trace-pc-guard,trace-cmp -fno-omit-frame-pointer
-    add_ldflags -fsanitize=address,undefined -fsanitize-coverage=trace-pc-guard,trace-cmp
-}
-
 add_sanitizer_flags(){
     case "$1" in
         asan)
             add_cflags  -fsanitize=address
             add_ldflags -fsanitize=address
+        ;;
+        fuzz)
+            add_cflags  -fsanitize=fuzzer-no-link
+            add_ldflags -fsanitize=fuzzer-no-link
+            : "${libfuzzer_path:=-fsanitize=fuzzer}"
         ;;
         lsan)
             add_cflags  -fsanitize=leak
@@ -4625,7 +4639,7 @@ add_sanitizer_flags(){
             add_cflags  -fsanitize=thread
             add_ldflags -fsanitize=thread
         ;;
-        usan)
+        usan|ubsan)
             add_cflags  -fsanitize=undefined
             add_ldflags -fsanitize=undefined
         ;;
@@ -4635,14 +4649,24 @@ add_sanitizer_flags(){
     esac
 }
 
+add_sanitizers(){
+    IFS=-
+    set -- $*
+    unset IFS
+    for sanitizer; do
+        add_sanitizer_flags "$sanitizer"
+    done
+    add_cflags -fno-omit-frame-pointer
+}
+
 case "$toolchain" in
     clang-*)
-        add_sanitizer_flags "${toolchain#clang-}"
+        add_sanitizers "${toolchain#clang-}"
         cc_default="clang"
         cxx_default="clang++"
     ;;
     gcc-*)
-        add_sanitizer_flags "${toolchain#gcc-}"
+        add_sanitizers "${toolchain#gcc-}"
         cc_default="gcc"
         cxx_default="g++"
         # In case of tsan with gcc, PIC has to be enabled
@@ -5133,7 +5157,9 @@ probe_cc(){
     elif $_cc -nologo- 2>&1 | grep -q ^Microsoft || { $_cc -v 2>&1 | grep -q clang && $_cc -? > /dev/null 2>&1; }; then
         _type=msvc
         if $_cc -nologo- 2>&1 | grep -q ^Microsoft; then
-            _ident=$($_cc 2>&1 | head -n1 | tr -d '\r')
+            # Depending on the tool (cl.exe or link.exe), the version number
+            # is printed on the first line of stderr or stdout
+            _ident=$($_cc 2>&1 | grep ^Microsoft | head -n1 | tr -d '\r')
         else
             _ident=$($_cc --version 2>/dev/null | head -n1 | tr -d '\r')
         fi
@@ -5953,7 +5979,11 @@ case $target_os in
         SLIB_INSTALL_LINKS=
         SLIB_INSTALL_EXTRA_SHLIB='$(SLIBNAME:$(SLIBSUF)=.lib)'
         SLIB_INSTALL_EXTRA_LIB='$(SLIBNAME_WITH_MAJOR:$(SLIBSUF)=.def)'
-        SHFLAGS='-dll -def:$$(@:$(SLIBSUF)=.def) -implib:$(SUBDIR)$(SLIBNAME:$(SLIBSUF)=.lib)'
+        if test $ld_type = "clang"; then
+            SHFLAGS='-Wl,-dll -Wl,-def:$$(@:$(SLIBSUF)=.def) -Wl,-implib:$(SUBDIR)$(SLIBNAME:$(SLIBSUF)=.lib)'
+        else
+            SHFLAGS='-dll -def:$$(@:$(SLIBSUF)=.def) -implib:$(SUBDIR)$(SLIBNAME:$(SLIBSUF)=.lib)'
+        fi
         enabled x86_64 && objformat="win64" || objformat="win32"
         ranlib=:
         enable dos_paths
@@ -6190,7 +6220,7 @@ set_default libdir
 set_default $PATHS_LIST
 set_default nm
 
-disabled optimizations || enabled ossfuzz || check_cflags -fomit-frame-pointer
+disabled optimizations || enabled ossfuzz || echo "$CFLAGS" | grep -q -- '-fsanitize=' || check_cflags -fomit-frame-pointer
 
 enable_weak_pic() {
     disabled pic && return
@@ -6818,6 +6848,7 @@ check_type "windows.h d3d12video.h" "ID3D12VideoEncoder"
 test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_VIDEO feature = D3D12_FEATURE_VIDEO_ENCODER_CODEC" && \
 test_code cc "windows.h d3d12video.h" "D3D12_FEATURE_DATA_VIDEO_ENCODER_RESOURCE_REQUIREMENTS req" && enable d3d12_encoder_feature
 check_type "windows.h" "DPI_AWARENESS_CONTEXT" -D_WIN32_WINNT=0x0A00
+check_type "windows.h security.h schnlsp.h" SecPkgContext_KeyingMaterialInfo -DSECURITY_WIN32
 check_type "d3d9.h dxva2api.h" DXVA2_ConfigPictureDecode -D_WIN32_WINNT=0x0602
 check_func_headers mfapi.h MFCreateAlignedMemoryBuffer -lmfplat
 
@@ -7161,6 +7192,10 @@ enabled mmal              && { check_lib mmal interface/mmal/mmal.h mmal_port_co
                                  check_lib mmal interface/mmal/mmal.h mmal_port_connect -lmmal_core -lmmal_util -lmmal_vc_client -lbcm_host; } ||
                                die "ERROR: mmal not found" &&
                                check_func_headers interface/mmal/mmal.h "MMAL_PARAMETER_VIDEO_MAX_NUM_CALLBACKS"; }
+enabled ohcodec           && { check_lib ohcodec "multimedia/player_framework/native_avcodec_videodecoder.h multimedia/player_framework/native_avcodec_videoencoder.h" \
+                                    "OH_VideoDecoder_CreateByName OH_VideoEncoder_CreateByName" \
+                                    -lnative_media_vdec -lnative_media_venc -lnative_media_codecbase -lnative_media_core -lnative_window ||
+                               die "ERROR: missing native_media libs"; }
 enabled openal            && { check_pkg_config openal "openal >= 1.1" "AL/al.h" alGetError ||
                                { for al_extralibs in "${OPENAL_LIBS}" "-lopenal" "-lOpenAL32"; do
                                check_lib openal 'AL/al.h' alGetError "${al_extralibs}" && break; done } ||
@@ -7192,13 +7227,10 @@ enabled omx               && require_headers OMX_Core.h && \
 enabled openssl           && { { check_pkg_config openssl "openssl >= 3.0.0" openssl/ssl.h OPENSSL_init_ssl &&
                                  { enabled gplv3 || ! enabled gpl || enabled nonfree || die "ERROR: OpenSSL >=3.0.0 requires --enable-version3"; }; } ||
                                { enabled gpl && ! enabled nonfree && die "ERROR: OpenSSL <3.0.0 is incompatible with the gpl"; } ||
-                               check_pkg_config openssl openssl openssl/ssl.h OPENSSL_init_ssl ||
-                               check_pkg_config openssl openssl openssl/ssl.h SSL_library_init ||
+                               check_pkg_config openssl "openssl >= 1.1.0" openssl/ssl.h OPENSSL_init_ssl ||
                                check_lib openssl openssl/ssl.h OPENSSL_init_ssl -lssl -lcrypto ||
-                               check_lib openssl openssl/ssl.h SSL_library_init -lssl -lcrypto ||
-                               check_lib openssl openssl/ssl.h SSL_library_init -lssl32 -leay32 ||
-                               check_lib openssl openssl/ssl.h SSL_library_init -lssl -lcrypto -lws2_32 -lgdi32 ||
-                               die "ERROR: openssl not found"; }
+                               check_lib openssl openssl/ssl.h OPENSSL_init_ssl -lssl -lcrypto -lws2_32 -lgdi32 ||
+                               die "ERROR: openssl (>= 1.1.0) not found"; }
 enabled pocketsphinx      && require_pkg_config pocketsphinx pocketsphinx pocketsphinx/pocketsphinx.h ps_init
 enabled rkmpp             && { require_pkg_config rkmpp rockchip_mpp  rockchip/rk_mpi.h mpp_create &&
                                require_pkg_config rockchip_mpp "rockchip_mpp >= 1.3.7" rockchip/rk_mpi.h mpp_create &&
@@ -7264,9 +7296,13 @@ enabled securetransport &&
 
 enabled schannel &&
     check_func_headers "windows.h security.h" InitializeSecurityContext -DSECURITY_WIN32 -lsecur32 &&
+    check_func_headers "windows.h ncrypt.h" NCryptOpenStorageProvider -DSECURITY_WIN32 -lncrypt &&
+    check_func_headers "windows.h wincrypt.h" CertCreateSelfSignCertificate -DSECURITY_WIN32 -lcrypt32 &&
     test_cpp_condition winerror.h "defined(SEC_I_CONTEXT_EXPIRED)" &&
-    schannel_extralibs="-lsecur32" ||
+    schannel_extralibs="-lsecur32 -lncrypt -lcrypt32" ||
         disable schannel
+
+enabled schannel && check_cc dtls_protocol "windows.h security.h schnlsp.h" "int i = SP_PROT_DTLS1_X_CLIENT;" -DSECURITY_WIN32
 
 makeinfo --version > /dev/null 2>&1 && enable makeinfo  || disable makeinfo
 enabled makeinfo \

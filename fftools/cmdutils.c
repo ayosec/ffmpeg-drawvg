@@ -255,9 +255,10 @@ static int write_option(void *optctx, const OptionDef *po, const char *opt,
     if (*opt == '/') {
         opt++;
 
-        if (po->type == OPT_TYPE_BOOL) {
+        if (!opt_has_arg(po)) {
             av_log(NULL, AV_LOG_FATAL,
-                   "Requested to load an argument from file for a bool option '%s'\n",
+                   "Requested to load an argument from file for an option '%s'"
+                   " which does not take an argument\n",
                    po->name);
             return AVERROR(EINVAL);
         }
@@ -1470,9 +1471,12 @@ void *allocate_array_elem(void *ptr, size_t elem_size, int *nb_elems)
 {
     void *new_elem;
 
-    if (!(new_elem = av_mallocz(elem_size)) ||
-        av_dynarray_add_nofree(ptr, nb_elems, new_elem) < 0)
+    new_elem = av_mallocz(elem_size);
+    if (!new_elem)
         return NULL;
+    if (av_dynarray_add_nofree(ptr, nb_elems, new_elem) < 0)
+        av_freep(&new_elem);
+
     return new_elem;
 }
 

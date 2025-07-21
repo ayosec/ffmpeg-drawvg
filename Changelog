@@ -2,6 +2,7 @@ Entries are sorted chronologically from oldest to youngest within each release,
 releases are sorted from youngest to oldest.
 
 version <next>:
+- Drop support for OpenSSL < 1.1.0
 - yasm support dropped, users need to use nasm
 - VVC VAAPI decoder
 - RealVideo 6.0 decoder
@@ -18,6 +19,11 @@ version <next>:
 - APV encoding support through a libopenapv wrapper
 - VVC decoder supports all content of SCC (Screen Content Coding):
   IBC (Inter Block Copy), Palette Mode and ACT (Adaptive Color Transform
+- G.728 decoder
+- pad_cuda filter
+- Sanyo LD-ADPCM decoder
+- APV in MP4/ISOBMFF muxing and demuxing
+- OpenHarmony hardware decoder/encoder
 
 
 version 7.1:
