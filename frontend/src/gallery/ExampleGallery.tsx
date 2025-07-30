@@ -168,7 +168,7 @@ export default function ExampleGallery({ onClose }: Props) {
 
     return (
         <div ref={windowRef}>
-            <ModalWindow title={<h1>Example<br />Gallery</h1>} onClose={onClose}>
+            <ModalWindow title={<h1>Examples<br />Gallery</h1>} onClose={onClose}>
                 <div className={galleryStyles.preview}>
                     {gridRows}
                 </div>

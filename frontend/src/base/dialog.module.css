@@ -211,6 +211,44 @@
     }
 }
 
+.welcomeBox {
+    display: flex;
+    flex-direction: column;
+
+    position: fixed;
+
+    left: 50vw;
+    bottom: 5vh;
+    transform: translateX(-50%);
+
+    box-shadow: 0 0 10px var(--icon-button-shadow);
+    border-radius: 1ch;
+
+    color: light-dark(black, white);
+    background: light-dark(#f7f7f7, #333);
+
+    .front {
+        display: flex;
+        padding: 1ch;
+        align-items: center;
+        justify-content: space-between;
+
+        border-radius: 1ch 1ch 0 0;
+
+        .title {
+            font-size: 1.5rem;
+        }
+    }
+
+    .content {
+        flex: 1;
+        padding: 2ch 4ch;
+
+        max-height: 40vh;
+        overflow: auto;
+    }
+}
+
 .warning {
     display: flex;
 

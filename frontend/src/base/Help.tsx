@@ -24,8 +24,8 @@ type DocKind = keyof typeof DOCS;
 export default function Help({ onClose }: Props) {
     return (
         <ModalWindow title="Help" onClose={onClose}>
-            <HelpItem kind="Language" />
-            <HelpItem kind="Playground" />
+            <Help.Item kind="Language" />
+            <Help.Item kind="Playground" />
 
             <div className={styles.actions}>
                 <button className={styles.close} onClick={onClose}>Close</button>
@@ -34,7 +34,7 @@ export default function Help({ onClose }: Props) {
     );
 }
 
-function HelpItem({ kind }: { kind: DocKind }) {
+Help.Item = ({ kind }: { kind: DocKind }) => {
     const { label, desc } = DOCS[kind];
 
     return (
@@ -48,7 +48,7 @@ function HelpItem({ kind }: { kind: DocKind }) {
             <span className="desc">{desc}</span>
         </a>
     );
-}
+};
 
 Help.docURL = (kind: DocKind) => (
     `${import.meta.env.BASE_URL}docs/${DOCS[kind].href}.html`

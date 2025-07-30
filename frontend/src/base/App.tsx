@@ -6,6 +6,7 @@ import Editor from "../editor/Editor";
 import Header from "./Header";
 import MonitorsPanel from "../monitors/MonitorsPanel";
 import OutputPanel from "../output/OutputPanel";
+import WelcomeBox from "./WelcomeBox";
 import useAppLayout from "./layout";
 import useCurrentProgram from "../currentProgram";
 
@@ -71,11 +72,13 @@ export default function App() {
         );
     }
 
-    return (
+    return <>
         <div className={styles.main} data-layout={layoutName}>
             <Header />
 
             {app}
         </div>
-    );
+
+        <WelcomeBox />
+    </>;
 }

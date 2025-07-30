@@ -90,13 +90,19 @@ html, body, #root {
 
 .block-link {
     display: block;
-    border: 1.5px solid;
+
     color: light-dark(#333, #eee);
+    background: light-dark(#fefefe, #222);
+
     text-decoration: none;
+
     padding: 0.5ch 1ch;
     margin-bottom: 2ch;
 
     outline: 0;
+    border: 1.5px solid;
+
+    cursor: pointer;
 
     &:focus, &:hover {
         color: light-dark(#44f, #ddf);

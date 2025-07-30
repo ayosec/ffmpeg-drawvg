@@ -17,6 +17,7 @@ import KeyboardShortcuts from "../base/KeyboardShortcuts";
 import Share from "./Share";
 import format from "../vgs/formatter";
 import keyMapHandler from "./keymap";
+import useExamplesGallery from "../gallery/state";
 import { getParameters } from "../vgs/decls";
 
 import styles from "./editor.module.css";
@@ -52,7 +53,9 @@ export default function Editor({ autoFocus }: Props) {
 
     const [ keyboardShortcuts, setKeyboardShortcuts ] = useState(false);
 
-    const [ exampleGallery, setExampleGallery ] = useState(false);
+    const exampleGallery = useExamplesGallery(s => s.isOpen);
+
+    const setExampleGallery = useExamplesGallery(s => s.setOpen);
 
     const [ help, setHelp ] = useState(false);
 
@@ -197,7 +200,7 @@ export default function Editor({ autoFocus }: Props) {
                 <div>
                     <IconButton
                         Icon={IoLibrary}
-                        label="Example Gallery"
+                        label="Examples Gallery"
                         onClick={() => setExampleGallery(!exampleGallery)}
                     />
 
