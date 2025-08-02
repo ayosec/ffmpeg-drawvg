@@ -30,8 +30,9 @@ in pkgs.stdenv.mkDerivation (mesonConf // {
   ];
 
   preConfigure = ''
+    patchShebangs version.py
+
     # Prevent pthread detection.
     sed -i 's/pthread.h/---no-pthread---/' meson-cc-tests/pthread.c
   '';
-
 })

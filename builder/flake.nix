@@ -7,9 +7,10 @@
     let
       system = "x86_64-linux";
 
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = nixpkgs.legacyPackages.${system}.extend
+        (final: prev: { jre = prev.jre_headless; });
 
-      emscripten = import ./emscripten { inherit pkgs; };
+      emscripten = pkgs.emscripten;
 
       pixman = import ./libs/pixman.nix { inherit pkgs emscripten; };
 
@@ -17,30 +18,36 @@
     in {
       formatter.${system} = pkgs.nixfmt-classic;
 
-      packages.${system} = {
-        inherit pixman cairo;
+      devShells.${system} = {
+        default = pkgs.mkShell {
 
-        default = emscripten;
-      };
+          packages = [
+            cairo
+            emscripten
+            pixman
+            pkgs.libwebp
+            pkgs.nodejs_20
+            pkgs.optipng
+            pkgs.pkg-config
+            pkgs.python3
+          ];
 
-      devShells.${system}.default = pkgs.mkShell {
+        };
 
-        packages = [
-          cairo
-          emscripten
-          pixman
-          pkgs.ccls
-          pkgs.jq
-          pkgs.libwebp
-          pkgs.meson
-          pkgs.ninja
-          pkgs.nodejs_20
-          pkgs.optipng
-          pkgs.pkg-config
-          pkgs.python3
-          pkgs.typescript-language-server
-        ];
-
+        ffmpeg = pkgs.mkShell.override { stdenv = pkgs.clangStdenv; } {
+          buildInputs = with pkgs; [
+            fontconfig
+            git
+            gnumake
+            harfbuzz
+            libaom
+            librsvg
+            libvpx
+            nasm
+            pkg-config
+            pkgs.cairo
+          ];
+        };
       };
     };
 }

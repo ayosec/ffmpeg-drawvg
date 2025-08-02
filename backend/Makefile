@@ -25,7 +25,7 @@ LINK += -s DEFAULT_TO_CXX=0
 LINK += -s ENVIRONMENT=worker
 LINK += -s EXIT_RUNTIME=0
 LINK += -s EXPORTED_FUNCTIONS=_free
-LINK += -s EXPORTED_RUNTIME_METHODS=cwrap
+LINK += -s EXPORTED_RUNTIME_METHODS=cwrap,HEAPU8
 LINK += -s EXPORT_ES6=1
 LINK += -s EXPORT_NAME=createModule
 LINK += -s FILESYSTEM=0
@@ -50,9 +50,6 @@ TARGET ?= target
 
 export EM_CACHE = $(abspath $(TARGET)/em-cache)
 
-export EM_CONFIG = $(abspath $(TARGET)/em-config)
-
-
 OUTPUT = $(TARGET)/build/play.mjs
 OBJECTS = $(patsubst %.c,$(TARGET)/avutil/%.o,$(AVUTIL_SOURCES))
 OBJECTS += $(patsubst %.c,$(TARGET)/play/%.o,$(PLAY_SOURCES))
@@ -76,7 +73,7 @@ clean:
 
 .PHONY: em-clean
 em-clean:
-	rm -rf $(EM_CONFIG) $(EM_CACHE)
+	rm -rf $(EM_CACHE)
 
 $(TARGET):
 	mkdir -p $(TARGET)
@@ -87,14 +84,11 @@ $(OUTPUT): $(OBJECTS)
 	$(CC) $(CFLAGS) $(LINK) -o $@ $^
 
 
-$(EM_CONFIG): | $(TARGET)
-	@echo "CACHE = '$(abspath $(EM_CACHE))'" > $@
-
-$(TARGET)/avutil/%.o: $(FFMPEG_ROOT)/libavutil/%.c | $(EM_CONFIG)
+$(TARGET)/avutil/%.o: $(FFMPEG_ROOT)/libavutil/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MJ $@.mj -c -o $@ $^
 
-$(TARGET)/play/%.o: src/%.c | $(EM_CONFIG)
+$(TARGET)/play/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MJ $@.mj -c -o $@ $^
 
