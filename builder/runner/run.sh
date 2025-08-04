@@ -5,13 +5,6 @@ set -euo pipefail
 runner=$(dirname "$0")
 flake=$(realpath "$runner/..")
 
-flakeargs=()
-
-if [ -n "${CI:-}" ]
-then
-    flakeargs=(--verbose --print-build-logs)
-fi
-
 if [ -z "${FFMPEG_DIR:-}" ]
 then
     echo "Missing FFMPEG_DIR"
@@ -26,7 +19,7 @@ run() {
 
     printf '\n -- Running %s --\n\n' "$*"
 
-    nix develop "${flakeargs[@]}" "$flake#$pkg" --command "$@"
+    nix develop --print-build-logs "$flake#$pkg" --command "$@"
 }
 
 if [ ! -x "$FFMPEG_BIN" ]
