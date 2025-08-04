@@ -1,0 +1,101 @@
+name: Publish
+
+on:
+  push:
+    branches: [ main, drawvg-filter, playground ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - id: checkout-ffmpeg
+        name: Checkout FFmpeg
+        uses: actions/checkout@v4
+        with:
+          ref: drawvg-filter
+          path: ffmpeg
+
+      - name: Checkout Playground
+        uses: actions/checkout@v4
+        with:
+          ref: playground
+          path: playground
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+        with:
+          use-flakehub: false
+
+      - id: cache-ffmpeg
+        name: FFmpeg Cache
+        uses: actions/cache@v4
+        with:
+          key: ffmpeg-build-${{ steps.checkout-ffmpeg.outputs.commit }}
+
+          # Add the main binary, and the generated headers, which may be needed
+          # by the playground backend.
+          path: |
+            ffmpeg/ffmpeg
+            ffmpeg/config.h
+            ffmpeg/config_components.h
+            ffmpeg/ffbuild/config.sh
+            ffmpeg/libavutil/avconfig.h
+            ffmpeg/libavutil/ffversion.h
+            ffmpeg/tests/audiomatch
+
+      - name: Verify FFmpeg Cache
+        if: steps.cache-ffmpeg.outputs.cache-hit == 'true'
+        run: |
+          ffbin="$(realpath ffmpeg)/ffmpeg"
+          ffcmd=(nix develop --quiet ./playground/builder#ffmpeg --command "$ffbin")
+
+          ffcommit=${{ steps.checkout-ffmpeg.outputs.commit }}
+
+          if "${ffcmd[@]}" -version | grep -q "${ffcommit:0:6}"
+          then
+            echo Valid version.
+          else
+            echo Invalid version:
+            "${ffcmd[@]}" -version
+            rm -v "$ffbin"
+          fi
+
+      - id: cache-emscripten
+        name: Emscripten Cache
+        uses: actions/cache@v4
+        with:
+          key: emscripten-cache-${{ hashFiles('playground/builder/flake.lock') }}
+          path: playground/backend/target/em-cache
+
+      - name: Build Site
+        run: |
+          export FFMPEG_DIR=$(realpath ffmpeg)
+
+          cd playground
+          exec builder/runner/run.sh
+
+      - name: Upload Site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: playground/frontend/node_modules/.dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
