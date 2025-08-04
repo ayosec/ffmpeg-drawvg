@@ -29,5 +29,9 @@ run() {
     nix develop "${flakeargs[@]}" "$flake#$pkg" --command "$@"
 }
 
-run ffmpeg "$runner/ffmpeg.sh" "$FFMPEG_DIR"
+if [ ! -x "$FFMPEG_BIN" ]
+then
+    run ffmpeg "$runner/ffmpeg.sh" "$FFMPEG_DIR"
+fi
+
 run default "$runner/playground.sh" "$FFMPEG_DIR"
