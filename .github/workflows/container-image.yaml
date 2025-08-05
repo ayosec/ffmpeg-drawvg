@@ -1,0 +1,42 @@
+name: Container Image
+
+on:
+  push:
+    branches: [ main, playground ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout FFmpeg
+        uses: actions/checkout@v4
+        with:
+          ref: drawvg-filter
+          path: ffmpeg
+
+      - name: Checkout Main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - name: Build Container Image
+        run: sudo main/container/build.sh ffmpeg docker-daemon:ffmpeg:latest
+
+      - name: Push Image
+        run: |
+          set -eu
+
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+          IMAGE_ID=ghcr.io/${{ github.repository }}:latest
+
+          set -x
+          docker tag ffmpeg "$IMAGE_ID"
+          docker push "$IMAGE_ID"
