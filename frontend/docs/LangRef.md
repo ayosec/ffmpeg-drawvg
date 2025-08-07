@@ -643,16 +643,17 @@ stroke
 A drawvg can use some variables, provided by the interpreter, to compute values
 in [!ffmpeg-expr]:
 
-| Variable       | Description                          |
-|----------------|--------------------------------------|
-| `cx`           | X coordinate of the [current point]. |
-| `cy`           | Y coordinate of the [current point]. |
-| `w`            | Width, in pixels, of the frame.      |
-| <code>h</code> | Height, in pixels, of the frame.     |
-| `i`            | The loop counter in `repeat` blocks. |
-| `n`            | Frame number.                        |
-| <code>t</code> | Timestamp, in seconds.               |
-| `duration`     | Duration, in seconds, of the frame.  |
+| Variable        | Description                                |
+|-----------------|--------------------------------------------|
+| `cx`            | X coordinate of the [current point].       |
+| `cy`            | Y coordinate of the [current point].       |
+| `w`             | Width, in pixels, of the frame.            |
+| <code>h</code>  | Height, in pixels, of the frame.           |
+| `i`             | The loop counter in `repeat` blocks.       |
+| `n`             | Frame number.                              |
+| <code>t</code>  | Timestamp, in seconds.                     |
+| <code>ts</code> | Timestamp, in seconds, of the first frame. |
+| `duration`      | Duration, in seconds, of the frame.        |
 
 #### <a name="user-variables"></a>User Variables
 

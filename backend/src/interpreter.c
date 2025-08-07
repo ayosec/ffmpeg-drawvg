@@ -104,6 +104,7 @@ void* backend_program_run(
 
     eval_state.vars[VAR_N] = var_n;
     eval_state.vars[VAR_T] = var_t;
+    eval_state.vars[VAR_TS] = 0;
     eval_state.vars[VAR_W] = width;
     eval_state.vars[VAR_H] = height;
     eval_state.vars[VAR_DURATION] = var_duration;
