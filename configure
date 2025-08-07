@@ -824,7 +824,7 @@ is_in(){
 }
 
 # The cfg loop is very hot (several thousands iterations), and in bash also
-# potentialy quite slow. Try to abort the iterations early, preferably without
+# potentially quite slow. Try to abort the iterations early, preferably without
 # calling functions. 70%+ of the time cfg is already done or without deps.
 check_deps(){
     for cfg; do
@@ -930,7 +930,7 @@ reverse () {
     '
 }
 
-# keeps the last occurence of each non-unique item
+# keeps the last occurrence of each non-unique item
 unique(){
     unique_out=
     eval unique_in=\$$1
@@ -3372,6 +3372,7 @@ pad_cuda_filter_deps_any="cuda_nvcc cuda_llvm"
 sharpen_npp_filter_deps="ffnvcodec libnpp"
 
 ddagrab_filter_deps="d3d11va IDXGIOutput1 DXGI_OUTDUPL_FRAME_INFO"
+scale_d3d11_filter_deps="d3d11va"
 
 amf_deps_any="libdl LoadLibrary"
 nvenc_deps="ffnvcodec"
@@ -4532,7 +4533,7 @@ done
 
 if disabled autodetect; then
 
-    # Unless iconv is explicitely disabled by the user, we still want to probe
+    # Unless iconv is explicitly disabled by the user, we still want to probe
     # for the iconv from the libc.
     disabled iconv || enable libc_iconv
 
@@ -4927,7 +4928,7 @@ msvc_common_flags(){
             -lstdc++)             ;;
             -l*)                  echo ${flag#-l}.lib ;;
             -LARGEADDRESSAWARE)   echo $flag ;;
-            -L*)                  echo -libpath:${flag#-L} ;;
+            -L*) [ "$_flags_type" = "link" ] && echo -libpath:${flag#-L} ;;
             -Wl,*)                ;;
             *)                    echo $flag ;;
         esac
@@ -4947,6 +4948,12 @@ msvc_flags(){
                                        -wd4273 -wd4554 -wd4701 -wd4703 ;;
         esac
     done
+}
+
+msvc_flags_link(){
+    _flags_type=link
+    msvc_flags "$@"
+    unset _flags_type
 }
 
 icl_flags(){
@@ -5144,7 +5151,7 @@ probe_cc(){
         disable stripping
     elif $_cc -? 2>/dev/null | grep -q 'LLVM.*Linker'; then
         # lld can emulate multiple different linkers; in ms link.exe mode,
-        # the -? parameter gives the help output which contains an identifyable
+        # the -? parameter gives the help output which contains an identifiable
         # string, while it gives an error in other modes.
         _type=lld-link
         # The link.exe mode doesn't have a switch for getting the version,
@@ -5175,12 +5182,13 @@ probe_cc(){
         _cflags_noopt="-O1"
         if $_cc -nologo- 2>&1 | grep -q Linker; then
             _ld_o='-out:$@'
+            _flags_filter=msvc_flags_link
         else
             _ld_o='-Fe$@'
+            _flags_filter=msvc_flags
         fi
         _cc_o='-Fo$@'
         _cc_e='-P -Fi$@'
-        _flags_filter=msvc_flags
         _ld_lib='lib%.a'
         _ld_path='-libpath:'
         _flags='-nologo'
@@ -5279,6 +5287,12 @@ else
     ar_o='$@'
 fi
 
+# Treat unrecognized flags as errors on MSVC
+test_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
+    check_cflags -options:strict
+test_host_cpp_condition windows.h "_MSC_FULL_VER >= 193030705" &&
+    check_host_cflags -options:strict
+
 add_cflags $extra_cflags
 add_cxxflags $extra_cxxflags
 add_objcflags $extra_objcflags
@@ -5300,6 +5314,7 @@ if test "$cpu" = host; then
     case "$cc_type" in
         gcc|llvm_gcc)
             check_native(){
+                : > $TMPC
                 $cc $1=native -v -c -o $TMPO $TMPC >$TMPE 2>&1 || return
                 sed -n "/cc1.*$1=/{
                             s/.*$1=\\([^ ]*\\).*/\\1/
@@ -5311,6 +5326,7 @@ if test "$cpu" = host; then
         ;;
         clang)
             check_native(){
+                : > $TMPC
                 $cc $1=native -v -c -o $TMPO $TMPC >$TMPE 2>&1 || return
                 sed -n "/cc1.*-target-cpu /{
                             s/.*-target-cpu \\([^ ]*\\).*/\\1/
@@ -5607,7 +5623,7 @@ elif enabled ppc; then
             cpuflags="-mcpu=$cpu"
             disable vsx
         ;;
-        power[7-8]*)
+        power[7-9]*|power10)
             cpuflags="-mcpu=$cpu"
         ;;
         cell)
@@ -6986,7 +7002,7 @@ enabled jni               && { [ $target_os = "android" ] && check_headers jni.h
 enabled ladspa            && require_headers "ladspa.h dlfcn.h"
 enabled lcms2             && require_pkg_config lcms2 "lcms2 >= 2.13" lcms2.h cmsCreateContext
 enabled libaom            && require_pkg_config libaom "aom >= 2.0.0" aom/aom_codec.h aom_codec_version
-enabled liboapv           && require_pkg_config liboapv "oapv >= 0.1.13.1" "oapv/oapv.h" oapve_encode
+enabled liboapv           && require_pkg_config liboapv "oapv >= 0.2.0.0" "oapv/oapv.h" oapve_encode
 enabled libaribb24        && { check_pkg_config libaribb24 "aribb24 > 1.0.3" "aribb24/aribb24.h" arib_instance_new ||
                                { enabled gpl && require_pkg_config libaribb24 aribb24 "aribb24/aribb24.h" arib_instance_new; } ||
                                die "ERROR: libaribb24 requires version higher than 1.0.3 or --enable-gpl."; }
@@ -7578,6 +7594,7 @@ check_disable_warning -Wno-unused-const-variable
 check_disable_warning -Wno-bool-operation
 check_disable_warning -Wno-char-subscripts
 check_disable_warning -Wno-implicit-const-int-float-conversion
+check_disable_warning -Wno-microsoft-enum-forward-reference
 
 check_disable_warning_headers(){
     warning_flag=-W${1#-Wno-}
@@ -7715,7 +7732,25 @@ if enabled icc; then
             disable aligned_stack
     fi
 elif enabled gcc; then
-    check_optflags -fno-tree-vectorize
+    gcc_version=$($cc -dumpversion)
+    major_version=${gcc_version%%.*}
+    if [ $major_version -lt 13 ]; then
+        # Disable tree-vectorize for GCC <13 - it has historically been buggy.
+        check_optflags -fno-tree-vectorize
+    else
+        case $arch in
+        x86|arm|aarch64)
+            # Allow the default of having tree-vectorize enabled on well tested
+            # architectures.
+            ;;
+        *)
+            # Disable tree-vectorize on potentially less tested
+            # architectures. Known issues:
+            # - https://gcc.gnu.org/PR121064 on Loongarch
+            check_optflags -fno-tree-vectorize
+            ;;
+        esac
+    fi
     check_cflags -Werror=format-security
     check_cflags -Werror=implicit-function-declaration
     check_cflags -Werror=missing-prototypes
@@ -7795,7 +7830,7 @@ elif enabled_any msvc icl; then
     fi
     # msvcrt10 x64 incorrectly enables log2, only msvcrt12 (MSVC 2013) onwards actually has log2.
     check_cpp_condition log2 crtversion.h "_VC_CRT_MAJOR_VERSION >= 12"
-    # the new SSA optimzer in VS2015 U3 is mis-optimizing some parts of the code
+    # the new SSA optimizer in VS2015 U3 is mis-optimizing some parts of the code
     # Issue has been fixed in MSVC v19.00.24218.
     test_cpp_condition windows.h "_MSC_FULL_VER >= 190024218" ||
         check_cflags -d2SSAOptimizer-

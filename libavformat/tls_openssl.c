@@ -31,6 +31,7 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/x509v3.h>
 
 /**
  * Returns a heap‐allocated null‐terminated string containing
@@ -658,14 +659,11 @@ static int url_bio_bputs(BIO *b, const char *str)
     return url_bio_bwrite(b, str, strlen(str));
 }
 
-static av_cold int init_bio_method(URLContext *h)
+static av_cold void init_bio_method(URLContext *h)
 {
     TLSContext *p = h->priv_data;
     BIO *bio;
-    int bio_idx = BIO_get_new_index();
-    if (bio_idx == -1)
-        return AVERROR_EXTERNAL;
-    p->url_bio_method = BIO_meth_new(bio_idx | BIO_TYPE_SOURCE_SINK, "urlprotocol bio");
+    p->url_bio_method = BIO_meth_new(BIO_TYPE_SOURCE_SINK, "urlprotocol bio");
     BIO_meth_set_write(p->url_bio_method, url_bio_bwrite);
     BIO_meth_set_read(p->url_bio_method, url_bio_bread);
     BIO_meth_set_puts(p->url_bio_method, url_bio_bputs);
@@ -676,7 +674,6 @@ static av_cold int init_bio_method(URLContext *h)
     BIO_set_data(bio, p);
 
     SSL_set_bio(p->ssl, bio, bio);
-    return 0;
 }
 
 static void openssl_info_callback(const SSL *ssl, int where, int ret) {
@@ -739,6 +736,12 @@ static av_cold int openssl_init_ca_key_cert(URLContext *h)
     if (c->ca_file) {
         if (!SSL_CTX_load_verify_locations(p->ctx, c->ca_file, NULL))
             av_log(h, AV_LOG_ERROR, "SSL_CTX_load_verify_locations %s\n", openssl_get_error(p));
+    } else {
+        if (!SSL_CTX_set_default_verify_paths(p->ctx)) {
+            // Only log the failure but do not error out, as this is not fatal
+            av_log(h, AV_LOG_WARNING, "Failure setting default verify locations: %s\n",
+                openssl_get_error(p));
+        }
     }
 
     if (c->cert_file) {
@@ -867,11 +870,7 @@ static int dtls_start(URLContext *h, const char *url, int flags, AVDictionary **
     SSL_set_options(p->ssl, SSL_OP_NO_QUERY_MTU);
     SSL_set_mtu(p->ssl, c->mtu);
     DTLS_set_link_mtu(p->ssl, c->mtu);
-
-    ret = init_bio_method(h);
-    if (ret < 0)
-        goto fail;
-
+    init_bio_method(h);
     if (p->tls_shared.external_sock != 1) {
         if ((ret = ff_tls_open_underlying(&p->tls_shared, h, url, options)) < 0) {
             av_log(p, AV_LOG_ERROR, "Failed to connect %s\n", url);
@@ -879,7 +878,7 @@ static int dtls_start(URLContext *h, const char *url, int flags, AVDictionary **
         }
     }
 
-    /* This seems to be neccesary despite explicitly setting client/server method above. */
+    /* This seems to be necessary despite explicitly setting client/server method above. */
     if (c->listen)
         SSL_set_accept_state(p->ssl);
     else
@@ -938,8 +937,7 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
     }
     ret = openssl_init_ca_key_cert(h);
     if (ret < 0) goto fail;
-    // Note, this doesn't check that the peer certificate actually matches
-    // the requested hostname.
+
     if (c->verify)
         SSL_CTX_set_verify(p->ctx, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     p->ssl = SSL_new(p->ctx);
@@ -950,11 +948,22 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
     }
     SSL_set_ex_data(p->ssl, 0, p);
     SSL_CTX_set_info_callback(p->ctx, openssl_info_callback);
-    ret = init_bio_method(h);
-    if (ret < 0)
-        goto fail;
-    if (!c->listen && !c->numerichost)
-        SSL_set_tlsext_host_name(p->ssl, c->host);
+    init_bio_method(h);
+    if (!c->listen && !c->numerichost) {
+        // By default OpenSSL does too lax wildcard matching
+        SSL_set_hostflags(p->ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+        if (!SSL_set1_host(p->ssl, c->host)) {
+            av_log(h, AV_LOG_ERROR, "Failed to set hostname for TLS/SSL verification: %s\n",
+                openssl_get_error(p));
+            ret = AVERROR_EXTERNAL;
+            goto fail;
+        }
+        if (!SSL_set_tlsext_host_name(p->ssl, c->host)) {
+            av_log(h, AV_LOG_ERROR, "Failed to set hostname for SNI: %s\n", openssl_get_error(p));
+            ret = AVERROR_EXTERNAL;
+            goto fail;
+        }
+    }
     ret = c->listen ? SSL_accept(p->ssl) : SSL_connect(p->ssl);
     if (ret == 0) {
         av_log(h, AV_LOG_ERROR, "Unable to negotiate TLS/SSL session\n");

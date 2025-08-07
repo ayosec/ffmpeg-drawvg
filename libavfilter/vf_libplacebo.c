@@ -159,6 +159,11 @@ typedef struct LibplaceboContext {
     pl_vulkan vulkan;
     pl_gpu gpu;
     pl_tex tex[4];
+    struct pl_custom_lut *lut;
+
+    /* dedicated renderer for linear output composition */
+    pl_renderer linear_rr;
+    pl_tex linear_tex;
 
     /* input state */
     LibplaceboInput *inputs;
@@ -184,6 +189,8 @@ typedef struct LibplaceboContext {
     AVExpr *pos_x_pexpr, *pos_y_pexpr, *pos_w_pexpr, *pos_h_pexpr;
     float pad_crop_ratio;
     float corner_rounding;
+    char *lut_filename;
+    enum pl_lut_type lut_type;
     int force_original_aspect_ratio;
     int force_divisible_by;
     int reset_sar;
@@ -369,6 +376,26 @@ static int find_scaler(AVFilterContext *avctx,
 
     av_log(avctx, AV_LOG_ERROR, "No such scaler preset '%s'.\n", name);
     return AVERROR(EINVAL);
+}
+
+static int parse_custom_lut(LibplaceboContext *s)
+{
+    int ret;
+    uint8_t *lutbuf;
+    size_t lutbuf_size;
+
+    if ((ret = av_file_map(s->lut_filename, &lutbuf, &lutbuf_size, 0, s)) < 0) {
+        av_log(s, AV_LOG_ERROR,
+               "The LUT file '%s' could not be read: %s\n",
+               s->lut_filename, av_err2str(ret));
+        return ret;
+    }
+
+    s->lut = pl_lut_parse_cube(s->log, lutbuf, lutbuf_size);
+    av_file_unmap(lutbuf, lutbuf_size);
+    if (!s->lut)
+        return AVERROR(EINVAL);
+    return 0;
 }
 
 static int update_settings(AVFilterContext *ctx)
@@ -729,12 +756,16 @@ static int init_vulkan(AVFilterContext *avctx, const AVVulkanDeviceContext *hwct
         RET(parse_shader(avctx, buf, buf_len));
     }
 
+    if (s->lut_filename)
+        RET(parse_custom_lut(s));
+
     /* Initialize inputs */
     s->inputs = av_calloc(s->nb_inputs, sizeof(*s->inputs));
     if (!s->inputs)
         return AVERROR(ENOMEM);
     for (int i = 0; i < s->nb_inputs; i++)
         RET(input_init(avctx, &s->inputs[i], i));
+    s->linear_rr = pl_renderer_create(s->log, s->gpu);
 
     /* fall through */
 fail:
@@ -757,9 +788,12 @@ static void libplacebo_uninit(AVFilterContext *avctx)
         av_freep(&s->inputs);
     }
 
+    pl_lut_free(&s->lut);
 #if PL_API_VER >= 351
     pl_cache_destroy(&s->cache);
 #endif
+    pl_renderer_destroy(&s->linear_rr);
+    pl_tex_destroy(s->gpu, &s->linear_tex);
     pl_options_free(&s->opts);
     pl_vulkan_destroy(&s->vulkan);
     pl_log_destroy(&s->log);
@@ -953,6 +987,20 @@ static int output_frame(AVFilterContext *ctx, int64_t pts)
         goto fail;
     }
 
+    struct pl_frame orig_target = target;
+    bool use_linear_compositor = false;
+    if (s->linear_tex && target.color.transfer != PL_COLOR_TRC_LINEAR && !s->disable_linear) {
+        use_linear_compositor = true;
+        target.color.transfer = PL_COLOR_TRC_LINEAR;
+        target.repr = pl_color_repr_rgb;
+        target.num_planes = 1;
+        target.planes[0] = (struct pl_plane) {
+            .components = 4,
+            .component_mapping = {0, 1, 2, 3},
+            .texture = s->linear_tex,
+        };
+    }
+
     /* Draw first frame opaque, others with blending */
     opts->params.blend_params = NULL;
 #if PL_API_VER >= 346
@@ -981,6 +1029,13 @@ static int output_frame(AVFilterContext *ctx, int64_t pts)
 #endif
     }
 
+    if (use_linear_compositor) {
+        /* Blit the linear intermediate image to the output frame */
+        target.crop = orig_target.crop = (struct pl_rect2df) {0};
+        pl_render_image(s->linear_rr, &target, &orig_target, &opts->params);
+        target = orig_target;
+    }
+
     if (outdesc->flags & AV_PIX_FMT_FLAG_HWACCEL) {
         pl_unmap_avframe(s->gpu, &target);
     } else if (!pl_download_avframe(s->gpu, &target, out)) {
@@ -1005,6 +1060,8 @@ static bool map_frame(pl_gpu gpu, pl_tex *tex,
         .tex        = tex,
         .map_dovi   = s->apply_dovi,
     ));
+    out->lut = s->lut;
+    out->lut_type = s->lut_type;
 
     if (!s->apply_filmgrain)
         out->film_grain.type = PL_FILM_GRAIN_NONE;
@@ -1307,6 +1364,29 @@ static int libplacebo_config_output(AVFilterLink *outlink)
                                s->force_divisible_by,
                                s->reset_sar ? sar_in : 1.0);
 
+
+    if (s->nb_inputs > 1 && !s->disable_fbos) {
+        /* Create a separate renderer and composition texture */
+        pl_fmt fmt = pl_find_fmt(s->gpu, PL_FMT_FLOAT, 4, 16, 0, PL_FMT_CAP_BLENDABLE);
+        bool ok = !!fmt;
+        if (ok) {
+            ok = pl_tex_recreate(s->gpu, &s->linear_tex, pl_tex_params(
+                .format     = fmt,
+                .w          = outlink->w,
+                .h          = outlink->h,
+                .renderable = true,
+                .sampleable = true,
+                .storable   = fmt->caps & PL_FMT_CAP_STORABLE,
+            ));
+        }
+
+        if (!ok) {
+            av_log(s, AV_LOG_WARNING, "Failed to create a linear texture for "
+                    "compositing multiple inputs, falling back to non-linear "
+                    "blending.\n");
+        }
+    }
+
     if (s->reset_sar) {
         /* SAR is normalized, or we have multiple inputs, set out to 1:1 */
         outlink->sample_aspect_ratio = (AVRational){ 1, 1 };
@@ -1361,7 +1441,7 @@ static int libplacebo_config_output(AVFilterLink *outlink)
 
     s->vkctx.output_width = outlink->w;
     s->vkctx.output_height = outlink->h;
-    /* Default to re-using the input format */
+    /* Default to reusing the input format */
     if (s->out_format == AV_PIX_FMT_NONE || s->out_format == AV_PIX_FMT_VULKAN) {
         s->vkctx.output_format = s->vkctx.input_format;
     } else {
@@ -1406,6 +1486,13 @@ static const AVOption libplacebo_options[] = {
     { "pad_crop_ratio", "ratio between padding and cropping when normalizing SAR (0=pad, 1=crop)", OFFSET(pad_crop_ratio), AV_OPT_TYPE_FLOAT, {.dbl=0.0}, 0.0, 1.0, DYNAMIC },
     { "fillcolor", "Background fill color", OFFSET(fillcolor), AV_OPT_TYPE_COLOR, {.str = "black@0"}, .flags = DYNAMIC },
     { "corner_rounding", "Corner rounding radius", OFFSET(corner_rounding), AV_OPT_TYPE_FLOAT, {.dbl = 0.0}, 0.0, 1.0, .flags = DYNAMIC },
+    { "lut", "Path to custom LUT file to apply", OFFSET(lut_filename), AV_OPT_TYPE_STRING, { .str = NULL }, .flags = STATIC },
+    { "lut_type", "Application mode of the custom LUT", OFFSET(lut_type), AV_OPT_TYPE_INT, { .i64 = PL_LUT_UNKNOWN }, 0, PL_LUT_CONVERSION, STATIC, .unit = "lut_type" },
+        { "auto",  NULL, 0, AV_OPT_TYPE_CONST, {.i64 = PL_LUT_UNKNOWN }, 0, 0, STATIC, .unit = "lut_type" },
+        { "native", NULL, 0, AV_OPT_TYPE_CONST, {.i64 = PL_LUT_NATIVE }, 0, 0, STATIC, .unit = "lut_type" },
+        { "normalized", NULL, 0, AV_OPT_TYPE_CONST, {.i64 = PL_LUT_NORMALIZED }, 0, 0, STATIC, .unit = "lut_type" },
+        { "conversion", NULL, 0, AV_OPT_TYPE_CONST, {.i64 = PL_LUT_CONVERSION }, 0, 0, STATIC, .unit = "lut_type" },
+
     { "extra_opts", "Pass extra libplacebo-specific options using a :-separated list of key=value pairs", OFFSET(extra_opts), AV_OPT_TYPE_DICT, .flags = DYNAMIC },
 #if PL_API_VER >= 351
     { "shader_cache",  "Set shader cache path", OFFSET(shader_cache), AV_OPT_TYPE_STRING, {.str = NULL}, .flags = STATIC },

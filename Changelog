@@ -24,6 +24,9 @@ version <next>:
 - Sanyo LD-ADPCM decoder
 - APV in MP4/ISOBMFF muxing and demuxing
 - OpenHarmony hardware decoder/encoder
+- Colordetect filter
+- Add vf_scale_d3d11 filter
+- No longer disabling GCC autovectorization, on X86, ARM and AArch64
 
 
 version 7.1:
@@ -154,6 +157,7 @@ version 6.1:
   variable-fields elements within the same parent element
 - ffprobe -output_format option added as an alias of -of
 
+# codespell:off
 
 version 6.0:
 - Radiance HDR image support
