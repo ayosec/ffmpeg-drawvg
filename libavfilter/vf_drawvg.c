@@ -44,6 +44,7 @@
 enum {
     VAR_N,          ///< Frame number.
     VAR_T,          ///< Timestamp in seconds.
+    VAR_TS,         ///< Time in seconds of the first frame.
     VAR_W,          ///< Frame width.
     VAR_H,          ///< Frame height.
     VAR_DURATION,   ///< Frame duration.
@@ -66,6 +67,7 @@ enum {
 static const char *const vgs_default_vars[] = {
     "n",
     "t",
+    "ts",
     "w",
     "h",
     "duration",
@@ -2319,7 +2321,9 @@ static int vgs_eval(
 typedef struct DrawVGContext {
     const AVClass *class;
 
-    cairo_format_t cairo_format;    ///< equivalent to AVPixelFormat
+    cairo_format_t cairo_format;    ///< equivalent to AVPixelFormat.
+
+    double time_start;              ///< time in seconds of the first frame.
 
     uint8_t *script_text;           ///< inline source.
     uint8_t *script_file;           ///< file with the script.
@@ -2393,6 +2397,7 @@ static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixel
 
 static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     int ret;
+    double var_t;
     cairo_surface_t* surface;
 
     FilterLink *inl = ff_filter_link(inlink);
@@ -2419,8 +2424,14 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
 
     eval_state.cairo_ctx = cairo_create(surface);
 
+    var_t = TS2T(frame->pts, inlink->time_base);
+
+    if (isnan(drawvg_ctx->time_start))
+        drawvg_ctx->time_start = var_t;
+
     eval_state.vars[VAR_N] = inl->frame_count_out;
-    eval_state.vars[VAR_T] = frame->pts == AV_NOPTS_VALUE ? NAN : frame->pts * av_q2d(inlink->time_base);
+    eval_state.vars[VAR_T] = var_t;
+    eval_state.vars[VAR_TS] = drawvg_ctx->time_start;
     eval_state.vars[VAR_W] = inlink->w;
     eval_state.vars[VAR_H] = inlink->h;
     eval_state.vars[VAR_DURATION] = frame->duration * av_q2d(inlink->time_base);
@@ -2458,6 +2469,8 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
     int ret;
     struct VGSParser parser;
     DrawVGContext *drawvg = ctx->priv;
+
+    drawvg->time_start = NAN;
 
     if (drawvg->script_file != NULL) {
         ret = ff_load_textfile(
