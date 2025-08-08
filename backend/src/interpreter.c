@@ -80,6 +80,7 @@ void* backend_program_run(
     size_t data_len;
     cairo_surface_t *surface;
     struct VGSEvalState eval_state;
+    AVFrame frame;
 
     CurrentFrameVariables.n = var_n;
     CurrentFrameVariables.t = var_t;
@@ -97,8 +98,17 @@ void* backend_program_run(
         width * 4
     );
 
+    // Initialize a dummy frame with enough data for
+    // the p(x,y) function.
+    memset(&frame, 0, sizeof(frame));
+    frame.data[0] = data;
+    frame.linesize[0] = width * 4;
+    frame.width = width;
+    frame.height = height;
+    frame.format = AV_PIX_FMT_RGB32;
+
     // VGS interpreter.
-    vgs_eval_state_init(&eval_state, program, log_ctx());
+    vgs_eval_state_init(&eval_state, program, log_ctx(), &frame);
 
     eval_state.cairo_ctx = cairo_create(surface);
 
