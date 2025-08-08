@@ -94,6 +94,18 @@ static double (*const vgs_func1_impls[])(void *, double) = {
     NULL,
 };
 
+static const char *const vgs_func2_names[] = {
+    "p",
+    NULL,
+};
+
+static double vgs_fn_p(void*, double, double);
+
+static double (*const vgs_func2_impls[])(void *, double, double) = {
+    vgs_fn_p,
+    NULL,
+};
+
 
 // Instructions.
 
@@ -729,8 +741,8 @@ static int vgs_parse_numeric_argument(
             parser->var_names,
             vgs_func1_names,
             vgs_func1_impls,
-            NULL,
-            NULL,
+            vgs_func2_names,
+            vgs_func2_impls,
             0,
             log_ctx
         );
@@ -1250,6 +1262,9 @@ struct VGSProcedure {
 struct VGSEvalState {
     void *log_ctx;
 
+    /// Current frame.
+    AVFrame *frame;
+
     /// Cairo context for drawing operations.
     cairo_t *cairo_ctx;
 
@@ -1381,14 +1396,67 @@ static double vgs_fn_randomg(void *data, double arg) {
     return ff_sfc64_get(rng) * (1.0 / UINT64_MAX);
 }
 
+// Return the pixel color in 0xRRGGBBAA format.
+//
+// The transformation matrix is applied to the given coordinates.
+//
+// If the coordinates are outside the frame, return NAN.
+static double vgs_fn_p(void* data, double x0, double y0) {
+    int x, y;
+    uint32_t color[4] = { 0, 0, 0, 255 };
+
+    struct VGSEvalState *state = (struct VGSEvalState *)data;
+    AVFrame *frame = state->frame;
+
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
+
+    if (frame == NULL || !isfinite(x0) || !isfinite(y0))
+        return NAN;
+
+    cairo_user_to_device(state->cairo_ctx, &x0, &y0);
+
+    x = (int)x0;
+    y = (int)y0;
+
+    if (x < 0 || y < 0 || x >= frame->width || y >= frame->height)
+        return NAN;
+
+    for (int c = 0; c < desc->nb_components; c++) {
+        uint32_t pixel;
+        int depth = desc->comp[c].depth;
+
+        av_read_image_line2(
+            &pixel,
+            (void*)frame->data,
+            frame->linesize,
+            desc,
+            x, y,
+            c,
+            1, // width
+            0, // read_pal_component
+            4  // dst_element_size
+        );
+
+        if (depth != 8) {
+            pixel = pixel * 255 / ((1 << depth) - 1);
+        }
+
+        color[c] = pixel;
+    }
+
+    return color[0] << 24 | color[1] << 16 | color[2] << 8 | color[3];
+}
+
 static void vgs_eval_state_init(
     struct VGSEvalState *state,
     const struct VGSProgram *program,
-    void *log_ctx
+    void *log_ctx,
+    AVFrame *frame
 ) {
     memset(state, 0, sizeof(*state));
 
     state->log_ctx = log_ctx;
+    state->frame = frame;
     state->rcp.status = RCP_NONE;
 
     if (program->proc_names != NULL) {
@@ -1616,16 +1684,6 @@ static void hsl2rgb(
     *pb = b + x;
 }
 
-// Convert a color in 4 components, between 0.0 and 1.0,
-// to a 0xRRGGBBAA value.
-static uint32_t vgs_color_value(double r, double g, double b, double a) {
-#define C(v, o) ((uint32_t)(av_clipd(v, 0, 1) * 255) << o)
-
-    return C(r, 24) | C(g, 16) | C(b, 8) | C(a, 0);
-
-#undef C
-}
-
 // Execute the cairo functions for the given script.
 static int vgs_eval(
     struct VGSEvalState *state,
@@ -1825,7 +1883,17 @@ static int vgs_eval(
                 b = numerics[3];
             }
 
-            state->vars[user_var] = (double)vgs_color_value(r, g, b, numerics[4]);
+#define C(v, o) ((uint32_t)(av_clipd(v, 0, 1) * 255) << o)
+
+            state->vars[user_var] = (double)(
+                C(r, 24)
+                | C(g, 16)
+                | C(b, 8)
+                | C(numerics[4], 0)
+            );
+
+#undef C
+
             break;
         }
 
@@ -2406,7 +2474,7 @@ static int drawvg_filter_frame(AVFilterLink *inlink, AVFrame *frame) {
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
     struct VGSEvalState eval_state;
-    vgs_eval_state_init(&eval_state, &drawvg_ctx->program, drawvg_ctx);
+    vgs_eval_state_init(&eval_state, &drawvg_ctx->program, drawvg_ctx, frame);
 
     // Draw directly on the frame data.
     surface = cairo_image_surface_create_for_data(

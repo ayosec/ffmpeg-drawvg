@@ -249,7 +249,7 @@ static void check_script(int is_file, const char* source) {
 
     ret = vgs_parse(NULL, &parser, &program, 0);
 
-    vgs_eval_state_init(&state, &program, NULL);
+    vgs_eval_state_init(&state, &program, NULL, NULL);
 
     for (int i = 0; i < VAR_COUNT; i++)
         state.vars[i] = 1 << i;
