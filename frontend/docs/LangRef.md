@@ -1142,6 +1142,41 @@ proc notyet {
 
 There are some functions specific to drawvg available in [!ffmpeg-expr].
 
+#### Function `p`
+
+`p(x, y)` returns the color of the pixel at coordinates `x, y`, as a
+`0xRRGGBBAA` value. This value can be assigned to a variable, which can be used
+later as the argument for `setcolor`.
+
+If the coordinates are outside the frame, or any of the arguments is not a
+finite number (like [`NaN`][nan]), the function returns `NaN`.
+
+The [transformation matrix](#transformations) is applied to the arguments. To
+use the original frame coordinates, call `resetmatrix` between `save` and
+`restore`:
+
+```vgs,ignore
+save
+resetmatrix
+setvar pixel (p(0, 0))    // top-left pixel of the frame.
+restore
+
+setcolor pixel
+```
+
+Bitwise operations can be used to extract individual color components:
+
+```vgs,ignore
+setvar pixel (p(x, y))
+
+if (not(isnan(pixel))) {
+    setvar px_red   (pixel / 0x1000000)
+    setvar px_green (bitand(pixel / 0x10000, 0xFF))
+    setvar px_blue  (bitand(pixel / 0x100, 0xFF))
+    setvar px_alpha (bitand(pixel, 0xFF))
+}
+```
+
 #### Function `pathlen`
 
 `pathlen(n)` computes the length of the current path, by adding the length of
