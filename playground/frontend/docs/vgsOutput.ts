@@ -4,17 +4,22 @@ import { gzipSync } from "node:zlib";
 import { hash, randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 
+import envPaths from "env-paths";
+
 import RunQueue from "./RunQueue";
 
 interface Asset {
     uri: string;
     path: string;
+    build(builder: () => Promise<void>): Promise<void>;
 }
 
 interface Loop {
     duration: number;
     fps: number;
 }
+
+const CACHE_DIR = envPaths("drawvg-playground").cache + "/outputs";
 
 const PREVIEW_WIDTH = 240;
 const PREVIEW_HEIGHT = 240;
@@ -54,8 +59,8 @@ function renderVGS(
         const png = outputNames("png");
         const webp = outputNames("webp");
 
-        renderImageFromProgram(ffmpegBin, code, png.path)?.then(() => {
-            makeWebp(png.path, webp.path);
+        renderImageFromProgram(ffmpegBin, code, png)?.then(() => {
+            makeWebp(png, webp);
         });
 
         output = `
@@ -75,7 +80,7 @@ function renderVGS(
         `;
     } else {
         const vp9 = outputNames("vp9.webm");
-        renderVideoFromProgram(ffmpegBin, code, vp9.path, loopDuration);
+        renderVideoFromProgram(ffmpegBin, code, vp9, loopDuration);
 
         output = `
             <video muted loop controls>
@@ -116,44 +121,65 @@ function makeOutputNames(rootDir: string, code: string): (s: string) => Asset {
 
     return function(suffix: string) {
         const uri = `./${OUTPUT}/vgs-${codeHash}.${suffix}`;
+        const filepath = path.join(rootDir, uri);
         return {
             uri,
-            path: path.join(rootDir, uri),
+            path: filepath,
+
+            async build(builder: () => Promise<void>) {
+                if (fs.existsSync(filepath))
+                    return;
+
+                const cacheKey = hash("sha256", filepath, "hex");
+                const cacheFile = path.join(CACHE_DIR, cacheKey);
+
+                if (fs.existsSync(cacheFile)) {
+                    fs.copyFileSync(cacheFile, filepath);
+                    return;
+                }
+
+                // Render the output and copy it to the cache.
+
+                await builder();
+
+                if (!fs.existsSync(CACHE_DIR))
+                    fs.mkdirSync(CACHE_DIR, { recursive: true });
+
+                fs.copyFileSync(filepath, cacheFile);
+            }
         };
     };
 }
 
-function renderImageFromProgram(ffmpegBin: string, code: string, pngPath: string) {
-    if (fs.existsSync(pngPath))
-        return;
+function renderImageFromProgram(ffmpegBin: string, code: string, png: Asset) {
+    return png.build(() => {
+        const tmpName = `${tmpdir()}/drawvg-${randomBytes(16).toString("base64url")}`;
+        fs.writeFileSync(tmpName, code);
 
-    const tmpName = `${tmpdir()}/drawvg-${randomBytes(16).toString("base64url")}`;
-    fs.writeFileSync(tmpName, code);
+        const filter = `
+            color=white:s=${PREVIEW_WIDTH}x${PREVIEW_HEIGHT}:r=1,
+            format=bgr0,
+            drawvg=file=${tmpName}
+        `;
 
-    const filter = `
-        color=white:s=${PREVIEW_WIDTH}x${PREVIEW_HEIGHT}:r=1,
-        format=bgr0,
-        drawvg=file=${tmpName}
-    `;
-
-    return (
-        JOBS.launch([
-            ffmpegBin,
-            "-hide_banner",
-            "-f", "lavfi",
-            "-i", filter,
-            "-vframes", "1",
-            "-update", "true",
-            pngPath,
-        ]).then(() => JOBS.launch(["optipng", pngPath]))
-    );
+        return (
+            JOBS.launch([
+                ffmpegBin,
+                "-hide_banner",
+                "-f", "lavfi",
+                "-i", filter,
+                "-vframes", "1",
+                "-update", "true",
+                png.path,
+            ]).then(() => JOBS.launch(["optipng", png.path]))
+        );
+    });
 }
 
-function makeWebp(pngPath: string, webpPath: string) {
-    if (fs.existsSync(webpPath))
-        return;
-
-    JOBS.launch(["cwebp", "-lossless", pngPath, "-o", webpPath]);
+function makeWebp(png: Asset, webp: Asset) {
+    return webp.build(() => {
+        return JOBS.launch(["cwebp", "-lossless", png.path, "-o", webp.path]);
+    });
 }
 
 function getLoopDuration(options: string[]): Loop|undefined {
@@ -171,33 +197,31 @@ function getLoopDuration(options: string[]): Loop|undefined {
 function renderVideoFromProgram(
     ffmpegBin: string,
     code: string,
-    outputPath: string,
+    output: Asset,
     loopDuration: Loop,
 ) {
+    return output.build(() => {
+        const tmpName = `${tmpdir()}/drawvg-${randomBytes(16).toString("base64url")}`;
+        fs.writeFileSync(tmpName, code);
 
-    if (fs.existsSync(outputPath))
-        return;
+        const filter = `
+            color=white:s=${PREVIEW_WIDTH}x${PREVIEW_HEIGHT}:r=${loopDuration.fps},
+            format=bgr0,
+            drawvg=file=${tmpName},
+            format=yuv420p
+        `;
 
-    const tmpName = `${tmpdir()}/drawvg-${randomBytes(16).toString("base64url")}`;
-    fs.writeFileSync(tmpName, code);
-
-    const filter = `
-        color=white:s=${PREVIEW_WIDTH}x${PREVIEW_HEIGHT}:r=${loopDuration.fps},
-        format=bgr0,
-        drawvg=file=${tmpName},
-        format=yuv420p
-    `;
-
-    return JOBS.launch([
-        ffmpegBin,
-        "-v", "warning",
-        "-hide_banner",
-        "-f", "lavfi",
-        "-i", filter,
-        "-to", `${loopDuration.duration}`,
-        "-c:v", "libvpx-vp9",
-        outputPath,
-    ]);
+        return JOBS.launch([
+            ffmpegBin,
+            "-v", "warning",
+            "-hide_banner",
+            "-f", "lavfi",
+            "-i", filter,
+            "-to", `${loopDuration.duration}`,
+            "-c:v", "libvpx-vp9",
+            output.path,
+        ]);
+    });
 }
 
 export default vgsOutput;
