@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host=0.0.0.0 --clearScreen=false",
     "build": "npm run build:app && npm run build:docs",
-    "build:app": "tsc -b && vite build --base /playground/ --outDir node_modules/.dist/playground",
+    "build:app": "tsc -b && vite build --base ${WEBSITE_URL:-/playground}/ --outDir node_modules/.dist/playground",
     "build:docs": "env DEST=node_modules/.dist/playground/docs tsx --tsconfig docs/tsconfig.json docs/render.ts",
     "build-backend": "make -C ../backend -j all",
     "lint": "eslint .",

@@ -21,6 +21,12 @@ interface Loop {
 
 const CACHE_DIR = envPaths("drawvg-playground").cache + "/outputs";
 
+const OUTPUTS_DIR = "outputs";
+
+const OUTPUTS_URI_PREFIX = process.env.WEBSITE_URL
+    ? `${process.env.WEBSITE_URL}/docs`
+    : ".";
+
 const PREVIEW_WIDTH = 240;
 const PREVIEW_HEIGHT = 240;
 
@@ -110,9 +116,7 @@ function urlHash(code: string): string {
 }
 
 function makeOutputNames(rootDir: string, code: string): (s: string) => Asset {
-    const OUTPUT = "outputs";
-
-    const dirname = path.join(rootDir, OUTPUT);
+    const dirname = path.join(rootDir, OUTPUTS_DIR);
 
     if (!fs.existsSync(dirname))
         fs.mkdirSync(dirname);
@@ -120,10 +124,11 @@ function makeOutputNames(rootDir: string, code: string): (s: string) => Asset {
     const codeHash = hash("sha256", code, "base64url").substring(0, 16);
 
     return function(suffix: string) {
-        const uri = `./${OUTPUT}/vgs-${codeHash}.${suffix}`;
-        const filepath = path.join(rootDir, uri);
+        const filename = `vgs-${codeHash}.${suffix}`;
+        const filepath = path.join(rootDir, OUTPUTS_DIR, filename);
         return {
-            uri,
+            uri: `${OUTPUTS_URI_PREFIX}/${OUTPUTS_DIR}/${filename}`,
+
             path: filepath,
 
             async build(builder: () => Promise<void>) {
