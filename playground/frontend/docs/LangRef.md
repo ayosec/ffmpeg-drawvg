@@ -88,13 +88,13 @@ A command is an identifier (like `setcolor` or `lineto`) followed by its
 arguments. Each item in the code (command name, arguments, etc.) is separated
 by any of the following characters:
 
-| Name    | C Syntax | Unicode  |
-|---------|----------|----------|
-| Space   | `' '`    | `U+0020` |
-| Comma   | `','`    | `U+002C` |
-| Newline | `'\n'`   | `U+000A` |
-| Tabs    | `'\t'`   | `U+0009` |
-| Return  | `'\r'`   | `U+000D` |
+| Character    | C Syntax |
+|--------------|----------|
+| Space        | `' '`    |
+| Comma        | `','`    |
+| Newline      | `'\n'`   |
+| Tabs         | `'\t'`   |
+| Return       | `'\r'`   |
 
 The beginning of the item indicates how it will be interpreted:
 
