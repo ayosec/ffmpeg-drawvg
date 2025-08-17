@@ -4,4 +4,5 @@ ffmpeg \
     -ss 7:51 -t 6 -i bigbuckbunny.mov \
     -/filter_complex transition.filter \
     -an \
-    output.mp4
+    -c:v libvpx-vp9 \
+    output.webm
