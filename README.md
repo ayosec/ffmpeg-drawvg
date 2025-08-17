@@ -8,6 +8,8 @@
 
 ---
 
+<!-- landing:intro -->
+
 drawvg is an experimental [FFmpeg filter] to render vector graphics on top of
 video frames.
 
@@ -32,12 +34,15 @@ Many command names are taken from [PostScript]. VGS is fully documented in the
 [svg-path]: https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/path
 [MGV]: https://imagemagick.org/script/magick-vector-graphics.php
 [PostScript]: https://en.wikipedia.org/wiki/PostScript
+[langref]: https://ayosec.github.io/ffmpeg-drawvg/playground/docs/langref.html
 
 Scripts can use [FFmpeg expressions] to describe graphics dynamically, so they
 can compute coordinates based on frame dimensions, frame metadata, generate
 random values, read pixel colors, etc.
 
 [FFmpeg expressions]: https://ffmpeg.org/ffmpeg-utils.html#Expression-Evaluation
+
+<!-- /landing:intro -->
 
 For example, to draw a blue circle in the middle of a frame:
 
@@ -62,8 +67,6 @@ drawvg can be combined with other FFmpeg filters to modify video frames.
 * [Language Reference for VGS][langref]
 
 * [Playground Help](https://ayosec.github.io/ffmpeg-drawvg/playground/docs/manual.html)
-
-[langref]: https://ayosec.github.io/ffmpeg-drawvg/playground/docs/langref.html
 
 ## Implementation
 

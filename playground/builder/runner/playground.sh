@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-PLAYGROUND_DIR=$(git rev-parse --show-toplevel)
+PLAYGROUND_DIR=$(git rev-parse --show-toplevel)/playground
 
 ffmpeg_dir=$1
 

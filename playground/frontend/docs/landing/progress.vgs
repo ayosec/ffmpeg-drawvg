@@ -1,0 +1,12 @@
+setvar T 3
+setvar R (h / 6)
+
+translate (w - R - 5) (R + 5)
+
+moveto 0 0
+arcn 0 0 R
+    (3 * PI / 2 - (PI * 2 * mod(t - ts, T) / T))
+    (-PI / 2)
+
+setcolor red@0.6
+fill

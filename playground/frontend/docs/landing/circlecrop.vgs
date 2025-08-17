@@ -1,0 +1,4 @@
+rect 0 0 w h
+setvar d (sin(PI / 2 * (t - ts)))
+circle (4 * w / 5) (3 * h / 5) (max(w, h) * (1 - d))
+eofill

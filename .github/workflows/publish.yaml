@@ -2,7 +2,7 @@ name: Publish
 
 on:
   push:
-    branches: [ main, drawvg-filter, playground ]
+    branches: [ main, drawvg-filter ]
 
 jobs:
   build:
@@ -11,20 +11,34 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      pages: write
 
     steps:
+      - uses: actions/github-script@v7
+        id: website-url
+        with:
+          result-encoding: string
+          script: |
+            const response = await github.rest.repos.getPages({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            return response.data.html_url.replace(/\/$/, "");
+
+      - id: checkout-main
+        name: Checkout Main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
       - id: checkout-ffmpeg
         name: Checkout FFmpeg
         uses: actions/checkout@v4
         with:
           ref: drawvg-filter
           path: ffmpeg
-
-      - name: Checkout Playground
-        uses: actions/checkout@v4
-        with:
-          ref: playground
-          path: playground
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -55,7 +69,7 @@ jobs:
         if: steps.cache-ffmpeg.outputs.cache-hit == 'true'
         run: |
           ffbin="$(realpath ffmpeg)/ffmpeg"
-          ffcmd=(nix develop --quiet ./playground/builder#ffmpeg --command "$ffbin")
+          ffcmd=(nix develop --quiet ./main/playground/builder#ffmpeg --command "$ffbin")
 
           ffcommit=${{ steps.checkout-ffmpeg.outputs.commit }}
 
@@ -72,28 +86,54 @@ jobs:
         name: Emscripten Cache
         uses: actions/cache@v4
         with:
-          key: emscripten-cache-${{ hashFiles('playground/builder/flake.lock') }}
-          path: playground/backend/target/em-cache
+          key: emscripten-cache-${{ hashFiles('main/playground/builder/flake.lock') }}
+          path: main/playground/backend/target/em-cache
+
+      - name: Example Video 1
+        uses: ./main/.github/workflows/wget
+        with:
+          # From: https://www.pexels.com/video/night-drive-on-highway-with-passing-cars-31940329/
+          path: videos/highway.mp4
+          url: https://www.pexels.com/download/video/31940329/?w=960&h=540
+
+      - name: Example Video 2
+        uses: ./main/.github/workflows/wget
+        with:
+          # From https://peach.blender.org/download/
+          path: videos/bigbuckbunny.mov
+          url: https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_h264.mov
 
       - name: Build Site
+        env:
+          WEBSITE_URL: ${{ steps.website-url.outputs.result }}/playground
+
         run: |
           export FFMPEG_DIR=$(realpath ffmpeg)
+          export EXAMPLE_VIDEOS_PATH=$(realpath videos)
 
-          cd playground
-          exec builder/runner/run.sh
+          set -x
+
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg  # for ffprobe
+
+          cd main/playground
+          builder/runner/run.sh
+
+          cd frontend/node_modules/.dist/
+          cp -a playground/docs/landing.html index.html
 
       - name: Upload Site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: playground/frontend/node_modules/.dist
+          path: main/playground/frontend/node_modules/.dist
 
   deploy:
     needs: build
     runs-on: ubuntu-24.04
 
     permissions:
-      pages: write
       id-token: write
+      pages: write
 
     steps:
       - name: Deploy to GitHub Pages

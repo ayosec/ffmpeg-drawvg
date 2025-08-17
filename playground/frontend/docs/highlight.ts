@@ -4,9 +4,10 @@ import { hash } from "node:crypto";
 import { tmpdir } from "node:os";
 
 import bash from "highlight.js/lib/languages/bash";
-import shell from "highlight.js/lib/languages/shell";
 import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
+import shell from "highlight.js/lib/languages/shell";
+import { HLJSApi } from "highlight.js";
 
 import Scanner from "./scanner";
 import tokenize from "@frontend/vgs/tokenizer";
@@ -22,6 +23,7 @@ hljs.registerLanguage("bash", (api) => {
 
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("console", shell);
+hljs.registerLanguage("filter", filtergraphLang);
 
 interface MarkSpan {
     kind: string;
@@ -218,4 +220,24 @@ function htmlEscape(text: string) {
         .replaceAll(/"/g, "&quot;")
         .replaceAll(/\x01(.*?)\x01/g, "<span class=\"$1\">")
         .replaceAll(/\x02/g, "</span>");
+}
+
+function filtergraphLang(hljs: HLJSApi) {
+    const keyword =
+        "alphamerge boxblur concat crop loop displace drawtext \
+         drawvg format pad scale overlay split \
+    ".split(/\s+/);
+
+    return {
+        name: "FilterGraph",
+        keywords: { keyword },
+        contains: [
+            hljs.APOS_STRING_MODE,
+            {
+                className: "variable.constant",
+                begin: /\[/,
+                end: /\]/,
+            },
+        ]
+    };
 }

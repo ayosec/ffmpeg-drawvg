@@ -4,9 +4,8 @@ import { gzipSync } from "node:zlib";
 import { hash, randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 
-import envPaths from "env-paths";
-
 import RunQueue from "./RunQueue";
+import { CACHE_DIR, DOCS_DIR, DOCS_URL } from "./buildcontext";
 
 interface Asset {
     uri: string;
@@ -19,20 +18,14 @@ interface Loop {
     fps: number;
 }
 
-const CACHE_DIR = envPaths("drawvg-playground").cache + "/outputs";
-
 const OUTPUTS_DIR = "outputs";
-
-const OUTPUTS_URI_PREFIX = process.env.WEBSITE_URL
-    ? `${process.env.WEBSITE_URL}/docs`
-    : ".";
 
 const PREVIEW_WIDTH = 240;
 const PREVIEW_HEIGHT = 240;
 
 const JOBS = new RunQueue();
 
-const vgsOutput: (rootDir: string, render: string, code: string, options: string[]) => string = (
+const vgsOutput: (render: string, code: string, options: string[]) => string = (
     function getPreview() {
         const PLAYGROUND_URL = process.env.PLAYGROUND_URL ?? "..";
         const FFMPEG_BIN = process.env.FFMPEG_BIN;
@@ -40,14 +33,13 @@ const vgsOutput: (rootDir: string, render: string, code: string, options: string
         if (PLAYGROUND_URL === undefined || FFMPEG_BIN === undefined)
             return (_a, _b, code) => `<pre>${code}</pre>`;
 
-        return (rootDir, render, code, options) => (
-            renderVGS(rootDir, PLAYGROUND_URL, FFMPEG_BIN, render, code, options)
+        return (render, code, options) => (
+            renderVGS(PLAYGROUND_URL, FFMPEG_BIN, render, code, options)
         );
     }
 )();
 
 function renderVGS(
-    rootDir: string,
     playgroundURL: string,
     ffmpegBin: string,
     render: string,
@@ -56,7 +48,7 @@ function renderVGS(
 ) {
     const shareURL = playgroundURL + "#gzip=" + urlHash(code);
 
-    const outputNames = makeOutputNames(rootDir, code);
+    const outputNames = makeOutputNames(code);
 
     const loopDuration = getLoopDuration(options);
 
@@ -115,8 +107,8 @@ function urlHash(code: string): string {
     return encodeURIComponent(gzipped.toString("base64"));
 }
 
-function makeOutputNames(rootDir: string, code: string): (s: string) => Asset {
-    const dirname = path.join(rootDir, OUTPUTS_DIR);
+function makeOutputNames(code: string): (s: string) => Asset {
+    const dirname = path.join(DOCS_DIR, OUTPUTS_DIR);
 
     if (!fs.existsSync(dirname))
         fs.mkdirSync(dirname);
@@ -125,9 +117,9 @@ function makeOutputNames(rootDir: string, code: string): (s: string) => Asset {
 
     return function(suffix: string) {
         const filename = `vgs-${codeHash}.${suffix}`;
-        const filepath = path.join(rootDir, OUTPUTS_DIR, filename);
+        const filepath = path.join(DOCS_DIR, OUTPUTS_DIR, filename);
         return {
-            uri: `${OUTPUTS_URI_PREFIX}/${OUTPUTS_DIR}/${filename}`,
+            uri: `${DOCS_URL}/${OUTPUTS_DIR}/${filename}`,
 
             path: filepath,
 
@@ -146,9 +138,6 @@ function makeOutputNames(rootDir: string, code: string): (s: string) => Asset {
                 // Render the output and copy it to the cache.
 
                 await builder();
-
-                if (!fs.existsSync(CACHE_DIR))
-                    fs.mkdirSync(CACHE_DIR, { recursive: true });
 
                 fs.copyFileSync(filepath, cacheFile);
             }

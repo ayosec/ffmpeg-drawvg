@@ -2,7 +2,7 @@ name: Container Image
 
 on:
   push:
-    branches: [ main, playground ]
+    branches: [ main, drawvg-filter ]
 
 jobs:
   build:

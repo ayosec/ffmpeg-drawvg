@@ -1,0 +1,33 @@
+[0] crop = iw-1, split [source0] [source1] ;
+
+[source0]
+    drawvg = rect 0 0 w h setcolor gray fill ,
+    loop = -1 : 1 : 0 ,
+    split
+    [gray0] [gray1] ;
+
+[gray0]
+    drawvg = file=waves.vgs ,
+    split
+    [xmap_src0] [xmap_src1] ;
+
+[xmap_src0]
+    boxblur = h/40 ,
+    split
+    [xmap0] [xmap1] ;
+
+[source1] [xmap1] [gray1]
+    displace = mirror ,
+    pad = iw*2+30 : ih*2+30 : 10:10
+    [pad0] ;
+
+[pad0] [xmap_src1] overlay = 10 : h+20 [pad1] ;
+
+[pad1] [source1] overlay = w+20 : 10 : shortest=1 [pad2] ;
+
+[pad2] [xmap0]
+    overlay = w+20 : h+20 : shortest=1 ,
+    drawtext = text='drawtext' : y=h-20 : x=20 : y_align=baseline : fontsize=32 : fontcolor=white ,
+    drawtext = text='boxblur' : y=h-20 : x=w/2+20 : y_align=baseline : fontsize=32 : fontcolor=white ,
+    drawtext = text='Source' : y=h/2-20 : x=w/2+20 : y_align=baseline : fontsize=32 : fontcolor=white ,
+    format = yuv420p

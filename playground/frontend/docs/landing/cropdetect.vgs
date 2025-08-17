@@ -1,0 +1,9 @@
+getmetadata cdx lavfi.cropdetect.x
+getmetadata cdy lavfi.cropdetect.y
+getmetadata cdw lavfi.cropdetect.w
+getmetadata cdh lavfi.cropdetect.h
+
+rect cdx cdy cdw cdh
+setcolor red@0.5
+setlinewidth 10
+stroke

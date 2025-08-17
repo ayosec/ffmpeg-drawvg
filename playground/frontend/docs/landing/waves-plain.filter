@@ -1,0 +1,16 @@
+[0] crop = iw-1, split [source0] [source1] ;
+
+[source0]
+    drawvg = rect 0 0 w h setcolor gray fill ,
+    loop = -1:1:0 ,
+    split
+    [gray0] [gray1] ;
+
+[gray0]
+    drawvg = file=waves.vgs ,
+    boxblur = h/40
+    [xmap] ;
+
+[source1] [xmap] [gray1]
+    displace = mirror ,
+    format = yuv420p

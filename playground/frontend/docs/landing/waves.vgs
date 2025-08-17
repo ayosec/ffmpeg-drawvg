@@ -1,0 +1,14 @@
+scalexy w (h / 20)
+
+translate 0 (sin(4 * t))
+
+repeat 20 {
+    setvar T (mod((t - ts) + randomg(1), 0.75) / 0.75)
+    setvar T (2 * abs(T - floor(T + 0.5)))
+
+    setvar a (T / 16 + 0.45)
+    setrgba a a a 1
+
+    rect 0 i 1 1
+    fill
+}

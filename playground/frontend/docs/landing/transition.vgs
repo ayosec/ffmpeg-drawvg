@@ -1,0 +1,20 @@
+setvar BARS 7
+setvar DURATION 2
+
+setvar IB (1 / BARS)
+setvar P ((t - ts) / DURATION)
+
+scalexy w h
+translate 0 0.5
+
+repeat BARS {
+    setvar bar (BARS * (P - i / BARS))
+    if (lt(bar, 0)) {
+        break
+    }
+
+    rect 0 (if(mod(i, 2), 0.5 - bar, -0.5)) IB bar
+    translate IB 0
+}
+
+fill

@@ -21,7 +21,6 @@ interface MarkupDocument {
 }
 
 export default async function renderMarkup(
-    rootDir: string,
     filename: string,
     langRefName: string,
 ): Promise<MarkupDocument> {
@@ -81,7 +80,7 @@ export default async function renderMarkup(
             }
 
             case "code":
-                applyHighlight(rootDir, token, langRefName);
+                applyHighlight(token, langRefName);
                 break;
 
             case "link":
@@ -124,7 +123,7 @@ export default async function renderMarkup(
     return { headers, html };
 }
 
-function applyHighlight(rootDir: string, token: Token, langRefName: string) {
+function applyHighlight(token: Token, langRefName: string) {
     const { text, lang } = <Tokens.Code>token;
     if (lang === undefined || lang === "")
         return;
@@ -143,7 +142,6 @@ function applyHighlight(rootDir: string, token: Token, langRefName: string) {
 
     if (langParts[0] === "vgs" && langParts.indexOf("ignore") === -1) {
         html = vgsOutput(
-            rootDir,
             `<pre>${html}</pre>`,
             text,
             langParts,

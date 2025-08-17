@@ -27,5 +27,4 @@
       "@frontend/*": ["../src/*"]
     }
   },
-  "include": ["./**.tsx"]
 }

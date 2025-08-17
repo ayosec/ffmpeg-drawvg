@@ -1,0 +1,3 @@
+crop = iw-1 ,
+drawvg = file=circlecrop.vgs : enable='gt(t,0.8)' ,
+format = yuv420p

@@ -1,0 +1,10 @@
+[0] scale = iw/1.5 : -2 , split [a] [b] ;
+
+[a]
+    drawvg = file=pixelate.vgs ,
+    pad = iw*2+30 : ih+20 : iw+20 : ih+10
+    [a0] ;
+
+[a0] [b]
+    overlay = 10 : 10 ,
+    format = yuv420p

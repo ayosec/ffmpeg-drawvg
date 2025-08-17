@@ -5,34 +5,15 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import DocView from "./DocView";
-
-// The environment variable $DEST is expected to indicate
-// the directory where files are written. The directory is
-// created. It is created if missing.
-const DOCS_DIR = (
-    function getDEST() {
-        const dest = process.env.DEST;
-        if (typeof dest !== "string")
-            throw "Missing DEST variable";
-
-        if (!fs.existsSync(dest))
-            fs.mkdirSync(dest, { recursive: true });
-
-        return dest;
-    }
-)();
+import Landing from "./landing/Landing";
+import { DOCS_DIR } from "./buildcontext";
 
 function writePage(filename: string, elem: React.ReactNode) {
     const timeLog = "DOCS: Rendering " + filename;
     console.time(timeLog);
 
-    const fd = fs.openSync(path.join(DOCS_DIR, filename), "w");
-    try {
-        fs.writeSync(fd, "<!DOCTYPE html>\n");
-        fs.writeSync(fd, renderToStaticMarkup(elem));
-    } finally {
-        fs.closeSync(fd);
-    }
+    const html = renderToStaticMarkup(elem);
+    fs.writeFileSync(path.join(DOCS_DIR, filename), "<!DOCTYPE html>\n" + html);
 
     console.timeLog(timeLog);
 }
@@ -40,8 +21,9 @@ function writePage(filename: string, elem: React.ReactNode) {
 // Render pages.
 const LANGREF_NAME = "langref.html";
 
-DocView(DOCS_DIR, "LangRef.md", "").then(html => writePage(LANGREF_NAME, html));
-DocView(DOCS_DIR, "Manual.md", LANGREF_NAME).then(html => writePage("manual.html", html));
+Landing(LANGREF_NAME).then(html => writePage("landing.html", html));
+DocView("LangRef.md", "").then(html => writePage(LANGREF_NAME, html));
+DocView("Manual.md", LANGREF_NAME).then(html => writePage("manual.html", html));
 
 // Copy SVG files.
 const ASSETS = path.join(import.meta.dirname, "assets");

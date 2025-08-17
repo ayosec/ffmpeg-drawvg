@@ -1,0 +1,12 @@
+[0] split [mask-bg] [mask-delay] ;
+
+[mask-bg] drawvg = file=transition.vgs [bars] ;
+
+[mask-delay] [bars] concat [mask] ;
+
+[1] [mask] alphamerge [a] ;
+
+[2] [a]
+    overlay = enable='lt(t,4)' ,
+    crop = iw-1 ,
+    format = yuv420p

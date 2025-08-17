@@ -1,0 +1,41 @@
+name: Download/Cache URL
+
+inputs:
+  url:
+    required: true
+    type: string
+  path:
+    required: true
+    type: string
+
+runs:
+  using: composite
+
+  steps:
+    - id: key
+      name: Cache Key
+      uses: actions/github-script@v7
+      env:
+        URL: ${{ inputs.url }}
+      with:
+        result-encoding: string
+        script: |
+          return require("crypto").hash("sha256", process.env.URL, "hex")
+
+    - id: cache
+      name: Cache
+      uses: actions/cache@v4
+      with:
+        key: wget-cache-${{ steps.key.outputs.result }}
+        path: ${{ inputs.path }}
+
+    - name: Download File
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        URL: ${{ inputs.url }}
+        OUTPUT: ${{ inputs.path }}
+      run: |
+        set -x
+        mkdir -p "$(dirname "$OUTPUT")"
+        wget --no-verbose -O "$OUTPUT" "$URL"
