@@ -2906,7 +2906,7 @@ static int vulkan_frames_init(AVHWFramesContext *hwfc)
     if (p->dev_is_nvidia &&
         (((fmt->nb_images == 1) && (fmt->vk_planes > 1)) ||
          (av_pix_fmt_desc_get(hwfc->sw_format)->nb_components == 1)))
-        supported_usage &= ~VK_IMAGE_USAGE_HOST_TRANSFER_BIT;
+        supported_usage &= ~VK_IMAGE_USAGE_HOST_TRANSFER_BIT_EXT;
 
     /* Image usage flags */
     if (!hwctx->usage) {
@@ -3986,7 +3986,7 @@ static VkImageAspectFlags plane_index_to_aspect(int plane) {
     if (plane == 2) return VK_IMAGE_ASPECT_MEMORY_PLANE_2_BIT_EXT;
     if (plane == 3) return VK_IMAGE_ASPECT_MEMORY_PLANE_3_BIT_EXT;
 
-    av_assert2 (false && "Invalid plane index");
+    av_assert2 (0 && "Invalid plane index");
     return VK_IMAGE_ASPECT_MEMORY_PLANE_0_BIT_EXT;
 }
 

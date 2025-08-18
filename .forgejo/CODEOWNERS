@@ -20,9 +20,10 @@ libavcodec/.*ffv1.* @lynne @michaelni
 libavcodec/golomb.* @michaelni
 libavcodec/.*h266.* @frankplow @NuoMi @jianhuaw
 libavcodec/h26x/.* @frankplow @NuoMi @jianhuaw
-libavcodec/.*jpegxl.* @lynne
-libavcodec/.*jxl.* @lynne
+libavcodec/.*jpegxl.* @lynne @Traneptora
+libavcodec/.*jxl.* @lynne @Traneptora
 libavcodec/.*opus.* @lynne
+libavcodec/.*png.* @Traneptora
 libavcodec/.*prores.* @lynne
 libavcodec/rangecoder.* @michaelni
 libavcodec/ratecontrol.* @michaelni
@@ -38,12 +39,15 @@ libavcodec/x86/.* @lynne
 # avfilter
 # =======
 libavfilter/aarch64/.* @mstorsjo
+libavfilter/af_whisper.* @vpalmisano
 libavfilter/vf_yadif.* @michaelni
 libavfilter/vsrc_mandelbrot.* @michaelni
 
 # avformat
 # =======
 libavformat/iamf.* @jamrial
+libavformat/.*jpegxl.* @Traneptora
+libavformat/.*jxl.* @Traneptora
 
 # avutil
 # ======
@@ -52,7 +56,6 @@ libavutil/.*d3d12va.* @jianhuaw
 libavutil/eval.* @michaelni
 libavutil/iamf.* @jamrial
 libavutil/integer.* @michaelni
-libavutil/kiss99.* @michaelni
 libavutil/lfg.* @michaelni
 libavutil/lls.* @michaelni
 libavutil/md5.* @michaelni
