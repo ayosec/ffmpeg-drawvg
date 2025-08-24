@@ -27,7 +27,7 @@
 
 [pad2] [xmap0]
     overlay = w+20 : h+20 : shortest=1 ,
-    drawtext = text='drawtext' : y=h-20 : x=20 : y_align=baseline : fontsize=32 : fontcolor=white ,
+    drawtext = text='drawvg' : y=h-20 : x=20 : y_align=baseline : fontsize=32 : fontcolor=white ,
     drawtext = text='boxblur' : y=h-20 : x=w/2+20 : y_align=baseline : fontsize=32 : fontcolor=white ,
     drawtext = text='Source' : y=h/2-20 : x=w/2+20 : y_align=baseline : fontsize=32 : fontcolor=white ,
     format = yuv420p
