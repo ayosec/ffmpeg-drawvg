@@ -31,12 +31,12 @@ dump_ast() {
 # Instructions
 
 echo -n 'export const Instructions = new Set('
-dump_ast vgs_instructions libavfilter/vf_drawvg.c |
+dump_ast vgs_commands libavfilter/vf_drawvg.c |
     jq '.inner|map(.inner[]|.inner[1]|.inner[]|.inner[].value|fromjson)'
 echo ');'
 
 echo -n 'export const InstructionsDecls: string[] = '
-dump_ast VGSInstruction libavfilter/vf_drawvg.c |
+dump_ast VGSCommand libavfilter/vf_drawvg.c |
     jq --from-file "$SYN_INFO/extract_decls.jq"
 echo ';'
 
