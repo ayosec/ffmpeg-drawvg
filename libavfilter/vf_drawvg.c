@@ -18,7 +18,11 @@
 
 /**
  * @file
+ *
  * drawvg filter, draw vector graphics with cairo.
+ *
+ * This file contains the parser and the interpreter for VGS, and the
+ * AVClass definitions for the drawvg filter.
  */
 
 #include <cairo.h>
@@ -39,7 +43,16 @@
 #include "textutils.h"
 #include "video.h"
 
-// Variables to evaluate expressions.
+/*
+ * == AVExpr Integration ==
+ *
+ * Definitions to use variables and functions in the expressions parsed
+ * and evaluated with `av_expr` functions.
+ *
+ * For user-variables, created with commands like `setvar` or `defhsla`,
+ * the VGS parser updates a copy of the `vgs_default_vars` array. The
+ * first user-variable is stored in the slot for `VAR_U0`.
+ */
 
 enum {
     VAR_N,          ///< Frame number.
@@ -74,7 +87,7 @@ static const char *const vgs_default_vars[] = {
     "cx",
     "cy",
     "i",
-    NULL, // User variables. Name is assigned by `setvar`.
+    NULL, // User variables. Name is assigned by commands like `setvar`.
 };
 
 // Functions used in expressions.
@@ -107,7 +120,11 @@ static double (*const vgs_func2_impls[])(void *, double, double) = {
 };
 
 
-// Commands.
+/*
+ * == Command Declarations ==
+ *
+ * TODO
+ */
 
 enum VGSCommand {
     CMD_ARC = 1,                ///<  arc (cx cy radius angle1 angle2)
@@ -196,7 +213,7 @@ static struct VGSConstant vgs_consts_line_join[] = {
     { NULL, 0 },
 };
 
-// Command parameters.
+/// Definition of each parameter in a command.
 struct VGSParameter {
     enum {
         PARAM_COLOR = 1,
@@ -217,7 +234,7 @@ struct VGSParameter {
 
 #define MAX_COMMAND_PARAMS 8
 
-// Command declarations.
+// Definition of each command.
 
 struct VGSCommandDecl {
     enum VGSCommand cmd;
@@ -233,7 +250,7 @@ struct VGSCommandDecl {
 #define P { PARAM_SUBPROGRAM }
 #define C(c) { PARAM_CONSTANT, .constants = c }
 
-// Commands available to the scripts.
+// Command declarations.
 //
 // The array must be sorted in ascending order by `name`.
 static struct VGSCommandDecl vgs_commands[] = {
@@ -402,7 +419,11 @@ static int vgs_cmd_change_path(enum VGSCommand cmd) {
     }
 }
 
-// Parser.
+/*
+ * == VGS Parser ==
+ *
+ * TODO
+ */
 
 struct VGSParser {
     const char* source;
@@ -1248,7 +1269,11 @@ fail:
     return AVERROR(EINVAL);
 }
 
-// Interpreter.
+/*
+ * == Interpreter ==
+ *
+ * TODO
+ */
 
 #define MAX_PROC_ARGS 2
 
@@ -1368,6 +1393,8 @@ static double vgs_fn_pathlen(void *data, double arg) {
     return length;
 }
 
+// Function `randomg(n)` for `av_expr_eval`.
+//
 // Compute a random value between 0 and 1. Similar to `random`, but the
 // generator is global to the VGS program.
 //
@@ -1396,6 +1423,8 @@ static double vgs_fn_randomg(void *data, double arg) {
     return ff_sfc64_get(rng) * (1.0 / UINT64_MAX);
 }
 
+// Function `p(x, y)` for `av_expr_eval`.
+//
 // Return the pixel color in 0xRRGGBBAA format.
 //
 // The transformation matrix is applied to the given coordinates.
@@ -2385,6 +2414,12 @@ static int vgs_eval(
     return 0;
 }
 
+
+/*
+ * == AVClass for drawvg ==
+ *
+ * TODO
+ */
 
 typedef struct DrawVGContext {
     const AVClass *class;
