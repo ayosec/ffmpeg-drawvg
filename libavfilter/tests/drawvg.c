@@ -195,20 +195,20 @@ void cairo_set_source (cairo_t *cr, cairo_pattern_t *source) {
     printf("\n");
 }
 
-// Verify that the `vgs_instructions` array is sorted, so it can
+// Verify that the `vgs_commands` array is sorted, so it can
 // be used with `bsearch(3)`.
-static void check_sorted_instructions(void) {
+static void check_sorted_cmds_array(void) {
     int failures = 0;
 
-    for (int i = 0; i < FF_ARRAY_ELEMS(vgs_instructions) - 1; i++) {
-        if (vgs_comp_instruction_spec(&vgs_instructions[i], &vgs_instructions[i]) != 0) {
+    for (int i = 0; i < FF_ARRAY_ELEMS(vgs_commands) - 1; i++) {
+        if (vgs_comp_command_spec(&vgs_commands[i], &vgs_commands[i]) != 0) {
             printf("%s: comparator must return 0 for item %d\n", __func__, i);
             failures++;
         }
 
-        if (vgs_comp_instruction_spec(&vgs_instructions[i], &vgs_instructions[i + 1]) >= 0) {
+        if (vgs_comp_command_spec(&vgs_commands[i], &vgs_commands[i + 1]) >= 0) {
             printf("%s: entry for '%s' must appear after '%s', at index %d\n",
-                __func__, vgs_instructions[i].name, vgs_instructions[i + 1].name, i);
+                __func__, vgs_commands[i].name, vgs_commands[i + 1].name, i);
             failures++;
         }
     }
@@ -287,7 +287,7 @@ int main(int argc, const char **argv)
 
     av_log_set_callback(mock_av_log);
 
-    check_sorted_instructions();
+    check_sorted_cmds_array();
 
     for (int i = 1; i < argc; i++)
         check_script(1, argv[i]);
@@ -295,7 +295,7 @@ int main(int argc, const char **argv)
     // Detect unclosed expressions.
     check_script(0, "M 0 (1*(t+1)");
 
-    // Invalid instruction.
+    // Invalid command.
     check_script(0, "save invalid 1 2");
 
     // Invalid constant.

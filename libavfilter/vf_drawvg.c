@@ -107,76 +107,76 @@ static double (*const vgs_func2_impls[])(void *, double, double) = {
 };
 
 
-// Instructions.
+// Commands.
 
-enum VGSInstruction {
-    INS_ARC = 1,                ///<  arc (cx cy radius angle1 angle2)
-    INS_ARC_NEG,                ///<  arcn (cx cy radius angle1 angle2)
-    INS_BREAK,                  ///<  break
-    INS_CIRCLE,                 ///<  circle (cx cy radius)
-    INS_CLIP,                   ///<  clip
-    INS_CLIP_EO,                ///<  eoclip
-    INS_CLOSE_PATH,             ///<  Z, z, closepath
-    INS_COLOR_STOP,             ///<  colorstop (offset color)
-    INS_CURVE_TO,               ///<  C, curveto (x1 y1 x2 y2 x y)
-    INS_DEF_HSLA,               ///<  defhsla (varname h s l a)
-    INS_DEF_RGBA,               ///<  defrgba (varname r g b a)
-    INS_CURVE_TO_REL,           ///<  c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
-    INS_ELLIPSE,                ///<  ellipse (cx cy rx ry)
-    INS_FILL,                   ///<  fill
-    INS_FILL_EO,                ///<  eofill
-    INS_GET_METADATA,           ///<  getmetadata varname key
-    INS_HORZ,                   ///<  H (x)
-    INS_HORZ_REL,               ///<  h (dx)
-    INS_IF,                     ///<  if (condition) { subprogram }
-    INS_LINEAR_GRAD,            ///<  lineargrad (x0 y0 x1 y1)
-    INS_LINE_TO,                ///<  L, lineto (x y)
-    INS_LINE_TO_REL,            ///<  l, rlineto (dx dy)
-    INS_MOVE_TO,                ///<  M, moveto (x y)
-    INS_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
-    INS_NEW_PATH,               ///<  newpath
-    INS_PRESERVE,               ///<  preserve
-    INS_PRINT,                  ///<  print (expr)
-    INS_PROC1_ASSIGN,           ///<  proc1 name varname { subprogram }
-    INS_PROC1_CALL,             ///<  call1 name (arg)
-    INS_PROC2_ASSIGN,           ///<  proc2 name varname1 varname2 { subprogram }
-    INS_PROC2_CALL,             ///<  call2 name (arg1 arg2)
-    INS_PROC_ASSIGN,            ///<  proc name { subprogram }
-    INS_PROC_CALL,              ///<  call name
-    INS_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
-    INS_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
-    INS_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
-    INS_RECT,                   ///<  rect (x y width height)
-    INS_REPEAT,                 ///<  repeat (count) { subprogram }
-    INS_RESET_CLIP,             ///<  resetclip
-    INS_RESET_DASH,             ///<  resetdash
-    INS_RESET_MATRIX,           ///<  resetmatrix
-    INS_RESTORE,                ///<  restore
-    INS_ROTATE,                 ///<  rotate (angle)
-    INS_ROUNDEDRECT,            ///<  roundedrect (x y width height radius)
-    INS_SAVE,                   ///<  save
-    INS_SCALE,                  ///<  scale (s)
-    INS_SCALEXY,                ///<  scalexy (sx sy)
-    INS_SET_COLOR,              ///<  setcolor (color)
-    INS_SET_DASH,               ///<  setdash (length)
-    INS_SET_DASH_OFFSET,        ///<  setdashoffset (offset)
-    INS_SET_HSLA,               ///<  sethsla (h s l a)
-    INS_SET_LINE_CAP,           ///<  setlinecap (cap)
-    INS_SET_LINE_JOIN,          ///<  setlinejoin (join)
-    INS_SET_LINE_WIDTH,         ///<  setlinewidth (width)
-    INS_SET_RGBA,               ///<  setrgba (r g b a)
-    INS_SET_VAR,                ///<  setvar (varname value)
-    INS_STROKE,                 ///<  stroke
-    INS_S_CURVE_TO,             ///<  S (x2 y2 x y)
-    INS_S_CURVE_TO_REL,         ///<  s (dx2 dy2 dx dy)
-    INS_TRANSLATE,              ///<  translate (tx ty)
-    INS_T_CURVE_TO,             ///<  T (x y)
-    INS_T_CURVE_TO_REL,         ///<  t (dx dy)
-    INS_VERT,                   ///<  V (y)
-    INS_VERT_REL,               ///<  v (dy)
+enum VGSCommand {
+    CMD_ARC = 1,                ///<  arc (cx cy radius angle1 angle2)
+    CMD_ARC_NEG,                ///<  arcn (cx cy radius angle1 angle2)
+    CMD_BREAK,                  ///<  break
+    CMD_CIRCLE,                 ///<  circle (cx cy radius)
+    CMD_CLIP,                   ///<  clip
+    CMD_CLIP_EO,                ///<  eoclip
+    CMD_CLOSE_PATH,             ///<  Z, z, closepath
+    CMD_COLOR_STOP,             ///<  colorstop (offset color)
+    CMD_CURVE_TO,               ///<  C, curveto (x1 y1 x2 y2 x y)
+    CMD_DEF_HSLA,               ///<  defhsla (varname h s l a)
+    CMD_DEF_RGBA,               ///<  defrgba (varname r g b a)
+    CMD_CURVE_TO_REL,           ///<  c, rcurveto (dx1 dy1 dx2 dy2 dx dy)
+    CMD_ELLIPSE,                ///<  ellipse (cx cy rx ry)
+    CMD_FILL,                   ///<  fill
+    CMD_FILL_EO,                ///<  eofill
+    CMD_GET_METADATA,           ///<  getmetadata varname key
+    CMD_HORZ,                   ///<  H (x)
+    CMD_HORZ_REL,               ///<  h (dx)
+    CMD_IF,                     ///<  if (condition) { subprogram }
+    CMD_LINEAR_GRAD,            ///<  lineargrad (x0 y0 x1 y1)
+    CMD_LINE_TO,                ///<  L, lineto (x y)
+    CMD_LINE_TO_REL,            ///<  l, rlineto (dx dy)
+    CMD_MOVE_TO,                ///<  M, moveto (x y)
+    CMD_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
+    CMD_NEW_PATH,               ///<  newpath
+    CMD_PRESERVE,               ///<  preserve
+    CMD_PRINT,                  ///<  print (expr)
+    CMD_PROC1_ASSIGN,           ///<  proc1 name varname { subprogram }
+    CMD_PROC1_CALL,             ///<  call1 name (arg)
+    CMD_PROC2_ASSIGN,           ///<  proc2 name varname1 varname2 { subprogram }
+    CMD_PROC2_CALL,             ///<  call2 name (arg1 arg2)
+    CMD_PROC_ASSIGN,            ///<  proc name { subprogram }
+    CMD_PROC_CALL,              ///<  call name
+    CMD_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
+    CMD_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
+    CMD_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
+    CMD_RECT,                   ///<  rect (x y width height)
+    CMD_REPEAT,                 ///<  repeat (count) { subprogram }
+    CMD_RESET_CLIP,             ///<  resetclip
+    CMD_RESET_DASH,             ///<  resetdash
+    CMD_RESET_MATRIX,           ///<  resetmatrix
+    CMD_RESTORE,                ///<  restore
+    CMD_ROTATE,                 ///<  rotate (angle)
+    CMD_ROUNDEDRECT,            ///<  roundedrect (x y width height radius)
+    CMD_SAVE,                   ///<  save
+    CMD_SCALE,                  ///<  scale (s)
+    CMD_SCALEXY,                ///<  scalexy (sx sy)
+    CMD_SET_COLOR,              ///<  setcolor (color)
+    CMD_SET_DASH,               ///<  setdash (length)
+    CMD_SET_DASH_OFFSET,        ///<  setdashoffset (offset)
+    CMD_SET_HSLA,               ///<  sethsla (h s l a)
+    CMD_SET_LINE_CAP,           ///<  setlinecap (cap)
+    CMD_SET_LINE_JOIN,          ///<  setlinejoin (join)
+    CMD_SET_LINE_WIDTH,         ///<  setlinewidth (width)
+    CMD_SET_RGBA,               ///<  setrgba (r g b a)
+    CMD_SET_VAR,                ///<  setvar (varname value)
+    CMD_STROKE,                 ///<  stroke
+    CMD_S_CURVE_TO,             ///<  S (x2 y2 x y)
+    CMD_S_CURVE_TO_REL,         ///<  s (dx2 dy2 dx dy)
+    CMD_TRANSLATE,              ///<  translate (tx ty)
+    CMD_T_CURVE_TO,             ///<  T (x y)
+    CMD_T_CURVE_TO_REL,         ///<  t (dx dy)
+    CMD_VERT,                   ///<  V (y)
+    CMD_VERT_REL,               ///<  v (dy)
 };
 
-// Constants used in some draw instructions, like `setlinejoin`.
+// Constants used in some draw commands, like `setlinejoin`.
 struct VGSConstant {
     const char* name;
     int value;
@@ -196,7 +196,7 @@ static struct VGSConstant vgs_consts_line_join[] = {
     { NULL, 0 },
 };
 
-// Instruction parameters.
+// Command parameters.
 struct VGSParameter {
     enum {
         PARAM_COLOR = 1,
@@ -215,14 +215,14 @@ struct VGSParameter {
     const struct VGSConstant *constants;
 };
 
-#define MAX_INSTRUCTION_PARAMS 8
+#define MAX_COMMAND_PARAMS 8
 
-// Instruction declarations.
+// Command declarations.
 
-struct VGSInstructionDecl {
-    enum VGSInstruction inst;
+struct VGSCommandDecl {
+    enum VGSCommand cmd;
     const char* name;
-    const struct VGSParameter params[MAX_INSTRUCTION_PARAMS];
+    const struct VGSParameter params[MAX_COMMAND_PARAMS];
 };
 
 #define L(...) { __VA_ARGS__, { PARAM_END } }            // Parameter list
@@ -233,82 +233,82 @@ struct VGSInstructionDecl {
 #define P { PARAM_SUBPROGRAM }
 #define C(c) { PARAM_CONSTANT, .constants = c }
 
-// Instructions available to the scripts.
+// Commands available to the scripts.
 //
 // The array must be sorted in ascending order by `name`.
-struct VGSInstructionDecl vgs_instructions[] = {
-    { INS_CURVE_TO,         "C",              R(N, N, N, N, N, N) },
-    { INS_HORZ,             "H",              R(N) },
-    { INS_LINE_TO,          "L",              R(N, N) },
-    { INS_MOVE_TO,          "M",              R(N, N) },
-    { INS_Q_CURVE_TO,       "Q",              R(N, N, N, N) },
-    { INS_S_CURVE_TO,       "S",              R(N, N, N, N) },
-    { INS_T_CURVE_TO,       "T",              R(N, N) },
-    { INS_VERT,             "V",              R(N) },
-    { INS_CLOSE_PATH,       "Z",              NONE },
-    { INS_ARC,              "arc",            R(N, N, N, N, N) },
-    { INS_ARC_NEG,          "arcn",           R(N, N, N, N, N) },
-    { INS_BREAK,            "break",          NONE },
-    { INS_CURVE_TO_REL,     "c",              R(N, N, N, N, N, N) },
-    { INS_PROC_CALL,        "call",           L({ PARAM_PROC_NAME }) },
-    { INS_PROC1_CALL,       "call1",          L({ PARAM_PROC_NAME }, N) },
-    { INS_PROC2_CALL,       "call2",          L({ PARAM_PROC_NAME }, N, N) },
-    { INS_CIRCLE,           "circle",         R(N, N, N) },
-    { INS_CLIP,             "clip",           NONE },
-    { INS_CLOSE_PATH,       "closepath",      NONE },
-    { INS_COLOR_STOP,       "colorstop",      R(N, { PARAM_COLOR }) },
-    { INS_CURVE_TO,         "curveto",        R(N, N, N, N, N, N) },
-    { INS_DEF_HSLA,         "defhsla",        L(V, N, N, N, N) },
-    { INS_DEF_RGBA,         "defrgba",        L(V, N, N, N, N) },
-    { INS_ELLIPSE,          "ellipse",        R(N, N, N, N) },
-    { INS_CLIP_EO,          "eoclip",         NONE },
-    { INS_FILL_EO,          "eofill",         NONE },
-    { INS_FILL,             "fill",           NONE },
-    { INS_GET_METADATA,     "getmetadata",    L(V, { PARAM_RAW_IDENT }) },
-    { INS_HORZ_REL,         "h",              R(N) },
-    { INS_IF,               "if",             L(N, P) },
-    { INS_LINE_TO_REL,      "l",              R(N, N) },
-    { INS_LINEAR_GRAD,      "lineargrad",     L(N, N, N, N) },
-    { INS_LINE_TO,          "lineto",         R(N, N) },
-    { INS_MOVE_TO_REL,      "m",              R(N, N) },
-    { INS_MOVE_TO,          "moveto",         R(N, N) },
-    { INS_NEW_PATH,         "newpath",        NONE },
-    { INS_PRESERVE,         "preserve",       NONE },
-    { INS_PRINT,            "print",          { { PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } } },
-    { INS_PROC_ASSIGN,      "proc",           L({ PARAM_PROC_NAME }, P) },
-    { INS_PROC1_ASSIGN,     "proc1",          L({ PARAM_PROC_NAME }, V, P) },
-    { INS_PROC2_ASSIGN,     "proc2",          L({ PARAM_PROC_NAME }, V, V, P) },
-    { INS_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
-    { INS_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
-    { INS_CURVE_TO_REL,     "rcurveto",       R(N, N, N, N, N, N) },
-    { INS_RECT,             "rect",           R(N, N, N, N) },
-    { INS_REPEAT,           "repeat",         L(N, P) },
-    { INS_RESET_CLIP,       "resetclip",      NONE },
-    { INS_RESET_DASH,       "resetdash",      NONE },
-    { INS_RESET_MATRIX,     "resetmatrix",    NONE },
-    { INS_RESTORE,          "restore",        NONE },
-    { INS_LINE_TO_REL,      "rlineto",        R(N, N) },
-    { INS_MOVE_TO_REL,      "rmoveto",        R(N, N) },
-    { INS_ROTATE,           "rotate",         L(N) },
-    { INS_ROUNDEDRECT,      "roundedrect",    R(N, N, N, N, N) },
-    { INS_S_CURVE_TO_REL,   "s",              R(N, N, N, N) },
-    { INS_SAVE,             "save",           NONE },
-    { INS_SCALE,            "scale",          L(N) },
-    { INS_SCALEXY,          "scalexy",        L(N, N) },
-    { INS_SET_COLOR,        "setcolor",       L({ PARAM_COLOR }) },
-    { INS_SET_DASH,         "setdash",        R(N) },
-    { INS_SET_DASH_OFFSET,  "setdashoffset",  R(N) },
-    { INS_SET_HSLA,         "sethsla",        L(N, N, N, N) },
-    { INS_SET_LINE_CAP,     "setlinecap",     L(C(vgs_consts_line_cap)) },
-    { INS_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
-    { INS_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
-    { INS_SET_RGBA,         "setrgba",        L(N, N, N, N) },
-    { INS_SET_VAR,          "setvar",         L(V, N) },
-    { INS_STROKE,           "stroke",         NONE },
-    { INS_T_CURVE_TO_REL,   "t",              R(N, N) },
-    { INS_TRANSLATE,        "translate",      L(N, N) },
-    { INS_VERT_REL,         "v",              R(N) },
-    { INS_CLOSE_PATH,       "z",              NONE },
+static struct VGSCommandDecl vgs_commands[] = {
+    { CMD_CURVE_TO,         "C",              R(N, N, N, N, N, N) },
+    { CMD_HORZ,             "H",              R(N) },
+    { CMD_LINE_TO,          "L",              R(N, N) },
+    { CMD_MOVE_TO,          "M",              R(N, N) },
+    { CMD_Q_CURVE_TO,       "Q",              R(N, N, N, N) },
+    { CMD_S_CURVE_TO,       "S",              R(N, N, N, N) },
+    { CMD_T_CURVE_TO,       "T",              R(N, N) },
+    { CMD_VERT,             "V",              R(N) },
+    { CMD_CLOSE_PATH,       "Z",              NONE },
+    { CMD_ARC,              "arc",            R(N, N, N, N, N) },
+    { CMD_ARC_NEG,          "arcn",           R(N, N, N, N, N) },
+    { CMD_BREAK,            "break",          NONE },
+    { CMD_CURVE_TO_REL,     "c",              R(N, N, N, N, N, N) },
+    { CMD_PROC_CALL,        "call",           L({ PARAM_PROC_NAME }) },
+    { CMD_PROC1_CALL,       "call1",          L({ PARAM_PROC_NAME }, N) },
+    { CMD_PROC2_CALL,       "call2",          L({ PARAM_PROC_NAME }, N, N) },
+    { CMD_CIRCLE,           "circle",         R(N, N, N) },
+    { CMD_CLIP,             "clip",           NONE },
+    { CMD_CLOSE_PATH,       "closepath",      NONE },
+    { CMD_COLOR_STOP,       "colorstop",      R(N, { PARAM_COLOR }) },
+    { CMD_CURVE_TO,         "curveto",        R(N, N, N, N, N, N) },
+    { CMD_DEF_HSLA,         "defhsla",        L(V, N, N, N, N) },
+    { CMD_DEF_RGBA,         "defrgba",        L(V, N, N, N, N) },
+    { CMD_ELLIPSE,          "ellipse",        R(N, N, N, N) },
+    { CMD_CLIP_EO,          "eoclip",         NONE },
+    { CMD_FILL_EO,          "eofill",         NONE },
+    { CMD_FILL,             "fill",           NONE },
+    { CMD_GET_METADATA,     "getmetadata",    L(V, { PARAM_RAW_IDENT }) },
+    { CMD_HORZ_REL,         "h",              R(N) },
+    { CMD_IF,               "if",             L(N, P) },
+    { CMD_LINE_TO_REL,      "l",              R(N, N) },
+    { CMD_LINEAR_GRAD,      "lineargrad",     L(N, N, N, N) },
+    { CMD_LINE_TO,          "lineto",         R(N, N) },
+    { CMD_MOVE_TO_REL,      "m",              R(N, N) },
+    { CMD_MOVE_TO,          "moveto",         R(N, N) },
+    { CMD_NEW_PATH,         "newpath",        NONE },
+    { CMD_PRESERVE,         "preserve",       NONE },
+    { CMD_PRINT,            "print",          { { PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } } },
+    { CMD_PROC_ASSIGN,      "proc",           L({ PARAM_PROC_NAME }, P) },
+    { CMD_PROC1_ASSIGN,     "proc1",          L({ PARAM_PROC_NAME }, V, P) },
+    { CMD_PROC2_ASSIGN,     "proc2",          L({ PARAM_PROC_NAME }, V, V, P) },
+    { CMD_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
+    { CMD_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
+    { CMD_CURVE_TO_REL,     "rcurveto",       R(N, N, N, N, N, N) },
+    { CMD_RECT,             "rect",           R(N, N, N, N) },
+    { CMD_REPEAT,           "repeat",         L(N, P) },
+    { CMD_RESET_CLIP,       "resetclip",      NONE },
+    { CMD_RESET_DASH,       "resetdash",      NONE },
+    { CMD_RESET_MATRIX,     "resetmatrix",    NONE },
+    { CMD_RESTORE,          "restore",        NONE },
+    { CMD_LINE_TO_REL,      "rlineto",        R(N, N) },
+    { CMD_MOVE_TO_REL,      "rmoveto",        R(N, N) },
+    { CMD_ROTATE,           "rotate",         L(N) },
+    { CMD_ROUNDEDRECT,      "roundedrect",    R(N, N, N, N, N) },
+    { CMD_S_CURVE_TO_REL,   "s",              R(N, N, N, N) },
+    { CMD_SAVE,             "save",           NONE },
+    { CMD_SCALE,            "scale",          L(N) },
+    { CMD_SCALEXY,          "scalexy",        L(N, N) },
+    { CMD_SET_COLOR,        "setcolor",       L({ PARAM_COLOR }) },
+    { CMD_SET_DASH,         "setdash",        R(N) },
+    { CMD_SET_DASH_OFFSET,  "setdashoffset",  R(N) },
+    { CMD_SET_HSLA,         "sethsla",        L(N, N, N, N) },
+    { CMD_SET_LINE_CAP,     "setlinecap",     L(C(vgs_consts_line_cap)) },
+    { CMD_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
+    { CMD_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
+    { CMD_SET_RGBA,         "setrgba",        L(N, N, N, N) },
+    { CMD_SET_VAR,          "setvar",         L(V, N) },
+    { CMD_STROKE,           "stroke",         NONE },
+    { CMD_T_CURVE_TO_REL,   "t",              R(N, N) },
+    { CMD_TRANSLATE,        "translate",      L(N, N) },
+    { CMD_VERT_REL,         "v",              R(N) },
+    { CMD_CLOSE_PATH,       "z",              NONE },
 };
 
 #undef L
@@ -317,18 +317,18 @@ struct VGSInstructionDecl vgs_instructions[] = {
 #undef N
 #undef C
 
-// Comparator for `ScriptInstructionSpec`, to be used with `bsearch(3)`.
-static int vgs_comp_instruction_spec(const void *cs1, const void *cs2) {
+// Comparator for `VGSCommandDecl`, to be used with `bsearch(3)`.
+static int vgs_comp_command_spec(const void *cs1, const void *cs2) {
     return strcmp(
-        ((struct VGSInstructionDecl*)cs1)->name,
-        ((struct VGSInstructionDecl*)cs2)->name
+        ((struct VGSCommandDecl*)cs1)->name,
+        ((struct VGSCommandDecl*)cs2)->name
     );
 }
 
-// Return the specs for the given instruction, or `NULL` if the name is not valid.
-static const struct VGSInstructionDecl* vgs_get_instruction(const char *name, size_t length) {
+// Return the specs for the given command, or `NULL` if the name is not valid.
+static const struct VGSCommandDecl* vgs_get_command(const char *name, size_t length) {
     char bufname[64];
-    struct VGSInstructionDecl key = { .name = bufname };
+    struct VGSCommandDecl key = { .name = bufname };
 
     if (length >= sizeof(bufname)) {
         return NULL;
@@ -339,25 +339,25 @@ static const struct VGSInstructionDecl* vgs_get_instruction(const char *name, si
 
     return bsearch(
         &key,
-        vgs_instructions,
-        FF_ARRAY_ELEMS(vgs_instructions),
-        sizeof(vgs_instructions[0]),
-        vgs_comp_instruction_spec
+        vgs_commands,
+        FF_ARRAY_ELEMS(vgs_commands),
+        sizeof(vgs_commands[0]),
+        vgs_comp_command_spec
     );
 }
 
-static int vgs_proc_num_args(enum VGSInstruction inst) {
-    switch (inst) {
-    case INS_PROC_CALL:
-    case INS_PROC_ASSIGN:
+static int vgs_proc_num_args(enum VGSCommand cmd) {
+    switch (cmd) {
+    case CMD_PROC_CALL:
+    case CMD_PROC_ASSIGN:
         return 0;
 
-    case INS_PROC1_CALL:
-    case INS_PROC1_ASSIGN:
+    case CMD_PROC1_CALL:
+    case CMD_PROC1_ASSIGN:
         return 1;
 
-    case INS_PROC2_CALL:
-    case INS_PROC2_ASSIGN:
+    case CMD_PROC2_CALL:
+    case CMD_PROC2_ASSIGN:
         return 2;
 
     default:
@@ -365,36 +365,36 @@ static int vgs_proc_num_args(enum VGSInstruction inst) {
     }
 }
 
-/// Return `1` if the instruction changes the path.
-static int vgs_inst_change_path(enum VGSInstruction inst) {
-    switch (inst) {
-    case INS_BREAK:
-    case INS_COLOR_STOP:
-    case INS_DEF_HSLA:
-    case INS_DEF_RGBA:
-    case INS_GET_METADATA:
-    case INS_IF:
-    case INS_LINEAR_GRAD:
-    case INS_PRINT:
-    case INS_PROC1_ASSIGN:
-    case INS_PROC1_CALL:
-    case INS_PROC2_ASSIGN:
-    case INS_PROC2_CALL:
-    case INS_PROC_ASSIGN:
-    case INS_PROC_CALL:
-    case INS_RADIAL_GRAD:
-    case INS_REPEAT:
-    case INS_RESET_DASH:
-    case INS_RESET_MATRIX:
-    case INS_SET_COLOR:
-    case INS_SET_DASH:
-    case INS_SET_DASH_OFFSET:
-    case INS_SET_HSLA:
-    case INS_SET_LINE_CAP:
-    case INS_SET_LINE_JOIN:
-    case INS_SET_LINE_WIDTH:
-    case INS_SET_RGBA:
-    case INS_SET_VAR:
+/// Return `1` if the command changes the path.
+static int vgs_cmd_change_path(enum VGSCommand cmd) {
+    switch (cmd) {
+    case CMD_BREAK:
+    case CMD_COLOR_STOP:
+    case CMD_DEF_HSLA:
+    case CMD_DEF_RGBA:
+    case CMD_GET_METADATA:
+    case CMD_IF:
+    case CMD_LINEAR_GRAD:
+    case CMD_PRINT:
+    case CMD_PROC1_ASSIGN:
+    case CMD_PROC1_CALL:
+    case CMD_PROC2_ASSIGN:
+    case CMD_PROC2_CALL:
+    case CMD_PROC_ASSIGN:
+    case CMD_PROC_CALL:
+    case CMD_RADIAL_GRAD:
+    case CMD_REPEAT:
+    case CMD_RESET_DASH:
+    case CMD_RESET_MATRIX:
+    case CMD_SET_COLOR:
+    case CMD_SET_DASH:
+    case CMD_SET_DASH_OFFSET:
+    case CMD_SET_HSLA:
+    case CMD_SET_LINE_CAP:
+    case CMD_SET_LINE_JOIN:
+    case CMD_SET_LINE_WIDTH:
+    case CMD_SET_RGBA:
+    case CMD_SET_VAR:
         return 0;
 
     default:
@@ -603,7 +603,7 @@ next_token:
     return 0;
 }
 
-// Instruction arguments.
+// Command arguments.
 struct VGSArgument {
     enum {
         ARG_COLOR = 1,
@@ -632,7 +632,7 @@ struct VGSArgument {
 
 // Program statements.
 struct VGSStatement {
-    enum VGSInstruction inst;
+    enum VGSCommand cmd;
     struct VGSArgument *args;
     int args_count;
 };
@@ -795,9 +795,9 @@ static int vgs_parse_numeric_argument(
     return ret;
 }
 
-// Check if the next token repeats the current instruction,
+// Check if the next token repeats the current command,
 // like in `l 10 10 20 20`.
-static int vgs_parser_can_repeat_inst(void *log_ctx, struct VGSParser *parser) {
+static int vgs_parser_can_repeat_cmd(void *log_ctx, struct VGSParser *parser) {
     struct VGSParserToken token = { 0 };
 
     int ret = vgs_parser_next_token(log_ctx, parser, &token, 0);
@@ -812,10 +812,10 @@ static int vgs_parser_can_repeat_inst(void *log_ctx, struct VGSParser *parser) {
 
     case TOKEN_WORD:
         // If the next token is a word, it will be considered to repeat
-        // the instruction only if it is a variable, and there is not
-        // known instruction with the same name.
+        // the command only if it is a variable, and there is not
+        // known command with the same name.
 
-        if (vgs_get_instruction(token.lexeme, token.length) != NULL)
+        if (vgs_get_command(token.lexeme, token.length) != NULL)
             return 1;
 
         for (int i = 0; i < VAR_COUNT; i++) {
@@ -855,7 +855,7 @@ static int vgs_is_valid_identifier(const struct VGSParserToken *token) {
     return 1;
 }
 
-// Extract the arguments for an instruction, and add a new statement
+// Extract the arguments for a command, and add a new statement
 // to the program.
 //
 // On success, return `0`.
@@ -863,7 +863,7 @@ static int vgs_parse_statement(
     void *log_ctx,
     struct VGSParser *parser,
     struct VGSProgram *program,
-    const struct VGSInstructionDecl *decl
+    const struct VGSCommandDecl *decl
 ) {
 
 #define FAIL(err) \
@@ -874,7 +874,7 @@ static int vgs_parse_statement(
 
 
     struct VGSStatement statement = {
-        .inst = decl->inst,
+        .cmd = decl->cmd,
         .args = NULL,
         .args_count = 0,
     };
@@ -892,8 +892,8 @@ static int vgs_parse_statement(
         case PARAM_VARIADIC:
             // Try to append the next numeric argument to the current
             // statement.
-            if (statement.args_count < MAX_INSTRUCTION_PARAMS
-                && vgs_parser_can_repeat_inst(log_ctx, parser) == 0
+            if (statement.args_count < MAX_COMMAND_PARAMS
+                && vgs_parser_can_repeat_cmd(log_ctx, parser) == 0
             ) {
                 param = &decl->params[0];
                 continue;
@@ -916,7 +916,7 @@ static int vgs_parse_statement(
 
             // May repeat if the next token is numeric.
             if (param->type != PARAM_END
-                && vgs_parser_can_repeat_inst(log_ctx, parser) == 0
+                && vgs_parser_can_repeat_cmd(log_ctx, parser) == 0
             ) {
                 param = &decl->params[0];
                 statement.args = NULL;
@@ -1196,7 +1196,7 @@ static int vgs_parse(
 
     for (;;) {
         int ret;
-        const struct VGSInstructionDecl *inst;
+        const struct VGSCommandDecl *cmd;
 
         ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
         if (ret != 0)
@@ -1216,12 +1216,12 @@ static int vgs_parse(
             return 0;
 
         case TOKEN_WORD:
-            // The token must be a valid instruction.
-            inst = vgs_get_instruction(token.lexeme, token.length);
-            if (inst == NULL)
+            // The token must be a valid command.
+            cmd = vgs_get_command(token.lexeme, token.length);
+            if (cmd == NULL)
                 goto invalid_token;
 
-            ret = vgs_parse_statement(log_ctx, parser, program, inst);
+            ret = vgs_parse_statement(log_ctx, parser, program, cmd);
             if (ret != 0)
                 goto fail;
 
@@ -1241,7 +1241,7 @@ static int vgs_parse(
     return AVERROR_BUG; /* unreachable */
 
 invalid_token:
-    vgs_log_invalid_token(log_ctx, parser, &token, "Expected instruction.");
+    vgs_log_invalid_token(log_ctx, parser, &token, "Expected command.");
 
 fail:
     vgs_free(program);
@@ -1268,7 +1268,7 @@ struct VGSEvalState {
     /// Cairo context for drawing operations.
     cairo_t *cairo_ctx;
 
-    /// Pattern being built by instructions like `colorstop`.
+    /// Pattern being built by commands like `colorstop`.
     cairo_pattern_t *pattern_builder;
 
     /// Register if `break` was called in a subprogram.
@@ -1296,7 +1296,7 @@ struct VGSEvalState {
     /// Frame metadata, if any.
     AVDictionary *metadata;
 
-    // Reflected Control Points. Used in T and S instructions.
+    // Reflected Control Points. Used in T and S commands.
     //
     // See https://www.w3.org/TR/SVG/paths.html#ReflectedControlPoints
     struct {
@@ -1702,8 +1702,8 @@ static int vgs_eval(
         }                                          \
     } while(0)
 
-    double numerics[MAX_INSTRUCTION_PARAMS];
-    double colors[MAX_INSTRUCTION_PARAMS][4];
+    double numerics[MAX_COMMAND_PARAMS];
+    double colors[MAX_COMMAND_PARAMS][4];
 
     double cx, cy; // Current point.
 
@@ -1767,25 +1767,25 @@ static int vgs_eval(
             }
         }
 
-        // If the instruction uses a pending pattern (like a solid color
+        // If the command uses a pending pattern (like a solid color
         // or a gradient), set it to the cairo context before executing
-        // stroke/fill instructions.
+        // stroke/fill commands.
         if (state->pattern_builder != NULL) {
-            switch (statement->inst) {
-            case INS_FILL:
-            case INS_FILL_EO:
-            case INS_RESTORE:
-            case INS_SAVE:
-            case INS_STROKE:
+            switch (statement->cmd) {
+            case CMD_FILL:
+            case CMD_FILL_EO:
+            case CMD_RESTORE:
+            case CMD_SAVE:
+            case CMD_STROKE:
                 cairo_set_source(state->cairo_ctx, state->pattern_builder);
                 cairo_pattern_destroy(state->pattern_builder);
                 state->pattern_builder = NULL;
             }
         }
 
-        // Execute the instruction.
-        switch (statement->inst) {
-        case INS_ARC:
+        // Execute the commands.
+        switch (statement->cmd) {
+        case CMD_ARC:
             ASSERT_ARGS(5);
             cairo_arc(
                 state->cairo_ctx,
@@ -1797,7 +1797,7 @@ static int vgs_eval(
             );
             break;
 
-        case INS_ARC_NEG:
+        case CMD_ARC_NEG:
             ASSERT_ARGS(5);
             cairo_arc_negative(
                 state->cairo_ctx,
@@ -1809,17 +1809,17 @@ static int vgs_eval(
             );
             break;
 
-        case INS_CIRCLE:
+        case CMD_CIRCLE:
             ASSERT_ARGS(3);
             draw_ellipse(state->cairo_ctx, numerics[0], numerics[1], numerics[2], numerics[2]);
             break;
 
-        case INS_CLIP:
-        case INS_CLIP_EO:
+        case CMD_CLIP:
+        case CMD_CLIP_EO:
             ASSERT_ARGS(0);
             cairo_set_fill_rule(
                 state->cairo_ctx,
-                statement->inst == INS_CLIP ?
+                statement->cmd == CMD_CLIP ?
                     CAIRO_FILL_RULE_WINDING :
                     CAIRO_FILL_RULE_EVEN_ODD
             );
@@ -1827,12 +1827,12 @@ static int vgs_eval(
             MAY_PRESERVE(cairo_clip);
             break;
 
-        case INS_CLOSE_PATH:
+        case CMD_CLOSE_PATH:
             ASSERT_ARGS(0);
             cairo_close_path(state->cairo_ctx);
             break;
 
-        case INS_COLOR_STOP:
+        case CMD_COLOR_STOP:
             if (state->pattern_builder == NULL) {
                 av_log(state->log_ctx, AV_LOG_ERROR, "colorstop with no active gradient.\n");
                 break;
@@ -1849,12 +1849,12 @@ static int vgs_eval(
             );
             break;
 
-        case INS_CURVE_TO:
-        case INS_CURVE_TO_REL:
+        case CMD_CURVE_TO:
+        case CMD_CURVE_TO_REL:
             ASSERT_ARGS(6);
             cubic_curve_to(
                 state,
-                statement->inst == INS_CURVE_TO_REL,
+                statement->cmd == CMD_CURVE_TO_REL,
                 numerics[0],
                 numerics[1],
                 numerics[2],
@@ -1864,8 +1864,8 @@ static int vgs_eval(
             );
             break;
 
-        case INS_DEF_HSLA:
-        case INS_DEF_RGBA: {
+        case CMD_DEF_HSLA:
+        case CMD_DEF_RGBA: {
             int user_var;
             double r, g, b;
 
@@ -1875,7 +1875,7 @@ static int vgs_eval(
 
             av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
 
-            if (statement->inst == INS_DEF_HSLA) {
+            if (statement->cmd == CMD_DEF_HSLA) {
                 hsl2rgb(numerics[1], numerics[2], numerics[3], &r, &g, &b);
             } else {
                 r = numerics[1];
@@ -1897,18 +1897,18 @@ static int vgs_eval(
             break;
         }
 
-        case INS_ELLIPSE:
+        case CMD_ELLIPSE:
             ASSERT_ARGS(4);
             draw_ellipse(state->cairo_ctx, numerics[0], numerics[1], numerics[2], numerics[3]);
             break;
 
-        case INS_FILL:
-        case INS_FILL_EO:
+        case CMD_FILL:
+        case CMD_FILL_EO:
             ASSERT_ARGS(0);
 
             cairo_set_fill_rule(
                 state->cairo_ctx,
-                statement->inst == INS_FILL ?
+                statement->cmd == CMD_FILL ?
                     CAIRO_FILL_RULE_WINDING :
                     CAIRO_FILL_RULE_EVEN_ODD
             );
@@ -1916,7 +1916,7 @@ static int vgs_eval(
             MAY_PRESERVE(cairo_fill);
             break;
 
-        case INS_GET_METADATA: {
+        case CMD_GET_METADATA: {
             int user_var;
             char *key, *endp;
 
@@ -1948,11 +1948,11 @@ static int vgs_eval(
             break;
         }
 
-        case INS_BREAK:
+        case CMD_BREAK:
             state->interrupted = 1;
             return 0;
 
-        case INS_IF:
+        case CMD_IF:
             ASSERT_ARGS(2);
 
             if (isfinite(numerics[0]) && numerics[0] != 0.0) {
@@ -1963,7 +1963,7 @@ static int vgs_eval(
 
             break;
 
-        case INS_LINEAR_GRAD:
+        case CMD_LINEAR_GRAD:
             ASSERT_ARGS(4);
 
             if (state->pattern_builder != NULL)
@@ -1977,37 +1977,37 @@ static int vgs_eval(
             );
             break;
 
-        case INS_LINE_TO:
+        case CMD_LINE_TO:
             ASSERT_ARGS(2);
             cairo_line_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
-        case INS_LINE_TO_REL:
+        case CMD_LINE_TO_REL:
             ASSERT_ARGS(2);
             cairo_rel_line_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
-        case INS_MOVE_TO:
+        case CMD_MOVE_TO:
             ASSERT_ARGS(2);
             cairo_move_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
-        case INS_MOVE_TO_REL:
+        case CMD_MOVE_TO_REL:
             ASSERT_ARGS(2);
             cairo_rel_move_to(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
-        case INS_NEW_PATH:
+        case CMD_NEW_PATH:
             ASSERT_ARGS(0);
             cairo_new_sub_path(state->cairo_ctx);
             break;
 
-        case INS_PRESERVE:
+        case CMD_PRESERVE:
             ASSERT_ARGS(0);
             state->preserve_path = 1;
             break;
 
-        case INS_PRINT: {
+        case CMD_PRINT: {
             char msg[256];
             int len = 0;
 
@@ -2035,13 +2035,13 @@ static int vgs_eval(
             break;
         }
 
-        case INS_PROC_ASSIGN:
-        case INS_PROC1_ASSIGN:
-        case INS_PROC2_ASSIGN: {
+        case CMD_PROC_ASSIGN:
+        case CMD_PROC1_ASSIGN:
+        case CMD_PROC2_ASSIGN: {
             int proc_args;
             struct VGSProcedure *proc;
 
-            proc_args = vgs_proc_num_args(statement->inst);
+            proc_args = vgs_proc_num_args(statement->cmd);
 
             ASSERT_ARGS(2 + proc_args);
 
@@ -2055,15 +2055,15 @@ static int vgs_eval(
             break;
         }
 
-        case INS_PROC_CALL:
-        case INS_PROC1_CALL:
-        case INS_PROC2_CALL: {
+        case CMD_PROC_CALL:
+        case CMD_PROC1_CALL:
+        case CMD_PROC2_CALL: {
             int proc_args;
             int proc_id;
 
             const struct VGSProcedure *proc;
 
-            proc_args = vgs_proc_num_args(statement->inst);
+            proc_args = vgs_proc_num_args(statement->cmd);
 
             ASSERT_ARGS(1 + proc_args);
             proc_id = statement->args[0].proc_id;
@@ -2108,14 +2108,14 @@ static int vgs_eval(
             break;
         }
 
-        case INS_Q_CURVE_TO:
-        case INS_Q_CURVE_TO_REL:
+        case CMD_Q_CURVE_TO:
+        case CMD_Q_CURVE_TO_REL:
             ASSERT_ARGS(4);
-            relative = statement->inst == INS_Q_CURVE_TO_REL;
+            relative = statement->cmd == CMD_Q_CURVE_TO_REL;
             quad_curve_to(state, relative, numerics[0], numerics[1], numerics[2], numerics[3]);
             break;
 
-        case INS_RADIAL_GRAD:
+        case CMD_RADIAL_GRAD:
             ASSERT_ARGS(6);
 
             if (state->pattern_builder != NULL)
@@ -2131,24 +2131,24 @@ static int vgs_eval(
             );
             break;
 
-        case INS_RESET_CLIP:
+        case CMD_RESET_CLIP:
             cairo_reset_clip(state->cairo_ctx);
             break;
 
-        case INS_RESET_DASH:
+        case CMD_RESET_DASH:
             cairo_set_dash(state->cairo_ctx, NULL, 0, 0);
             break;
 
-        case INS_RESET_MATRIX:
+        case CMD_RESET_MATRIX:
             cairo_identity_matrix(state->cairo_ctx);
             break;
 
-        case INS_RECT:
+        case CMD_RECT:
             ASSERT_ARGS(4);
             cairo_rectangle(state->cairo_ctx, numerics[0], numerics[1], numerics[2], numerics[3]);
             break;
 
-        case INS_REPEAT: {
+        case CMD_REPEAT: {
             double var_i = state->vars[VAR_I];
 
             ASSERT_ARGS(2);
@@ -2175,17 +2175,17 @@ static int vgs_eval(
             break;
         }
 
-        case INS_RESTORE:
+        case CMD_RESTORE:
             ASSERT_ARGS(0);
             cairo_restore(state->cairo_ctx);
             break;
 
-        case INS_ROTATE:
+        case CMD_ROTATE:
             ASSERT_ARGS(1);
             cairo_rotate(state->cairo_ctx, numerics[0]);
             break;
 
-        case INS_ROUNDEDRECT:
+        case CMD_ROUNDEDRECT:
             ASSERT_ARGS(5);
             rounded_rect(
                 state->cairo_ctx,
@@ -2197,22 +2197,22 @@ static int vgs_eval(
             );
             break;
 
-        case INS_SAVE:
+        case CMD_SAVE:
             ASSERT_ARGS(0);
             cairo_save(state->cairo_ctx);
             break;
 
-        case INS_SCALE:
+        case CMD_SCALE:
             ASSERT_ARGS(1);
             cairo_scale(state->cairo_ctx, numerics[0], numerics[0]);
             break;
 
-        case INS_SCALEXY:
+        case CMD_SCALEXY:
             ASSERT_ARGS(2);
             cairo_scale(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
-        case INS_SET_COLOR:
+        case CMD_SET_COLOR:
             ASSERT_ARGS(1);
 
             if (state->pattern_builder != NULL)
@@ -2226,23 +2226,23 @@ static int vgs_eval(
             );
             break;
 
-        case INS_SET_LINE_CAP:
+        case CMD_SET_LINE_CAP:
             ASSERT_ARGS(1);
             cairo_set_line_cap(state->cairo_ctx, statement->args[0].constant);
             break;
 
-        case INS_SET_LINE_JOIN:
+        case CMD_SET_LINE_JOIN:
             ASSERT_ARGS(1);
             cairo_set_line_join(state->cairo_ctx, statement->args[0].constant);
             break;
 
-        case INS_SET_LINE_WIDTH:
+        case CMD_SET_LINE_WIDTH:
             ASSERT_ARGS(1);
             cairo_set_line_width(state->cairo_ctx, numerics[0]);
             break;
 
-        case INS_SET_DASH:
-        case INS_SET_DASH_OFFSET: {
+        case CMD_SET_DASH:
+        case CMD_SET_DASH_OFFSET: {
             int num;
             double *dashes, offset, stack_buf[16];
 
@@ -2258,7 +2258,7 @@ static int vgs_eval(
 
             cairo_get_dash(state->cairo_ctx, dashes, &offset);
 
-            if (statement->inst == INS_SET_DASH) {
+            if (statement->cmd == CMD_SET_DASH) {
                 dashes[num] = numerics[0];
                 num++;
             } else {
@@ -2273,8 +2273,8 @@ static int vgs_eval(
             break;
         }
 
-        case INS_SET_HSLA:
-        case INS_SET_RGBA: {
+        case CMD_SET_HSLA:
+        case CMD_SET_RGBA: {
             double r, g, b;
 
             ASSERT_ARGS(4);
@@ -2282,7 +2282,7 @@ static int vgs_eval(
             if (state->pattern_builder != NULL)
                 cairo_pattern_destroy(state->pattern_builder);
 
-            if (statement->inst == INS_SET_HSLA) {
+            if (statement->cmd == CMD_SET_HSLA) {
                 hsl2rgb(numerics[0], numerics[1], numerics[2], &r, &g, &b);
             } else {
                 r = numerics[0];
@@ -2294,7 +2294,7 @@ static int vgs_eval(
             break;
         }
 
-        case INS_SET_VAR: {
+        case CMD_SET_VAR: {
             int user_var;
 
             ASSERT_ARGS(2);
@@ -2306,17 +2306,17 @@ static int vgs_eval(
             break;
         }
 
-        case INS_STROKE:
+        case CMD_STROKE:
             ASSERT_ARGS(0);
             MAY_PRESERVE(cairo_stroke);
             break;
 
-        case INS_S_CURVE_TO:
-        case INS_S_CURVE_TO_REL:
+        case CMD_S_CURVE_TO:
+        case CMD_S_CURVE_TO_REL:
             ASSERT_ARGS(4);
             cubic_curve_to(
                 state,
-                statement->inst == INS_S_CURVE_TO_REL,
+                statement->cmd == CMD_S_CURVE_TO_REL,
                 NAN,
                 NAN,
                 numerics[0],
@@ -2326,32 +2326,32 @@ static int vgs_eval(
             );
             break;
 
-        case INS_TRANSLATE:
+        case CMD_TRANSLATE:
             ASSERT_ARGS(2);
             cairo_translate(state->cairo_ctx, numerics[0], numerics[1]);
             break;
 
-        case INS_T_CURVE_TO:
-        case INS_T_CURVE_TO_REL:
+        case CMD_T_CURVE_TO:
+        case CMD_T_CURVE_TO_REL:
             ASSERT_ARGS(2);
-            relative = statement->inst == INS_T_CURVE_TO_REL;
+            relative = statement->cmd == CMD_T_CURVE_TO_REL;
             quad_curve_to(state, relative, NAN, NAN, numerics[0], numerics[1]);
             break;
 
-        case INS_HORZ:
-        case INS_HORZ_REL:
-        case INS_VERT:
-        case INS_VERT_REL:
+        case CMD_HORZ:
+        case CMD_HORZ_REL:
+        case CMD_VERT:
+        case CMD_VERT_REL:
             ASSERT_ARGS(1);
 
             if (cairo_has_current_point(state->cairo_ctx)) {
                 double d = numerics[0];
 
-                switch (statement->inst) {
-                    case INS_HORZ:     cx  = d; break;
-                    case INS_VERT:     cy  = d; break;
-                    case INS_HORZ_REL: cx += d; break;
-                    case INS_VERT_REL: cy += d; break;
+                switch (statement->cmd) {
+                    case CMD_HORZ:     cx  = d; break;
+                    case CMD_VERT:     cy  = d; break;
+                    case CMD_HORZ_REL: cx += d; break;
+                    case CMD_VERT_REL: cy += d; break;
                 }
 
                 cairo_line_to(state->cairo_ctx, cx, cy);
@@ -2361,11 +2361,11 @@ static int vgs_eval(
         }
 
         // Reflected control points will be discarded if the executed
-        // instruction did not update them, and it is a instruction
-        // to modify the path.
+        // command did not update them, and it is a commands to
+        // modify the path.
         if (state->rcp.status == RCP_UPDATED) {
             state->rcp.status = RCP_VALID;
-        } else if (vgs_inst_change_path(statement->inst)) {
+        } else if (vgs_cmd_change_path(statement->cmd)) {
             state->rcp.status = RCP_NONE;
         }
 

@@ -1,4 +1,4 @@
-check_sorted_instructions: 0 failures
+check_sorted_cmds_array: 0 failures
 
 --- check_script: drawvg.all
 cairo_set_line_join 0
@@ -84,7 +84,7 @@ av_log[16]: Invalid token '(' at line 1, column 5: Unmatched parenthesis.
 check_script: vgs_parse = -22
 
 --- check_script: save invalid 1 2
-av_log[16]: Invalid token 'invalid' at line 1, column 6: Expected instruction.
+av_log[16]: Invalid token 'invalid' at line 1, column 6: Expected command.
 check_script: vgs_parse = -22
 
 --- check_script: setlinecap unknown m 10 20
