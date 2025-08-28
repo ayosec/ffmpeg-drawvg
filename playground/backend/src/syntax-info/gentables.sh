@@ -32,7 +32,7 @@ dump_ast() {
 
 echo -n 'export const Instructions = new Set('
 dump_ast vgs_commands libavfilter/vf_drawvg.c |
-    jq '.inner|map(.inner[]|.inner[1]|.inner[]|.inner[].value|fromjson)'
+    jq '.inner|map(.inner[]|.inner[0]|.inner[]|.inner[].value|fromjson)'
 echo ');'
 
 echo -n 'export const InstructionsDecls: string[] = '
