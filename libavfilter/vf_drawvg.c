@@ -46,8 +46,8 @@
 /*
  * == AVExpr Integration ==
  *
- * Definitions to use variables and functions in the expressions parsed
- * and evaluated with `av_expr` functions.
+ * Definitions to use variables and functions in the expressions from
+ * `av_expr_*` functions.
  *
  * For user-variables, created with commands like `setvar` or `defhsla`,
  * the VGS parser updates a copy of the `vgs_default_vars` array. The
@@ -74,7 +74,7 @@ enum {
 /// is more than enough for the expected use of this filter.
 #define USER_VAR_COUNT 10
 
-// Total number of variables (default- and user-variables).
+/// Total number of variables (default- and user-variables).
 #define VAR_COUNT (VAR_U0 + USER_VAR_COUNT)
 
 static const char *const vgs_default_vars[] = {
@@ -98,8 +98,8 @@ static const char *const vgs_func1_names[] = {
     NULL,
 };
 
-static double vgs_fn_pathlen(void*, double);
-static double vgs_fn_randomg(void*, double);
+static double vgs_fn_pathlen(void *, double);
+static double vgs_fn_randomg(void *, double);
 
 static double (*const vgs_func1_impls[])(void *, double) = {
     vgs_fn_pathlen,
@@ -112,18 +112,22 @@ static const char *const vgs_func2_names[] = {
     NULL,
 };
 
-static double vgs_fn_p(void*, double, double);
+static double vgs_fn_p(void *, double, double);
 
 static double (*const vgs_func2_impls[])(void *, double, double) = {
     vgs_fn_p,
     NULL,
 };
 
-
 /*
  * == Command Declarations ==
  *
- * TODO
+ * Each command is defined by an opcode (used later by the interpreter), a name,
+ * and a set of parameters.
+ *
+ * Inspired by SVG, some commands can be repeated when the next token after the
+ * last parameter is a numeric value (for example, `L 1 2 3 4` is equivalent to
+ * `L 1 2 L 3 4`). In these commands, the last parameter is `PARAM_MAY_REPEAT`.
  */
 
 enum VGSCommand {
@@ -193,27 +197,26 @@ enum VGSCommand {
     CMD_VERT_REL,               ///<  v (dy)
 };
 
-// Constants used in some draw commands, like `setlinejoin`.
+/// Constants for some commands, like `setlinejoin`.
 struct VGSConstant {
     const char* name;
     int value;
 };
 
-static struct VGSConstant vgs_consts_line_cap[] = {
+static const struct VGSConstant vgs_consts_line_cap[] = {
     { "butt", CAIRO_LINE_CAP_BUTT },
     { "round", CAIRO_LINE_CAP_ROUND },
     { "square", CAIRO_LINE_CAP_SQUARE },
     { NULL, 0 },
 };
 
-static struct VGSConstant vgs_consts_line_join[] = {
+static const struct VGSConstant vgs_consts_line_join[] = {
     { "bevel", CAIRO_LINE_JOIN_BEVEL },
     { "miter", CAIRO_LINE_JOIN_MITER },
     { "round", CAIRO_LINE_JOIN_ROUND },
     { NULL, 0 },
 };
 
-/// Definition of each parameter in a command.
 struct VGSParameter {
     enum {
         PARAM_COLOR = 1,
@@ -229,127 +232,133 @@ struct VGSParameter {
         PARAM_VAR_NAME,
     } type;
 
-    const struct VGSConstant *constants;
+    const struct VGSConstant *constants; ///< Array for PARAM_CONSTANT.
 };
 
 #define MAX_COMMAND_PARAMS 8
 
 // Definition of each command.
 
-struct VGSCommandDecl {
-    enum VGSCommand cmd;
+struct VGSCommandSpec {
     const char* name;
-    const struct VGSParameter params[MAX_COMMAND_PARAMS];
+    enum VGSCommand cmd;
+    const struct VGSParameter *params;
 };
 
-#define L(...) { __VA_ARGS__, { PARAM_END } }            // Parameter list
-#define R(...) { __VA_ARGS__, { PARAM_MAY_REPEAT } }     // Repeatable PL
-#define NONE { { PARAM_END } }
+// Parameter lists.
+#define PARAMS(...) (const struct VGSParameter[]){ __VA_ARGS__ }
+#define L(...) PARAMS(__VA_ARGS__, { PARAM_END })
+#define R(...) PARAMS(__VA_ARGS__, { PARAM_MAY_REPEAT })
+#define NONE   PARAMS({ PARAM_END })
+
+// Common parameter types.
 #define N { PARAM_NUMERIC }
 #define V { PARAM_VAR_NAME }
 #define P { PARAM_SUBPROGRAM }
 #define C(c) { PARAM_CONSTANT, .constants = c }
 
-// Command declarations.
+// Declarations table.
 //
-// The array must be sorted in ascending order by `name`.
-static struct VGSCommandDecl vgs_commands[] = {
-    { CMD_CURVE_TO,         "C",              R(N, N, N, N, N, N) },
-    { CMD_HORZ,             "H",              R(N) },
-    { CMD_LINE_TO,          "L",              R(N, N) },
-    { CMD_MOVE_TO,          "M",              R(N, N) },
-    { CMD_Q_CURVE_TO,       "Q",              R(N, N, N, N) },
-    { CMD_S_CURVE_TO,       "S",              R(N, N, N, N) },
-    { CMD_T_CURVE_TO,       "T",              R(N, N) },
-    { CMD_VERT,             "V",              R(N) },
-    { CMD_CLOSE_PATH,       "Z",              NONE },
-    { CMD_ARC,              "arc",            R(N, N, N, N, N) },
-    { CMD_ARC_NEG,          "arcn",           R(N, N, N, N, N) },
-    { CMD_BREAK,            "break",          NONE },
-    { CMD_CURVE_TO_REL,     "c",              R(N, N, N, N, N, N) },
-    { CMD_PROC_CALL,        "call",           L({ PARAM_PROC_NAME }) },
-    { CMD_PROC1_CALL,       "call1",          L({ PARAM_PROC_NAME }, N) },
-    { CMD_PROC2_CALL,       "call2",          L({ PARAM_PROC_NAME }, N, N) },
-    { CMD_CIRCLE,           "circle",         R(N, N, N) },
-    { CMD_CLIP,             "clip",           NONE },
-    { CMD_CLOSE_PATH,       "closepath",      NONE },
-    { CMD_COLOR_STOP,       "colorstop",      R(N, { PARAM_COLOR }) },
-    { CMD_CURVE_TO,         "curveto",        R(N, N, N, N, N, N) },
-    { CMD_DEF_HSLA,         "defhsla",        L(V, N, N, N, N) },
-    { CMD_DEF_RGBA,         "defrgba",        L(V, N, N, N, N) },
-    { CMD_ELLIPSE,          "ellipse",        R(N, N, N, N) },
-    { CMD_CLIP_EO,          "eoclip",         NONE },
-    { CMD_FILL_EO,          "eofill",         NONE },
-    { CMD_FILL,             "fill",           NONE },
-    { CMD_GET_METADATA,     "getmetadata",    L(V, { PARAM_RAW_IDENT }) },
-    { CMD_HORZ_REL,         "h",              R(N) },
-    { CMD_IF,               "if",             L(N, P) },
-    { CMD_LINE_TO_REL,      "l",              R(N, N) },
-    { CMD_LINEAR_GRAD,      "lineargrad",     L(N, N, N, N) },
-    { CMD_LINE_TO,          "lineto",         R(N, N) },
-    { CMD_MOVE_TO_REL,      "m",              R(N, N) },
-    { CMD_MOVE_TO,          "moveto",         R(N, N) },
-    { CMD_NEW_PATH,         "newpath",        NONE },
-    { CMD_PRESERVE,         "preserve",       NONE },
-    { CMD_PRINT,            "print",          { { PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } } },
-    { CMD_PROC_ASSIGN,      "proc",           L({ PARAM_PROC_NAME }, P) },
-    { CMD_PROC1_ASSIGN,     "proc1",          L({ PARAM_PROC_NAME }, V, P) },
-    { CMD_PROC2_ASSIGN,     "proc2",          L({ PARAM_PROC_NAME }, V, V, P) },
-    { CMD_Q_CURVE_TO_REL,   "q",              R(N, N, N, N) },
-    { CMD_RADIAL_GRAD,      "radialgrad",     L(N, N, N, N, N, N) },
-    { CMD_CURVE_TO_REL,     "rcurveto",       R(N, N, N, N, N, N) },
-    { CMD_RECT,             "rect",           R(N, N, N, N) },
-    { CMD_REPEAT,           "repeat",         L(N, P) },
-    { CMD_RESET_CLIP,       "resetclip",      NONE },
-    { CMD_RESET_DASH,       "resetdash",      NONE },
-    { CMD_RESET_MATRIX,     "resetmatrix",    NONE },
-    { CMD_RESTORE,          "restore",        NONE },
-    { CMD_LINE_TO_REL,      "rlineto",        R(N, N) },
-    { CMD_MOVE_TO_REL,      "rmoveto",        R(N, N) },
-    { CMD_ROTATE,           "rotate",         L(N) },
-    { CMD_ROUNDEDRECT,      "roundedrect",    R(N, N, N, N, N) },
-    { CMD_S_CURVE_TO_REL,   "s",              R(N, N, N, N) },
-    { CMD_SAVE,             "save",           NONE },
-    { CMD_SCALE,            "scale",          L(N) },
-    { CMD_SCALEXY,          "scalexy",        L(N, N) },
-    { CMD_SET_COLOR,        "setcolor",       L({ PARAM_COLOR }) },
-    { CMD_SET_DASH,         "setdash",        R(N) },
-    { CMD_SET_DASH_OFFSET,  "setdashoffset",  R(N) },
-    { CMD_SET_HSLA,         "sethsla",        L(N, N, N, N) },
-    { CMD_SET_LINE_CAP,     "setlinecap",     L(C(vgs_consts_line_cap)) },
-    { CMD_SET_LINE_JOIN,    "setlinejoin",    L(C(vgs_consts_line_join)) },
-    { CMD_SET_LINE_WIDTH,   "setlinewidth",   L(N) },
-    { CMD_SET_RGBA,         "setrgba",        L(N, N, N, N) },
-    { CMD_SET_VAR,          "setvar",         L(V, N) },
-    { CMD_STROKE,           "stroke",         NONE },
-    { CMD_T_CURVE_TO_REL,   "t",              R(N, N) },
-    { CMD_TRANSLATE,        "translate",      L(N, N) },
-    { CMD_VERT_REL,         "v",              R(N) },
-    { CMD_CLOSE_PATH,       "z",              NONE },
+// The array must be sorted by `name` in ascending order.
+static const struct VGSCommandSpec vgs_commands[] = {
+    { "C",              CMD_CURVE_TO,         R(N, N, N, N, N, N) },
+    { "H",              CMD_HORZ,             R(N) },
+    { "L",              CMD_LINE_TO,          R(N, N) },
+    { "M",              CMD_MOVE_TO,          R(N, N) },
+    { "Q",              CMD_Q_CURVE_TO,       R(N, N, N, N) },
+    { "S",              CMD_S_CURVE_TO,       R(N, N, N, N) },
+    { "T",              CMD_T_CURVE_TO,       R(N, N) },
+    { "V",              CMD_VERT,             R(N) },
+    { "Z",              CMD_CLOSE_PATH,       NONE },
+    { "arc",            CMD_ARC,              R(N, N, N, N, N) },
+    { "arcn",           CMD_ARC_NEG,          R(N, N, N, N, N) },
+    { "break",          CMD_BREAK,            NONE },
+    { "c",              CMD_CURVE_TO_REL,     R(N, N, N, N, N, N) },
+    { "call",           CMD_PROC_CALL,        L({ PARAM_PROC_NAME }) },
+    { "call1",          CMD_PROC1_CALL,       L({ PARAM_PROC_NAME }, N) },
+    { "call2",          CMD_PROC2_CALL,       L({ PARAM_PROC_NAME }, N, N) },
+    { "circle",         CMD_CIRCLE,           R(N, N, N) },
+    { "clip",           CMD_CLIP,             NONE },
+    { "closepath",      CMD_CLOSE_PATH,       NONE },
+    { "colorstop",      CMD_COLOR_STOP,       R(N, { PARAM_COLOR }) },
+    { "curveto",        CMD_CURVE_TO,         R(N, N, N, N, N, N) },
+    { "defhsla",        CMD_DEF_HSLA,         L(V, N, N, N, N) },
+    { "defrgba",        CMD_DEF_RGBA,         L(V, N, N, N, N) },
+    { "ellipse",        CMD_ELLIPSE,          R(N, N, N, N) },
+    { "eoclip",         CMD_CLIP_EO,          NONE },
+    { "eofill",         CMD_FILL_EO,          NONE },
+    { "fill",           CMD_FILL,             NONE },
+    { "getmetadata",    CMD_GET_METADATA,     L(V, { PARAM_RAW_IDENT }) },
+    { "h",              CMD_HORZ_REL,         R(N) },
+    { "if",             CMD_IF,               L(N, P) },
+    { "l",              CMD_LINE_TO_REL,      R(N, N) },
+    { "lineargrad",     CMD_LINEAR_GRAD,      L(N, N, N, N) },
+    { "lineto",         CMD_LINE_TO,          R(N, N) },
+    { "m",              CMD_MOVE_TO_REL,      R(N, N) },
+    { "moveto",         CMD_MOVE_TO,          R(N, N) },
+    { "newpath",        CMD_NEW_PATH,         NONE },
+    { "preserve",       CMD_PRESERVE,         NONE },
+    { "print",          CMD_PRINT,            PARAMS({ PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } }),
+    { "proc",           CMD_PROC_ASSIGN,      L({ PARAM_PROC_NAME }, P) },
+    { "proc1",          CMD_PROC1_ASSIGN,     L({ PARAM_PROC_NAME }, V, P) },
+    { "proc2",          CMD_PROC2_ASSIGN,     L({ PARAM_PROC_NAME }, V, V, P) },
+    { "q",              CMD_Q_CURVE_TO_REL,   R(N, N, N, N) },
+    { "radialgrad",     CMD_RADIAL_GRAD,      L(N, N, N, N, N, N) },
+    { "rcurveto",       CMD_CURVE_TO_REL,     R(N, N, N, N, N, N) },
+    { "rect",           CMD_RECT,             R(N, N, N, N) },
+    { "repeat",         CMD_REPEAT,           L(N, P) },
+    { "resetclip",      CMD_RESET_CLIP,       NONE },
+    { "resetdash",      CMD_RESET_DASH,       NONE },
+    { "resetmatrix",    CMD_RESET_MATRIX,     NONE },
+    { "restore",        CMD_RESTORE,          NONE },
+    { "rlineto",        CMD_LINE_TO_REL,      R(N, N) },
+    { "rmoveto",        CMD_MOVE_TO_REL,      R(N, N) },
+    { "rotate",         CMD_ROTATE,           L(N) },
+    { "roundedrect",    CMD_ROUNDEDRECT,      R(N, N, N, N, N) },
+    { "s",              CMD_S_CURVE_TO_REL,   R(N, N, N, N) },
+    { "save",           CMD_SAVE,             NONE },
+    { "scale",          CMD_SCALE,            L(N) },
+    { "scalexy",        CMD_SCALEXY,          L(N, N) },
+    { "setcolor",       CMD_SET_COLOR,        L({ PARAM_COLOR }) },
+    { "setdash",        CMD_SET_DASH,         R(N) },
+    { "setdashoffset",  CMD_SET_DASH_OFFSET,  R(N) },
+    { "sethsla",        CMD_SET_HSLA,         L(N, N, N, N) },
+    { "setlinecap",     CMD_SET_LINE_CAP,     L(C(vgs_consts_line_cap)) },
+    { "setlinejoin",    CMD_SET_LINE_JOIN,    L(C(vgs_consts_line_join)) },
+    { "setlinewidth",   CMD_SET_LINE_WIDTH,   L(N) },
+    { "setrgba",        CMD_SET_RGBA,         L(N, N, N, N) },
+    { "setvar",         CMD_SET_VAR,          L(V, N) },
+    { "stroke",         CMD_STROKE,           NONE },
+    { "t",              CMD_T_CURVE_TO_REL,   R(N, N) },
+    { "translate",      CMD_TRANSLATE,        L(N, N) },
+    { "v",              CMD_VERT_REL,         R(N) },
+    { "z",              CMD_CLOSE_PATH,       NONE },
 };
 
-#undef L
-#undef R
-#undef NONE
-#undef N
 #undef C
+#undef L
+#undef N
+#undef NONE
+#undef PARAMS
+#undef R
 
-// Comparator for `VGSCommandDecl`, to be used with `bsearch(3)`.
+/// Comparator for `VGSCommandDecl`, to be used with `bsearch(3)`.
 static int vgs_comp_command_spec(const void *cs1, const void *cs2) {
     return strcmp(
-        ((struct VGSCommandDecl*)cs1)->name,
-        ((struct VGSCommandDecl*)cs2)->name
+        ((const struct VGSCommandSpec*)cs1)->name,
+        ((const struct VGSCommandSpec*)cs2)->name
     );
 }
 
-// Return the specs for the given command, or `NULL` if the name is not valid.
-static const struct VGSCommandDecl* vgs_get_command(const char *name, size_t length) {
+/// Return the specs for the given command, or `NULL` if the name is not valid.
+///
+/// The implementation assumes that `vgs_commands` is sorted by `name`.
+static const struct VGSCommandSpec* vgs_get_command(const char *name, size_t length) {
     char bufname[64];
-    struct VGSCommandDecl key = { .name = bufname };
+    struct VGSCommandSpec key = { .name = bufname };
 
-    if (length >= sizeof(bufname)) {
+    if (length >= sizeof(bufname))
         return NULL;
-    }
 
     memcpy(bufname, name, length);
     bufname[length] = '\0';
@@ -382,7 +391,7 @@ static int vgs_proc_num_args(enum VGSCommand cmd) {
     }
 }
 
-/// Return `1` if the command changes the path.
+/// Return `1` if the command changes the current path in the cairo context.
 static int vgs_cmd_change_path(enum VGSCommand cmd) {
     switch (cmd) {
     case CMD_BREAK:
@@ -422,7 +431,24 @@ static int vgs_cmd_change_path(enum VGSCommand cmd) {
 /*
  * == VGS Parser ==
  *
- * TODO
+ * The lexer determines the token kind by reading the first character after a
+ * delimiter (any of " \n\t\r,").
+ *
+ * The output of the parser is an instance of `VGSProgram`. It is a list of
+ * statements, and each statement is a command opcode and its arguments. This
+ * instance is created on filter initialization, and reused for every frame.
+ *
+ * User-variables are stored in an array initialized with a copy of
+ * `vgs_default_vars`.
+ *
+ * Blocks (the body for procedures, `if`, and `repeat`) are stored as nested
+ * `VGSProgram` instances.
+ *
+ * The source is assumed to be ASCII. If it contains multibyte chars, each
+ * byte is treated as an individual character. This is only relevant when the
+ * parser must report the location of a syntax error.
+ *
+ * There is no error recovery. The first invalid token will stop the parser.
  */
 
 struct VGSParser {
@@ -432,12 +458,11 @@ struct VGSParser {
     const char **proc_names;
     int proc_names_count;
 
-    // Store the variable names for the default ones
-    // (from `vgs_default_vars`) and the variables
-    // created with `setvar`.
+    // Store the variable names for the default ones (from `vgs_default_vars`)
+    // and the variables created with `setvar`.
     //
-    // The extra slot is needed to store the `NULL`
-    // terminator expected by `av_expr_parse`.
+    // The extra slot is needed to store the `NULL` terminator expected by
+    // `av_expr_parse`.
     const char *var_names[VAR_COUNT + 1];
 };
 
@@ -456,12 +481,13 @@ struct VGSParserToken {
     size_t length;
 };
 
-// Return `1` if `token` is the value of `str`.
+/// Check if `token` is the value of `str`.
 static int vgs_token_is_string(const struct VGSParserToken *token, const char *str) {
     return strncmp(str, token->lexeme, token->length) == 0
         && str[token->length] == '\0';
 }
 
+/// Compute the line/column numbers of the given token.
 static void vgs_token_span(
     const struct VGSParser *parser,
     const struct VGSParserToken *token,
@@ -509,13 +535,12 @@ void vgs_log_invalid_token(
         (int)token->length, token->lexeme, line, column, extra);
 }
 
-// Return the next token in the source.
-//
-// @param[out]  token     Next token.
-// @param[in]   advance   If true, the parser cursor is updated after
-//                        the returned token.
-//
-// @return `0` on success, a negative `AVERROR` code on failure.
+/// Return the next token in the source.
+///
+/// @param[out]  token    Next token.
+/// @param[in]   advance  If true, the cursor is updated after finding a token.
+///
+/// @return `0` on success, and a negative `AVERROR` code on failure.
 static int vgs_parser_next_token(
     void *log_ctx,
     struct VGSParser *parser,
@@ -523,7 +548,7 @@ static int vgs_parser_next_token(
     int advance
 ) {
 
-#define WORD_SEPARATOR " \n\t\r,"
+    #define WORD_SEPARATOR " \n\t\r,"
 
     int level;
     size_t cursor, length;
@@ -624,7 +649,7 @@ next_token:
     return 0;
 }
 
-// Command arguments.
+/// Command arguments.
 struct VGSArgument {
     enum {
         ARG_COLOR = 1,
@@ -651,7 +676,7 @@ struct VGSArgument {
     char *metadata;
 };
 
-// Program statements.
+/// Program statements.
 struct VGSStatement {
     enum VGSCommand cmd;
     struct VGSArgument *args;
@@ -700,7 +725,7 @@ static void vgs_statement_free(struct VGSStatement *stm) {
     av_freep(&stm->args);
 }
 
-// Release the memory allocated by the program.
+/// Release the memory allocated by the program.
 static void vgs_free(struct VGSProgram *program) {
     if (program->statements == NULL)
         return;
@@ -718,6 +743,9 @@ static void vgs_free(struct VGSProgram *program) {
     }
 }
 
+/// Consume the next argument as a numeric value, and store it in `arg`.
+///
+/// Return `0` on success, and a negative `AVERROR` code on failure.
 static int vgs_parse_numeric_argument(
     void *log_ctx,
     struct VGSParser *parser,
@@ -733,7 +761,8 @@ static int vgs_parse_numeric_argument(
     if (ret != 0)
         return ret;
 
-    // Convert the lexeme to a NUL-terminated string.
+    // Convert the lexeme to a NUL-terminated string. Small lexemes are copied
+    // to a buffer on the stack; thus, it avoids allocating memory is most cases.
     if (token.length + 1 < sizeof(stack_buf)) {
         lexeme = stack_buf;
     } else {
@@ -816,8 +845,8 @@ static int vgs_parse_numeric_argument(
     return ret;
 }
 
-// Check if the next token repeats the current command,
-// like in `l 10 10 20 20`.
+/// Check if the next token is a numeric value, so the last command must be
+/// repeated.
 static int vgs_parser_can_repeat_cmd(void *log_ctx, struct VGSParser *parser) {
     struct VGSParserToken token = { 0 };
 
@@ -876,23 +905,22 @@ static int vgs_is_valid_identifier(const struct VGSParserToken *token) {
     return 1;
 }
 
-// Extract the arguments for a command, and add a new statement
-// to the program.
-//
-// On success, return `0`.
+/// Extract the arguments for a command, and add a new statement
+/// to the program.
+///
+/// On success, return `0`.
 static int vgs_parse_statement(
     void *log_ctx,
     struct VGSParser *parser,
     struct VGSProgram *program,
-    const struct VGSCommandDecl *decl
+    const struct VGSCommandSpec *decl
 ) {
 
-#define FAIL(err) \
-    do {                                \
-        vgs_statement_free(&statement); \
-        return AVERROR(err);            \
-    } while(0)
-
+    #define FAIL(err) \
+        do {                                \
+            vgs_statement_free(&statement); \
+            return AVERROR(err);            \
+        } while(0)
 
     struct VGSStatement statement = {
         .cmd = decl->cmd,
@@ -1170,7 +1198,7 @@ static int vgs_parse_statement(
         param++;
     }
 
-#undef FAIL
+    #undef FAIL
 }
 
 static void vgs_parser_init(struct VGSParser *parser, const char *source) {
@@ -1198,9 +1226,12 @@ static void vgs_parser_free(struct VGSParser *parser) {
     }
 }
 
-// Parse a script to generate the program statements.
-//
-// @return `0` on success, a negative `AVERROR` code on failure.
+/// Build a program by parsing a script.
+///
+/// `subprogram` must be true when the function is called to parse the body of
+/// a block (like `if` or `proc` commands).
+///
+/// Return `0` on success, and a negative `AVERROR` code on failure.
 static int vgs_parse(
     void *log_ctx,
     struct VGSParser *parser,
@@ -1217,7 +1248,7 @@ static int vgs_parse(
 
     for (;;) {
         int ret;
-        const struct VGSCommandDecl *cmd;
+        const struct VGSCommandSpec *cmd;
 
         ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
         if (ret != 0)
@@ -1272,15 +1303,22 @@ fail:
 /*
  * == Interpreter ==
  *
- * TODO
+ * The interpreter takes the `VGSProgram` built by the parser, and translate the
+ * statements to calls to cairo.
+ *
+ * `VGSEvalState` tracks the state needed to execute such commands.
  */
 
 #define MAX_PROC_ARGS 2
 
+/// Number of different states for the `randomg` function.
 #define RANDOM_STATES 4
 
+/// Block assigned to a procedure by a call to `proc*` commands.
 struct VGSProcedure {
-    struct VGSProgram *program;
+    const struct VGSProgram *program;
+
+    /// Variable ids where each argument is stored.
     int args[MAX_PROC_ARGS];
 };
 
@@ -1306,7 +1344,7 @@ struct VGSEvalState {
     /// Subprograms associated to each procedure identifier.
     struct VGSProcedure *procedures;
 
-    /// Procedure name for each identifier.
+    /// Reference to the procedure names in the `VGSProgram`.
     const char *const *proc_names;
 
     /// Values for the variables in expressions.
@@ -1334,22 +1372,23 @@ struct VGSEvalState {
     } rcp;
 };
 
-// Function `pathlen(n)` for `av_expr_eval`.
-//
-// Compute the length of the current path. If `n > 0`, it is the
-// maximum number of segments to be added to the length.
+/// Function `pathlen(n)` for `av_expr_eval`.
+///
+/// Compute the length of the current path in the cairo context. If `n > 0`, it
+/// is the maximum number of segments to be added to the length.
 static double vgs_fn_pathlen(void *data, double arg) {
+    if (!isfinite(arg))
+        return NAN;
+
     const struct VGSEvalState *state = (struct VGSEvalState *)data;
 
     int max_segments = (int)arg;
 
-    cairo_path_t *path;
-    double length = 0;
-
     double lmx = NAN, lmy = NAN; // last move point
     double cx = NAN, cy = NAN;   // current point.
 
-    path = cairo_copy_path_flat(state->cairo_ctx);
+    double length = 0;
+    cairo_path_t *path = cairo_copy_path_flat(state->cairo_ctx);
 
     for (int i = 0; i < path->num_data; i += path->data[i].header.length) {
         double x, y;
@@ -1383,7 +1422,7 @@ static double vgs_fn_pathlen(void *data, double arg) {
         cy = y;
 
         // If the function argument is `> 0`, use it as a limit for how
-        // many segments are added.
+        // many segments are added up.
         if (--max_segments == 0)
             break;
     }
@@ -1393,29 +1432,24 @@ static double vgs_fn_pathlen(void *data, double arg) {
     return length;
 }
 
-// Function `randomg(n)` for `av_expr_eval`.
-//
-// Compute a random value between 0 and 1. Similar to `random`, but the
-// generator is global to the VGS program.
-//
-// The last 2 bits of the integer representation of the argument are used
-// as the state index. If the state is not initialized, the value is used
-// as the seed.
+/// Function `randomg(n)` for `av_expr_eval`.
+///
+/// Compute a random value between 0 and 1. Similar to `random()`, but the
+/// state is global to the VGS program.
+///
+/// The last 2 bits of the integer representation of the argument are used
+/// as the state index. If the state is not initialized, the argument is
+/// the seed for that state.
 static double vgs_fn_randomg(void *data, double arg) {
-    int rng_idx;
-    uint64_t iarg;
-
-    FFSFC64 *rng;
-    struct VGSEvalState *state = (struct VGSEvalState *)data;
-
     if (!isfinite(arg))
         return arg;
 
-    iarg = (uint64_t)arg;
-    rng_idx = iarg & (RANDOM_STATES - 1);
-    av_assert0(rng_idx >= 0 && rng_idx < RANDOM_STATES);
+    struct VGSEvalState *state = (struct VGSEvalState *)data;
 
-    rng = &state->random_state[rng_idx];
+    uint64_t iarg = (uint64_t)arg;
+    int rng_idx = iarg % FF_ARRAY_ELEMS(state->random_state);
+
+    FFSFC64 *rng = &state->random_state[rng_idx];
 
     if (rng->counter == 0)
         ff_sfc64_init(rng, iarg, iarg, iarg, 12);
@@ -1423,32 +1457,31 @@ static double vgs_fn_randomg(void *data, double arg) {
     return ff_sfc64_get(rng) * (1.0 / UINT64_MAX);
 }
 
-// Function `p(x, y)` for `av_expr_eval`.
-//
-// Return the pixel color in 0xRRGGBBAA format.
-//
-// The transformation matrix is applied to the given coordinates.
-//
-// If the coordinates are outside the frame, return NAN.
+/// Function `p(x, y)` for `av_expr_eval`.
+///
+/// Return the pixel color in 0xRRGGBBAA format.
+///
+/// The transformation matrix is applied to the given coordinates.
+///
+/// If the coordinates are outside the frame, return NAN.
 static double vgs_fn_p(void* data, double x0, double y0) {
-    int x, y;
-    uint32_t color[4] = { 0, 0, 0, 255 };
-
     struct VGSEvalState *state = (struct VGSEvalState *)data;
     AVFrame *frame = state->frame;
-
-    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
 
     if (frame == NULL || !isfinite(x0) || !isfinite(y0))
         return NAN;
 
     cairo_user_to_device(state->cairo_ctx, &x0, &y0);
 
-    x = (int)x0;
-    y = (int)y0;
+    int x = (int)x0;
+    int y = (int)y0;
 
     if (x < 0 || y < 0 || x >= frame->width || y >= frame->height)
         return NAN;
+
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
+
+    uint32_t color[4] = { 0, 0, 0, 255 };
 
     for (int c = 0; c < desc->nb_components; c++) {
         uint32_t pixel;
@@ -1507,15 +1540,17 @@ static void vgs_eval_state_free(struct VGSEvalState *state) {
     memset(state, 0, sizeof(*state));
 }
 
+/// Draw an ellipse. `x`/`y` specifies the center, and `rx`/`ry` the radius of
+/// the ellipse on the x/y axis.
+///
+/// Cairo does not provide a native way to create an ellipse, but it can be done
+/// by scaling the Y axis with the transformation matrix.
 static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
     cairo_save(c);
     cairo_translate(c, x, y);
 
-    if (rx != ry) {
-        // Cairo does not support ellipses, but it can be created by
-        // adjusting the transformation matrix.
+    if (rx != ry)
         cairo_scale(c, 1, ry / rx);
-    }
 
     cairo_new_sub_path(c);
     cairo_arc(c, 0, 0, rx, 0, 2 * M_PI);
@@ -1525,13 +1560,14 @@ static void draw_ellipse(cairo_t *c, double x, double y, double rx, double ry) {
     cairo_restore(c);
 }
 
-// Render a quadratic bezier from the current point to `x, y`, The control point
-// is specified by `x1, y1`.
-//
-// If the control point is NAN, use the reflected point.
-//
-// cairo only supports cubic cuvers, so we have to transform the control points.
-static void quad_curve_to(
+/// Draw a quadratic bezier from the current point to `x, y`, The control point
+/// is specified by `x1, y1`.
+///
+/// If the control point is NAN, use the reflected point.
+///
+/// cairo only supports cubic cuvers, so control points must be adjusted to
+/// simulate the behaviour in SVG.
+static void draw_quad_curve_to(
     struct VGSEvalState *state,
     int relative,
     double x1,
@@ -1579,8 +1615,8 @@ static void quad_curve_to(
     state->rcp.quad_y = 2 * y - y1;
 }
 
-// Similar to quad_curve_to, but for cubic curves.
-static void cubic_curve_to(
+/// Similar to quad_curve_to, but for cubic curves.
+static void draw_cubic_curve_to(
     struct VGSEvalState *state,
     int relative,
     double x1,
@@ -1627,7 +1663,7 @@ static void cubic_curve_to(
     state->rcp.quad_y = y2;
 }
 
-static void rounded_rect(
+static void draw_rounded_rect(
     cairo_t *c,
     double x,
     double y,
@@ -1713,23 +1749,30 @@ static void hsl2rgb(
     *pb = b + x;
 }
 
-// Execute the cairo functions for the given script.
+/// Interpreter for `VGSProgram`.
+///
+/// Its implementation is a simple switch-based dispatch.
+///
+/// To evaluate blocks (like `if` or `call`), it makes a recursive call with
+/// the subprogram allocated to the block.
 static int vgs_eval(
     struct VGSEvalState *state,
     const struct VGSProgram *program
 ) {
 
-#define ASSERT_ARGS(n) av_assert0(statement->args_count == n)
+    #define ASSERT_ARGS(n) av_assert0(statement->args_count == n)
 
-#define MAY_PRESERVE(funcname) \
-    do {                                           \
-        if (state->preserve_path) {                \
-            state->preserve_path = 0;              \
-            funcname##_preserve(state->cairo_ctx); \
-        } else {                                   \
-            funcname(state->cairo_ctx);            \
-        }                                          \
-    } while(0)
+    // When `preserve` is used, the next call to `clip`, `fill`, or `stroke`
+    // uses the `cairo_..._preserve` function.
+    #define MAY_PRESERVE(funcname) \
+        do {                                           \
+            if (state->preserve_path) {                \
+                state->preserve_path = 0;              \
+                funcname##_preserve(state->cairo_ctx); \
+            } else {                                   \
+                funcname(state->cairo_ctx);            \
+            }                                          \
+        } while(0)
 
     double numerics[MAX_COMMAND_PARAMS];
     double colors[MAX_COMMAND_PARAMS][4];
@@ -1756,6 +1799,7 @@ static int vgs_eval(
         state->vars[VAR_CX] = cx;
         state->vars[VAR_CY] = cy;
 
+        // Compute arguments.
         for (int arg = 0; arg < statement->args_count; arg++) {
             uint8_t color[4];
 
@@ -1812,7 +1856,7 @@ static int vgs_eval(
             }
         }
 
-        // Execute the commands.
+        // Execute the command.
         switch (statement->cmd) {
         case CMD_ARC:
             ASSERT_ARGS(5);
@@ -1881,7 +1925,7 @@ static int vgs_eval(
         case CMD_CURVE_TO:
         case CMD_CURVE_TO_REL:
             ASSERT_ARGS(6);
-            cubic_curve_to(
+            draw_cubic_curve_to(
                 state,
                 statement->cmd == CMD_CURVE_TO_REL,
                 numerics[0],
@@ -1912,7 +1956,7 @@ static int vgs_eval(
                 b = numerics[3];
             }
 
-#define C(v, o) ((uint32_t)(av_clipd(v, 0, 1) * 255) << o)
+            #define C(v, o) ((uint32_t)(av_clipd(v, 0, 1) * 255) << o)
 
             state->vars[user_var] = (double)(
                 C(r, 24)
@@ -1921,7 +1965,7 @@ static int vgs_eval(
                 | C(numerics[4], 0)
             );
 
-#undef C
+            #undef C
 
             break;
         }
@@ -1949,21 +1993,17 @@ static int vgs_eval(
             int user_var;
             char *key, *endp;
 
-            double value;
-
-            AVDictionaryEntry* entry;
+            double value = NAN;
 
             ASSERT_ARGS(2);
 
             user_var = statement->args[0].constant;
             key = statement->args[1].metadata;
 
-            value = NAN;
-
             av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
 
             if (state->metadata != NULL && key != NULL) {
-                entry = av_dict_get(state->metadata, key, NULL, 0);
+                AVDictionaryEntry *entry = av_dict_get(state->metadata, key, NULL, 0);
 
                 if (entry != NULL) {
                     value = av_strtod(entry->value, &endp);
@@ -2141,7 +2181,14 @@ static int vgs_eval(
         case CMD_Q_CURVE_TO_REL:
             ASSERT_ARGS(4);
             relative = statement->cmd == CMD_Q_CURVE_TO_REL;
-            quad_curve_to(state, relative, numerics[0], numerics[1], numerics[2], numerics[3]);
+            draw_quad_curve_to(
+                state,
+                relative,
+                numerics[0],
+                numerics[1],
+                numerics[2],
+                numerics[3]
+            );
             break;
 
         case CMD_RADIAL_GRAD:
@@ -2186,10 +2233,9 @@ static int vgs_eval(
                 break;
 
             for (int i = 0, count = (int)numerics[0]; i < count; i++) {
-                int ret;
-
                 state->vars[VAR_I] = i;
-                ret = vgs_eval(state, statement->args[1].subprogram);
+
+                int ret = vgs_eval(state, statement->args[1].subprogram);
                 if (ret != 0)
                     return ret;
 
@@ -2216,7 +2262,7 @@ static int vgs_eval(
 
         case CMD_ROUNDEDRECT:
             ASSERT_ARGS(5);
-            rounded_rect(
+            draw_rounded_rect(
                 state->cairo_ctx,
                 numerics[0],
                 numerics[1],
@@ -2343,7 +2389,7 @@ static int vgs_eval(
         case CMD_S_CURVE_TO:
         case CMD_S_CURVE_TO_REL:
             ASSERT_ARGS(4);
-            cubic_curve_to(
+            draw_cubic_curve_to(
                 state,
                 statement->cmd == CMD_S_CURVE_TO_REL,
                 NAN,
@@ -2364,7 +2410,7 @@ static int vgs_eval(
         case CMD_T_CURVE_TO_REL:
             ASSERT_ARGS(2);
             relative = statement->cmd == CMD_T_CURVE_TO_REL;
-            quad_curve_to(state, relative, NAN, NAN, numerics[0], numerics[1]);
+            draw_quad_curve_to(state, relative, NAN, NAN, numerics[0], numerics[1]);
             break;
 
         case CMD_HORZ:
@@ -2414,22 +2460,30 @@ static int vgs_eval(
     return 0;
 }
 
-
 /*
  * == AVClass for drawvg ==
  *
- * TODO
+ * Source is parsed on the `init` function.
+ *
+ * Cairo supports a few pixel formats, but only RGB. All compatible formats are
+ * listed in the `drawvg_pix_fmts` array.
  */
 
 typedef struct DrawVGContext {
     const AVClass *class;
 
-    cairo_format_t cairo_format;    ///< equivalent to AVPixelFormat.
+    /// Equivalent to AVPixelFormat.
+    cairo_format_t cairo_format;
 
-    double time_start;              ///< time in seconds of the first frame.
+    /// Time in seconds of the first frame.
+    double time_start;
 
-    uint8_t *script_text;           ///< inline source.
-    uint8_t *script_file;           ///< file with the script.
+    /// Inline source.
+    uint8_t *script_text;
+
+    /// File path to load the source.
+    uint8_t *script_file;
+
     struct VGSProgram program;
 } DrawVGContext;
 
@@ -2471,8 +2525,11 @@ static const enum AVPixelFormat drawvg_pix_fmts[] = {
 };
 
 // Return the cairo equivalent to AVPixelFormat.
-static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixelFormat format) {
-    // This array must have the same order of `pixel_fmts_drawvg`.
+static cairo_format_t cairo_format_from_pix_fmt(
+    DrawVGContext* ctx,
+    enum AVPixelFormat format
+) {
+    // This array must have the same order of `drawvg_pix_fmts`.
     const cairo_format_t format_map[] = {
         CAIRO_FORMAT_ARGB32, // cairo expects pre-multiplied alpha.
         CAIRO_FORMAT_RGB24,
@@ -2481,20 +2538,14 @@ static cairo_format_t cairo_format_from_pix_fmt(DrawVGContext* ctx, enum AVPixel
         CAIRO_FORMAT_INVALID,
     };
 
-    const char* pix_fmt_name = av_get_pix_fmt_name(format);
-
     for (int i = 0; i < FF_ARRAY_ELEMS(drawvg_pix_fmts); i++) {
-        if (drawvg_pix_fmts[i] == format) {
-            cairo_format_t fmt = format_map[i];
-
-            av_log(ctx, AV_LOG_TRACE, "Use cairo_format_t#%d for %s\n",
-                fmt, pix_fmt_name);
-
-            return fmt;
-        }
+        if (drawvg_pix_fmts[i] == format)
+            return format_map[i];
     }
 
-    av_log(ctx, AV_LOG_ERROR, "Invalid pix_fmt: %s\n", pix_fmt_name);
+    const char* name = av_get_pix_fmt_name(format);
+    av_log(ctx, AV_LOG_ERROR, "Invalid pix_fmt: %s\n", name);
+
     return CAIRO_FORMAT_INVALID;
 }
 
@@ -2559,7 +2610,7 @@ static int drawvg_config_props(AVFilterLink *inlink) {
     DrawVGContext *drawvg_ctx = filter_ctx->priv;
 
     // Find the cairo format equivalent to the format of the frame,
-    // so cairo can draw directly on the frame data.
+    // so cairo can draw directly on the memory already allocated.
 
     drawvg_ctx->cairo_format = cairo_format_from_pix_fmt(drawvg_ctx, inlink->format);
     if (drawvg_ctx->cairo_format == CAIRO_FORMAT_INVALID)
