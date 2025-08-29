@@ -108,6 +108,8 @@ jobs:
           WEBSITE_URL: ${{ steps.website-url.outputs.result }}/playground
 
         run: |
+          export VITE_SOURCE_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+
           export FFMPEG_DIR=$(realpath ffmpeg)
           export EXAMPLE_VIDEOS_PATH=$(realpath videos)
 

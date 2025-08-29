@@ -77,10 +77,18 @@ function ThemeSwitcher() {
     );
 }
 
+const SOURCE_URL: string | undefined = import.meta.env.VITE_SOURCE_URL;
+
 export default function Header() {
+    const title = "FFmpeg - drawvg";
+
+    const titleElem = SOURCE_URL
+        ? <a href={SOURCE_URL} target="_blank">{title}</a>
+        : title;
+
     return (
         <header className={styles.header}>
-            <div className={styles.title}>FFmpeg - drawvg</div>
+            <div className={styles.title}>{titleElem}</div>
 
             <div className={styles.actions}>
                 <LayoutSwitcher />
