@@ -8,7 +8,7 @@ setvar SP (S * P)
 
 setvar N (floor(t / tr_full))
 
-proc1 colorize d {
+proc colorize d {
 	sethsla
 		((N + d) * 41)
 		(st(0, 1e6 * (N + d)); random(0) / 2 + 0.3)
@@ -20,17 +20,17 @@ if (gte(P, 1)) {
 	// The transition is done, so we can fill the entire
 	// frame with the final color.
 
-	call1 colorize 1
+	call colorize 1
 	rect 0 0 w h
 	fill
 	break
 }
 
-call1 colorize 0
+call colorize 0
 rect 0 0 w h
 fill
 
-call1 colorize 1
+call colorize 1
 repeat (w / S + 2) {
 	setvar x (i * S - SP / 2)
 	repeat (h / S + 2) {

@@ -20,7 +20,7 @@ scalexy
 	w
 	(h / (LINEAR + SIN + POW075 + POW15 + LOG10 + LOG100))
 
-proc1 draw p {
+proc draw p {
 	rect 0 0 p 1
 	fill
 	translate 0 1
@@ -28,30 +28,30 @@ proc1 draw p {
 
 if LINEAR {
 	setcolor lightgreen
-	call1 draw progress
+	call draw progress
 }
 
 if SIN {
 	setcolor skyblue
-	call1 draw (sin(PI/2 * progress))
+	call draw (sin(PI/2 * progress))
 }
 
 if POW075 {
 	setcolor mediumseagreen
-	call1 draw (pow(progress, 0.75))
+	call draw (pow(progress, 0.75))
 }
 
 if POW15 {
 	setcolor cadetblue
-	call1 draw (pow(progress, 1.5))
+	call draw (pow(progress, 1.5))
 }
 
 if LOG10 {
 	setcolor seagreen
-	call1 draw ((log(1 + progress * 9))/log(10))
+	call draw ((log(1 + progress * 9))/log(10))
 }
 
 if LOG100 {
 	setcolor steelblue
-	call1 draw ((log(1 + progress * 99))/log(100))
+	call draw ((log(1 + progress * 99))/log(100))
 }

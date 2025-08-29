@@ -5,7 +5,7 @@ rect 0 0 w h
 setcolor #001040
 fill
 
-proc1 star size {
+proc star size {
 	setvar s1 (size/8)
 
 	M (-size) 0
@@ -37,7 +37,7 @@ proc rocket {
 		z
 	}
 
-	proc1 draw body {
+	proc draw body {
 		setlinewidth 1
 		setlinejoin miter
 
@@ -68,20 +68,20 @@ proc rocket {
 	save
 	scalexy -1 1
 	call fin
-	call1 draw 0
+	call draw 0
 	restore
 
 	call fin
-	call1 draw 0
+	call draw 0
 
 	call shape
-	call1 draw 1
+	call draw 1
 
 	call shape
 	clip
 	circle 0 -20 12
 	ellipse 0 20 10 2
-	call1 draw 0
+	call draw 0
 	resetclip
 
 	// window
@@ -110,7 +110,7 @@ repeat (sqrt(w * h) / 40) {
 	save
 	translate sx sy
 	rotate (PI*randomg(2))
-	call1 star (8 + 4 * randomg(2))
+	call star (8 + 4 * randomg(2))
 	restore
 }
 
