@@ -189,7 +189,7 @@ function signature(code: string) {
     for (; ;) {
         takeWS();
 
-        const c = scanner.scan(/\w+/);
+        const c = scanner.scan(/\w+\*?/);
         if (!c)
             break;
 

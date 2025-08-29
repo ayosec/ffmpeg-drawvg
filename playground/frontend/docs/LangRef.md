@@ -662,8 +662,8 @@ with a numeric value.
 
 The name must follow these rules:
 
-* It must start with an ASCII letter.
-* It can contain only ASCII letters and digits.
+* It must start with an ASCII letter or an underscore (`_`).
+* It can contain only ASCII letters, underscores, and digits.
 * It must not match the name of a variable provided by the interpreter (like `w` or <code>t</code>).
 
 The same variable can be assigned multiple times.
@@ -684,7 +684,7 @@ fill
 
 :::
 
-Currently, a script can contain only 10 different variable names, but this
+Currently, a script can contain only 20 different variable names, but this
 limit can be modified in the future.
 
 
@@ -1023,48 +1023,41 @@ stroke
 ### <a name="procedures"></a>Procedures
 
 A procedure is a name associated with a block that can be executed multiple
-times.
+times. It can take between 0 and 6 parameters.
 
-It can have zero, one, or two arguments. It is defined with `proc`, `proc1`, or
-`proc2`, depending on how many arguments are required.
+`proc` is used to set the parameter names and the block for a procedure:
 
 ```vgs,ignore
 proc p0 {
     // …
 }
 
-proc1 p1 arg1 {
-    // …
-}
-
-proc1 p1 arg1 arg2 {
+proc p1 param1 param2 {
     // …
 }
 ```
 
-Depending on the number of arguments, they are called with `call`, `call1`, or
-`call2`.
+Inside the block, the arguments can be accessed as regular variables:
+
+```vgs,ignore
+proc square center_x center_y side {
+    rect
+        (center_x - side / 2) (center_y - side / 2)
+        side side
+}
+```
+
+`call` executes the block assigned to the procedure name. It requires the name
+of the procedure, and the value for each parameter defined in the call to
+`proc`.
 
 ```vgs,ignore
 call p0
 
-call1 p1 (value1)
+call p1 1 2
 
-call2 p2 (value1) (value2)
+call square (w / 2) (h / 2) (w / t)
 ```
-
-The arguments (like `arg1` or `arg2` in the previous examples) are accessed as
-regular variables.
-
-When the procedure returns, the value of the variable for each argument is
-restored to the value before calling the procedure. Changes in other variables
-(with `setvar`, `getmetadata`, `defhsla`, and `defrgba`) are preserved.
-
-`break` causes the script to leave the current procedure, if called outside a
-`repeat` loop, similar to the [`return` statement][return-stm] in other
-programming languages.
-
-[return-stm]: https://en.wikipedia.org/wiki/Return_statement
 
 ::: {.example}
 
@@ -1103,7 +1096,7 @@ arguments:
 setvar len (w / 10)
 setlinewidth 5
 
-proc2 zigzag color y {
+proc zigzag color y {
     setcolor color
 
     M 0 y
@@ -1114,12 +1107,51 @@ proc2 zigzag color y {
     stroke
 }
 
-call2 zigzag 0x40C0FFFF 60
-call2 zigzag 0x00AABBFF 120
-call2 zigzag 0x20F0B7FF 180
+call zigzag 0x40C0FFFF 60
+call zigzag 0x00AABBFF 120
+call zigzag 0x20F0B7FF 180
 ```
 
 :::
+
+When the procedure returns, the value of the variable for each argument is
+restored to the value it had before calling the procedure. Changes in other
+variables (with `setvar`, `getmetadata`, `defhsla`, and `defrgba`) are
+preserved.
+
+::: {.example}
+
+In the next example, the variable `A` has the value `0` before calling the
+procedure `P`. During the execution of `P`, `A` is `1`, but after it, `A` is `0`
+again.
+
+```vgs,ignore
+setvar A 0
+
+proc P A {
+    print A
+}
+
+print A
+call P 1
+print A
+```
+
+It writes the following messages:
+
+```console
+[7:7] A = 0.000
+[4:8] A = 1.000
+[9:7] A = 0.000
+```
+
+:::
+
+`break` causes the script to leave the current procedure, similar to the
+[`return` statement][return-stm] in other programming languages, unless it is
+called within a `repeat` loop.
+
+[return-stm]: https://en.wikipedia.org/wiki/Return_statement
 
 The body of the procedure must be defined with `proc` *before* using `call`.
 
@@ -1138,6 +1170,28 @@ proc notyet {
 
 :::
 
+A procedure can be redefined by other calls to `proc` with the same name. In
+such case, `call` invokes the last assigned block.
+
+::: {.example}
+
+In this example, the procedure `example` has two different blocks.
+
+```vgs,ignore
+proc example {
+    // block1
+}
+
+call example    // executes block1
+
+proc example {
+    // block2
+}
+
+call example    // executes block2
+```
+
+:::
 ### Functions in Expressions
 
 There are some functions specific to drawvg available in [!ffmpeg-expr].
@@ -1577,7 +1631,7 @@ for the current frame.
 ### `call`
 
 ```signature
-call name
+call name args*
 ```
 
 Invokes a procedure defined by `proc`.
@@ -1585,27 +1639,6 @@ Invokes a procedure defined by `proc`.
 See the [Procedures] section above for more details.
 
 [Procedures]: #procedures
-
-### `call1`
-
-```signature
-call1 name arg
-```
-
-Invokes a procedure defined by `proc1`, passing `arg` as its argument.
-
-See the [Procedures] section above for more details.
-
-### `call2`
-
-```signature
-call2 name arg1 arg2
-```
-
-Invokes a procedure defined by `proc2`, passing `arg1` and `arg2` as its
-arguments.
-
-See the [Procedures] section above for more details.
 
 ### `circle`
 
@@ -2016,89 +2049,13 @@ See the [Command <code>print</code>](#command-print) section above for more deta
 ### `proc`
 
 ```signature
-proc name { block }
+proc name params* { block }
 ```
 
-Assign a block to the procedure `name`. The procedure can be called multiple
-times with the `call` command.
+Assign the block and the parameters for the procedure `name`. The procedure can
+be called multiple times with the `call` command.
 
-The block for a procedure can be reassigned by other calls to `proc`. In such
-case, `call` invokes the last assigned block.
-
-::: {.example}
-
-In this example, the procedure `example` has two different blocks.
-
-```vgs,ignore
-proc example {
-    // block1
-}
-
-call example    // executes block1
-
-proc example {
-    // block2
-}
-
-call example    // executes block2
-```
-
-:::
-
-The execution returns to the caller when the last command of the block is
-executed, but it can be interrupted early with `break`.
-
-All changes performed in the procedure (setting variables, modifying colors,
-adding segments to the path, etc) are preserved when it terminates.
-
-### `proc1`
-
-```signature
-proc1 name varname { block }
-```
-
-Like `proc`, but the procedure can receive 1 argument. It must be called with
-`call1`.
-
-The argument is stored in the variable `varname`. The variable is updated when
-the procedure is called, and its value is restored when the procedure returns.
-
-::: {.example}
-
-In the next example, the variable `A` has the value `0` before calling the
-procedure `P`. During the execution of `P`, `A` is `1`, but after it, `A` is `0`
-again.
-
-```vgs,ignore
-setvar A 0
-
-proc1 P A {
-    print A
-}
-
-print A
-call1 P 1
-print A
-```
-
-It writes the following messages:
-
-```console
-[7:7] A = 0.000000
-[4:8] A = 1.000000
-[9:7] A = 0.000000
-```
-
-:::
-
-### `proc2`
-
-```signature
-proc2 name varname1 varname2 { block }
-```
-
-Like `proc1`, but the procedure can receive 2 arguments. It must be called with
-`call2`.
+See the [Procedures] section above for more details.
 
 ### `Q`
 

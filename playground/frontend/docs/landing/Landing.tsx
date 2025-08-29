@@ -42,8 +42,6 @@ export default async function Landing(langRefName: string) {
                         <a href={ repoURL }>Source Code</a>
                         <a href={ playgroundURL }>Playground</a>
                         <a href={ docsURL + langRefName }>Language Reference</a>
-                        <a href="#examples">Examples</a>
-                        <a href="#usage">Usage</a>
 
                         <details open data-title="Examples">
                             <summary>Examples</summary>
