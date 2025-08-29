@@ -103,13 +103,13 @@ check_script: vgs_parse = -22
 av_log[16]: Invalid token 'cx' at line 1, column 8: Reserved variable name.
 check_script: vgs_parse = -22
 
---- check_script:  setvar v0 0 setvar v1 1 setvar v2 2 setvar v3 3 setvar v4 4 setvar v5 5 setvar v6 6 setvar v7 7 setvar v8 8 setvar v9 9 M (v0) (v9) 1 (unknown_var)
+--- check_script:  setvar v0 0 setvar v1 1 setvar v2 2 setvar v3 3 setvar v4 4 setvar v5 5 setvar v6 6 setvar v7 7 setvar v8 8 setvar v9 9 setvar v10 10 setvar v11 11 setvar v12 12 setvar v13 13 setvar v14 14 setvar v15 15 setvar v16 16 setvar v17 17 setvar v18 18 setvar v19 19 M (v0) (v19) 1 (unknown_var)
 av_log[16]: Undefined constant or missing '(' in 'unknown_var)'
-av_log[16]: Invalid token '(unknown_var)' at line 1, column 136: Invalid expression.
+av_log[16]: Invalid token '(unknown_var)' at line 1, column 277: Invalid expression.
 check_script: vgs_parse = -22
 
---- check_script:  setvar v1 0 setvar v2 1 setvar v3 2 setvar v4 3 setvar v5 4 setvar v6 5 setvar v7 6 setvar v8 7 setvar v9 8 setvar v10 9 setvar v11 10
-av_log[16]: Invalid token 'v11' at line 1, column 130: Too many user variables. Can define up to 10 variables.
+--- check_script:  setvar v1 0 setvar v2 1 setvar v3 2 setvar v4 3 setvar v5 4 setvar v6 5 setvar v7 6 setvar v8 7 setvar v9 8 setvar v10 9 setvar v11 10 setvar v12 11 setvar v13 12 setvar v14 13 setvar v15 14 setvar v16 15 setvar v17 16 setvar v18 17 setvar v19 18 setvar v20 19 setvar v21 20
+av_log[16]: Invalid token 'v21' at line 1, column 270: Too many user variables. Can define up to 20 variables.
 check_script: vgs_parse = -22
 
 --- check_script: call a
@@ -118,5 +118,13 @@ av_log[16]: Missing body for procedure 'a'
 --- check_script: proc a { call b } call a
 av_log[16]: Missing body for procedure 'b'
 
+--- check_script: proc p0 a1 a2 a3 a4 a5 a6 a7 a8 { break }
+av_log[16]: Invalid token 'a7' at line 1, column 27: Too many parameters. Limit is 6
+check_script: vgs_parse = -22
+
+--- check_script: proc p0 a1 a2 { break } call p0 break
+av_log[16]: Procedure expects 2 arguments, but received 0.
+--- check_script: proc p0 a1 a2 { break } call p0 1 2 3
+av_log[16]: Procedure expects 2 arguments, but received 3.
 --- check_script: M 0 (1 + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n + n)
 cairo_move_to 0.0 101.0

@@ -77,9 +77,9 @@ resetdash
 // Procedures
 setvar a -1
 setvar b -2
-proc2 f2 a b { M a b break call invalid }
-proc1 f1 a { call2 f2 a 2 }
-proc f0 { call1 f1 1 }
+proc f2 a b { M a b break call invalid }
+proc f1 a { call f2 a 2 }
+proc f0 { call f1 1 }
 call f0
 l a b
 

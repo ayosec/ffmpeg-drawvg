@@ -70,9 +70,9 @@ enum {
 /// Number of user variables that can be created with `setvar`.
 ///
 /// It is possible to allow any number of variables, but this
-/// approach simplifies the implementation, and 10 variables
+/// approach simplifies the implementation, and 20 variables
 /// is more than enough for the expected use of this filter.
-#define USER_VAR_COUNT 10
+#define USER_VAR_COUNT 20
 
 /// Total number of variables (default- and user-variables).
 #define VAR_COUNT (VAR_U0 + USER_VAR_COUNT)
@@ -157,13 +157,9 @@ enum VGSCommand {
     CMD_MOVE_TO_REL,            ///<  m, rmoveto (dx dy)
     CMD_NEW_PATH,               ///<  newpath
     CMD_PRESERVE,               ///<  preserve
-    CMD_PRINT,                  ///<  print (expr)
-    CMD_PROC1_ASSIGN,           ///<  proc1 name varname { subprogram }
-    CMD_PROC1_CALL,             ///<  call1 name (arg)
-    CMD_PROC2_ASSIGN,           ///<  proc2 name varname1 varname2 { subprogram }
-    CMD_PROC2_CALL,             ///<  call2 name (arg1 arg2)
-    CMD_PROC_ASSIGN,            ///<  proc name { subprogram }
-    CMD_PROC_CALL,              ///<  call name
+    CMD_PRINT,                  ///<  print (expr)*
+    CMD_PROC_ASSIGN,            ///<  proc name varnames* { subprogram }
+    CMD_PROC_CALL,              ///<  call name (expr)*
     CMD_Q_CURVE_TO,             ///<  Q (x1 y1 x y)
     CMD_Q_CURVE_TO_REL,         ///<  q (dx1 dy1 dx dy)
     CMD_RADIAL_GRAD,            ///<  radialgrad (cx0 cy0 radius0 cx1 cy1 radius1)
@@ -225,7 +221,9 @@ struct VGSParameter {
         PARAM_MAY_REPEAT,
         PARAM_NUMERIC,
         PARAM_NUMERIC_METADATA,
+        PARAM_PROC_ARGS,
         PARAM_PROC_NAME,
+        PARAM_PROC_PARAMS,
         PARAM_RAW_IDENT,
         PARAM_SUBPROGRAM,
         PARAM_VARIADIC,
@@ -235,7 +233,14 @@ struct VGSParameter {
     const struct VGSConstant *constants; ///< Array for PARAM_CONSTANT.
 };
 
+// Max number of parameters for a command.
 #define MAX_COMMAND_PARAMS 8
+
+// Max number of arguments when calling a procedure. Subtract 2 to
+// `MAX_COMMAND_PARAMS` because the call to `proc` needs 2 arguments
+// (the procedure name and its body). The rest can be variable names
+// for the arguments.
+#define MAX_PROC_ARGS (MAX_COMMAND_PARAMS - 2)
 
 // Definition of each command.
 
@@ -274,9 +279,7 @@ static const struct VGSCommandSpec vgs_commands[] = {
     { "arcn",           CMD_ARC_NEG,          R(N, N, N, N, N) },
     { "break",          CMD_BREAK,            NONE },
     { "c",              CMD_CURVE_TO_REL,     R(N, N, N, N, N, N) },
-    { "call",           CMD_PROC_CALL,        L({ PARAM_PROC_NAME }) },
-    { "call1",          CMD_PROC1_CALL,       L({ PARAM_PROC_NAME }, N) },
-    { "call2",          CMD_PROC2_CALL,       L({ PARAM_PROC_NAME }, N, N) },
+    { "call",           CMD_PROC_CALL,        L({ PARAM_PROC_NAME }, { PARAM_PROC_ARGS }) },
     { "circle",         CMD_CIRCLE,           R(N, N, N) },
     { "clip",           CMD_CLIP,             NONE },
     { "closepath",      CMD_CLOSE_PATH,       NONE },
@@ -298,10 +301,8 @@ static const struct VGSCommandSpec vgs_commands[] = {
     { "moveto",         CMD_MOVE_TO,          R(N, N) },
     { "newpath",        CMD_NEW_PATH,         NONE },
     { "preserve",       CMD_PRESERVE,         NONE },
-    { "print",          CMD_PRINT,            PARAMS({ PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC } }),
-    { "proc",           CMD_PROC_ASSIGN,      L({ PARAM_PROC_NAME }, P) },
-    { "proc1",          CMD_PROC1_ASSIGN,     L({ PARAM_PROC_NAME }, V, P) },
-    { "proc2",          CMD_PROC2_ASSIGN,     L({ PARAM_PROC_NAME }, V, V, P) },
+    { "print",          CMD_PRINT,            L({ PARAM_NUMERIC_METADATA }, { PARAM_VARIADIC }) },
+    { "proc",           CMD_PROC_ASSIGN,      L({ PARAM_PROC_NAME }, { PARAM_PROC_PARAMS }, P) },
     { "q",              CMD_Q_CURVE_TO_REL,   R(N, N, N, N) },
     { "radialgrad",     CMD_RADIAL_GRAD,      L(N, N, N, N, N, N) },
     { "rcurveto",       CMD_CURVE_TO_REL,     R(N, N, N, N, N, N) },
@@ -372,25 +373,6 @@ static const struct VGSCommandSpec* vgs_get_command(const char *name, size_t len
     );
 }
 
-static int vgs_proc_num_args(enum VGSCommand cmd) {
-    switch (cmd) {
-    case CMD_PROC_CALL:
-    case CMD_PROC_ASSIGN:
-        return 0;
-
-    case CMD_PROC1_CALL:
-    case CMD_PROC1_ASSIGN:
-        return 1;
-
-    case CMD_PROC2_CALL:
-    case CMD_PROC2_ASSIGN:
-        return 2;
-
-    default:
-        av_assert0(0);
-    }
-}
-
 /// Return `1` if the command changes the current path in the cairo context.
 static int vgs_cmd_change_path(enum VGSCommand cmd) {
     switch (cmd) {
@@ -402,10 +384,6 @@ static int vgs_cmd_change_path(enum VGSCommand cmd) {
     case CMD_IF:
     case CMD_LINEAR_GRAD:
     case CMD_PRINT:
-    case CMD_PROC1_ASSIGN:
-    case CMD_PROC1_CALL:
-    case CMD_PROC2_ASSIGN:
-    case CMD_PROC2_CALL:
     case CMD_PROC_ASSIGN:
     case CMD_PROC_CALL:
     case CMD_RADIAL_GRAD:
@@ -850,7 +828,7 @@ static int vgs_parse_numeric_argument(
 static int vgs_parser_can_repeat_cmd(void *log_ctx, struct VGSParser *parser) {
     struct VGSParserToken token = { 0 };
 
-    int ret = vgs_parser_next_token(log_ctx, parser, &token, 0);
+    const int ret = vgs_parser_next_token(log_ctx, parser, &token, 0);
 
     if (ret != 0)
         return ret;
@@ -930,6 +908,8 @@ static int vgs_parse_statement(
 
     const struct VGSParameter *param = &decl->params[0];
 
+    int proc_args_count = 0;
+
     for (;;) {
         int ret;
         void *r;
@@ -939,16 +919,18 @@ static int vgs_parse_statement(
 
         switch (param->type) {
         case PARAM_VARIADIC:
-            // Try to append the next numeric argument to the current
-            // statement.
+            // If the next token is numeric, repeat the previous parameter
+            // to append it to the current statement.
+
             if (statement.args_count < MAX_COMMAND_PARAMS
                 && vgs_parser_can_repeat_cmd(log_ctx, parser) == 0
             ) {
-                param = &decl->params[0];
-                continue;
+                param--;
+            } else {
+                param++;
             }
 
-            /* fallthrough */
+            continue;
 
         case PARAM_END:
         case PARAM_MAY_REPEAT:
@@ -1038,6 +1020,21 @@ static int vgs_parse_statement(
             break;
         }
 
+        case PARAM_PROC_ARGS:
+            if (vgs_parser_can_repeat_cmd(log_ctx, parser) != 0) {
+                // No more arguments. Jump to next parameter.
+                param++;
+                continue;
+            }
+
+            if (proc_args_count++ >= MAX_PROC_ARGS) {
+                vgs_log_invalid_token(log_ctx, parser, &token,
+                    "Too many arguments. Limit is %d", MAX_PROC_ARGS);
+                FAIL(EINVAL);
+            }
+
+            /* fallthrough */
+
         case PARAM_NUMERIC:
         case PARAM_NUMERIC_METADATA:
             ret = vgs_parse_numeric_argument(
@@ -1093,7 +1090,6 @@ static int vgs_parse_statement(
             break;
         }
 
-
         case PARAM_RAW_IDENT:
             ret = vgs_parser_next_token(log_ctx, parser, &token, 1);
             if (ret != 0)
@@ -1133,6 +1129,25 @@ static int vgs_parse_statement(
             }
 
             break;
+
+        case PARAM_PROC_PARAMS:
+            ret = vgs_parser_next_token(log_ctx, parser, &token, 0);
+            if (ret != 0)
+                FAIL(EINVAL);
+
+            if (token.type == TOKEN_WORD && proc_args_count++ >= MAX_PROC_ARGS) {
+                vgs_log_invalid_token(log_ctx, parser, &token,
+                    "Too many parameters. Limit is %d", MAX_PROC_ARGS);
+                FAIL(EINVAL);
+            }
+
+            if (token.type != TOKEN_WORD) {
+                // No more variables. Jump to next parameter.
+                param++;
+                continue;
+            }
+
+            /* fallthrough */
 
         case PARAM_VAR_NAME: {
             int var_idx = -1;
@@ -1195,7 +1210,15 @@ static int vgs_parse_statement(
         if (r == NULL)
             FAIL(ENOMEM);
 
-        param++;
+        switch (param->type) {
+            case PARAM_PROC_ARGS:
+            case PARAM_PROC_PARAMS:
+                // Don't update params.
+                break;
+
+            default:
+                param++;
+        }
     }
 
     #undef FAIL
@@ -1309,14 +1332,15 @@ fail:
  * `VGSEvalState` tracks the state needed to execute such commands.
  */
 
-#define MAX_PROC_ARGS 2
-
 /// Number of different states for the `randomg` function.
 #define RANDOM_STATES 4
 
-/// Block assigned to a procedure by a call to `proc*` commands.
+/// Block assigned to a procedure by a call to the `proc` command.
 struct VGSProcedure {
     const struct VGSProgram *program;
+
+    /// Number of expected arguments.
+    int proc_args_count;
 
     /// Variable ids where each argument is stored.
     int args[MAX_PROC_ARGS];
@@ -1446,8 +1470,8 @@ static double vgs_fn_randomg(void *data, double arg) {
 
     struct VGSEvalState *state = (struct VGSEvalState *)data;
 
-    uint64_t iarg = (uint64_t)arg;
-    int rng_idx = iarg % FF_ARRAY_ELEMS(state->random_state);
+    const uint64_t iarg = (uint64_t)arg;
+    const int rng_idx = iarg % FF_ARRAY_ELEMS(state->random_state);
 
     FFSFC64 *rng = &state->random_state[rng_idx];
 
@@ -1465,16 +1489,16 @@ static double vgs_fn_randomg(void *data, double arg) {
 ///
 /// If the coordinates are outside the frame, return NAN.
 static double vgs_fn_p(void* data, double x0, double y0) {
-    struct VGSEvalState *state = (struct VGSEvalState *)data;
-    AVFrame *frame = state->frame;
+    const struct VGSEvalState *state = (struct VGSEvalState *)data;
+    const AVFrame *frame = state->frame;
 
     if (frame == NULL || !isfinite(x0) || !isfinite(y0))
         return NAN;
 
     cairo_user_to_device(state->cairo_ctx, &x0, &y0);
 
-    int x = (int)x0;
-    int y = (int)y0;
+    const int x = (int)x0;
+    const int y = (int)y0;
 
     if (x < 0 || y < 0 || x >= frame->width || y >= frame->height)
         return NAN;
@@ -1485,7 +1509,7 @@ static double vgs_fn_p(void* data, double x0, double y0) {
 
     for (int c = 0; c < desc->nb_components; c++) {
         uint32_t pixel;
-        int depth = desc->comp[c].depth;
+        const int depth = desc->comp[c].depth;
 
         av_read_image_line2(
             &pixel,
@@ -1578,7 +1602,7 @@ static void draw_quad_curve_to(
     double x0 = 0, y0 = 0;  // Current point.
     double xa, ya, xb, yb;  // Control points for the cubic curve.
 
-    int use_reflected = isnan(x1);
+    const int use_reflected = isnan(x1);
 
     cairo_get_current_point(state->cairo_ctx, &x0, &y0);
 
@@ -1628,7 +1652,7 @@ static void draw_cubic_curve_to(
 ) {
     double x0 = 0, y0 = 0; // Current point.
 
-    int use_reflected = isnan(x1);
+    const int use_reflected = isnan(x1);
 
     cairo_get_current_point(state->cairo_ctx, &x0, &y0);
 
@@ -1939,13 +1963,11 @@ static int vgs_eval(
 
         case CMD_DEF_HSLA:
         case CMD_DEF_RGBA: {
-            int user_var;
             double r, g, b;
 
             ASSERT_ARGS(5);
 
-            user_var = statement->args[0].variable;
-
+            const int user_var = statement->args[0].variable;
             av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
 
             if (statement->cmd == CMD_DEF_HSLA) {
@@ -1990,19 +2012,17 @@ static int vgs_eval(
             break;
 
         case CMD_GET_METADATA: {
-            int user_var;
-            char *key, *endp;
+            ASSERT_ARGS(2);
 
             double value = NAN;
 
-            ASSERT_ARGS(2);
-
-            user_var = statement->args[0].constant;
-            key = statement->args[1].metadata;
+            const int user_var = statement->args[0].constant;
+            const char *key = statement->args[1].metadata;
 
             av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
 
             if (state->metadata != NULL && key != NULL) {
+                char *endp;
                 AVDictionaryEntry *entry = av_dict_get(state->metadata, key, NULL, 0);
 
                 if (entry != NULL) {
@@ -2104,19 +2124,15 @@ static int vgs_eval(
             break;
         }
 
-        case CMD_PROC_ASSIGN:
-        case CMD_PROC1_ASSIGN:
-        case CMD_PROC2_ASSIGN: {
-            int proc_args;
+        case CMD_PROC_ASSIGN: {
             struct VGSProcedure *proc;
 
-            proc_args = vgs_proc_num_args(statement->cmd);
-
-            ASSERT_ARGS(2 + proc_args);
+            const int proc_args = statement->args_count - 2;
+            av_assert0(proc_args >= 0 && proc_args <= MAX_PROC_ARGS);
 
             proc = &state->procedures[statement->args[0].proc_id];
-
             proc->program = statement->args[proc_args + 1].subprogram;
+            proc->proc_args_count = proc_args;
 
             for (int i = 0; i < MAX_PROC_ARGS; i++)
                 proc->args[i] = i < proc_args ? statement->args[i + 1].constant : -1;
@@ -2124,30 +2140,37 @@ static int vgs_eval(
             break;
         }
 
-        case CMD_PROC_CALL:
-        case CMD_PROC1_CALL:
-        case CMD_PROC2_CALL: {
-            int proc_args;
-            int proc_id;
+        case CMD_PROC_CALL: {
+            const int proc_args = statement->args_count - 1;
+            av_assert0(proc_args >= 0 && proc_args <= MAX_PROC_ARGS);
 
-            const struct VGSProcedure *proc;
+            const int proc_id = statement->args[0].proc_id;
 
-            proc_args = vgs_proc_num_args(statement->cmd);
+            const struct VGSProcedure *proc = &state->procedures[proc_id];
 
-            ASSERT_ARGS(1 + proc_args);
-            proc_id = statement->args[0].proc_id;
+            if (proc->proc_args_count != proc_args) {
+                av_log(
+                    state->log_ctx,
+                    AV_LOG_ERROR,
+                    "Procedure expects %d arguments, but received %d.",
+                    proc->proc_args_count,
+                    proc_args
+                );
 
-            proc = &state->procedures[proc_id];
+                break;
+            }
+
             if (proc->program == NULL) {
                 const char *proc_name = state->proc_names[proc_id];
-                av_log(state->log_ctx, AV_LOG_ERROR, "Missing body for procedure '%s'\n", proc_name);
+                av_log(state->log_ctx, AV_LOG_ERROR,
+                    "Missing body for procedure '%s'\n", proc_name);
             } else {
                 int ret;
                 double current_vars[MAX_PROC_ARGS] = { 0 };
 
                 // Set variables for the procedure arguments
                 for (int i = 0; i < proc_args; i++) {
-                    int var = proc->args[i];
+                    const int var = proc->args[i];
                     if (var != -1) {
                         current_vars[i] = state->vars[var];
                         state->vars[var] = numerics[i + 1];
@@ -2158,7 +2181,7 @@ static int vgs_eval(
 
                 // Restore variable values.
                 for (int i = 0; i < proc_args; i++) {
-                    int var = proc->args[i];
+                    const int var = proc->args[i];
                     if (var != -1) {
                         state->vars[var] = current_vars[i];
                     }
@@ -2235,7 +2258,7 @@ static int vgs_eval(
             for (int i = 0, count = (int)numerics[0]; i < count; i++) {
                 state->vars[VAR_I] = i;
 
-                int ret = vgs_eval(state, statement->args[1].subprogram);
+                const int ret = vgs_eval(state, statement->args[1].subprogram);
                 if (ret != 0)
                     return ret;
 
@@ -2370,11 +2393,9 @@ static int vgs_eval(
         }
 
         case CMD_SET_VAR: {
-            int user_var;
-
             ASSERT_ARGS(2);
 
-            user_var = statement->args[0].constant;
+            const int user_var = statement->args[0].constant;
 
             av_assert0(user_var >= VAR_U0 && user_var < (VAR_U0 + USER_VAR_COUNT));
             state->vars[user_var] = numerics[1];

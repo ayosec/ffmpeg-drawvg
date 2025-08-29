@@ -329,6 +329,11 @@ int main(int argc, const char **argv)
     check_script(0, "call a");
     check_script(0, "proc a { call b } call a");
 
+    // Invalid arguments list.
+    check_script(0, "proc p0 a1 a2 a3 a4 a5 a6 a7 a8 { break }");
+    check_script(0, "proc p0 a1 a2 { break } call p0 break");
+    check_script(0, "proc p0 a1 a2 { break } call p0 1 2 3");
+
     // Long expressions.
     memset(buf, 0, sizeof(buf));
     strncat(buf, "M 0 (1", sizeof(buf) - 1);
