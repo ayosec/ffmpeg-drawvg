@@ -13030,13 +13030,15 @@ For more information about libharfbuzz, check:
 @anchor{drawvg}
 @section drawvg
 
-Draw vector graphics on top of video frames, using the libcairo library.
+Draw vector graphics on top of video frames, by executing a script written in
+a custom language called VGS (@emph{Vector Graphics Script}).
 
-The filter requires a script to describe the graphics to draw. The script
-is written in a language specific for this filter, named VGS (@emph{Vector
-Graphics Script}).
+The documentation for the language can be found in
+@ref{,,drawvg - Language Reference,drawvg-reference}.
 
-The language is documented in @ref{,,drawvg - Language Reference,drawvg-reference}.
+Graphics are rendered using the @uref{https://cairographics.org/,cario 2D
+graphics library}. The filter is enabled only if libcairo is detected when
+FFmpeg is built.
 
 @subsection Parameters
 
@@ -13052,15 +13054,24 @@ Path of the file to load the script source.
 
 @end table
 
+@subsection Pixel Formats
+
+Since Cairo only supports RGB images, if the input video is something else (like
+YUV 4:2:0), before executing the script the video is converted to a format
+compatible with Cairo. Then, you have to use use either the @ref{format} filter,
+or the @code{-pix_fmt} option, to convert it to the expected format in the
+output.
+
 @subsection Examples
 
 @itemize
 @item
-Draw the outline of an ellipse that covers the frame.
+Draw the outline of an ellipse.
 
 @example
 ffmpeg -i input.webm \
-    -vf 'drawvg=ellipse (w/2) (h/2) (w/2) (h/2) stroke' \
+    -vf 'drawvg=ellipse (w/2) (h/2) (w/3) (h/3) stroke' \
+    -pix_fmt yuv420p \
     output.webm
 @end example
 
@@ -13074,13 +13085,14 @@ The script for drawvg is in a file @code{draw.vgs}:
 translate (w/2) (h/2)
 rotate t
 rect -100 -100 200 200
+setcolor red@@0.5
 fill
 @end example
 
 Then:
 
 @example
-ffmpeg -i input.webm -vf 'drawvg=file=draw.vgs' output.webm
+ffmpeg -i input.webm -vf 'drawvg=file=draw.vgs,format=yuv420p' output.webm
 @end example
 
 @end itemize
