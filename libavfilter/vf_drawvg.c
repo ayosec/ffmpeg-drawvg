@@ -2647,6 +2647,13 @@ static av_cold int drawvg_init(AVFilterContext *ctx) {
 
     drawvg->time_start = NAN;
 
+    if ((drawvg->script_text == NULL) == (drawvg->script_file == NULL)) {
+        av_log(ctx, AV_LOG_ERROR,
+            "Either 'source' or 'file' must be provided\n");
+
+        return AVERROR(EINVAL);
+    }
+
     if (drawvg->script_file != NULL) {
         ret = ff_load_textfile(
             ctx,
