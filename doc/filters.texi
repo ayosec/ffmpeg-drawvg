@@ -13027,6 +13027,64 @@ For more information about libfribidi, check:
 For more information about libharfbuzz, check:
 @url{https://github.com/harfbuzz/harfbuzz}.
 
+@anchor{drawvg}
+@section drawvg
+
+Draw vector graphics on top of video frames, using the libcairo library.
+
+The filter requires a script to describe the graphics to draw. The script
+is written in a language specific for this filter, named VGS (@emph{Vector
+Graphics Script}).
+
+The language is documented in @ref{,,drawvg - Language Reference,drawvg-reference}.
+
+@subsection Parameters
+
+Either @code{script} or @code{file} must be set.
+
+@table @option
+
+@item s, script
+Script source to draw the graphics.
+
+@item file
+Path of the file to load the script source.
+
+@end table
+
+@subsection Examples
+
+@itemize
+@item
+Draw the outline of an ellipse that covers the frame.
+
+@example
+ffmpeg -i input.webm \
+    -vf 'drawvg=ellipse (w/2) (h/2) (w/2) (h/2) stroke' \
+    output.webm
+@end example
+
+@item
+
+Draw a square rotating in the middle of the frame.
+
+The script for drawvg is in a file @code{draw.vgs}:
+
+@example
+translate (w/2) (h/2)
+rotate t
+rect -100 -100 200 200
+fill
+@end example
+
+Then:
+
+@example
+ffmpeg -i input.webm -vf 'drawvg=file=draw.vgs' output.webm
+@end example
+
+@end itemize
+
 @section edgedetect
 
 Detect and draw edges. The filter uses the Canny Edge Detection algorithm.
