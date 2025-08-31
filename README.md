@@ -103,3 +103,25 @@ repository:
 ```console
 $ podman pull ghcr.io/ayosec/ffmpeg-drawvg:latest ...
 ```
+
+For example, to create a video (in the file `output.mp4`) with a rotating
+square in the center:
+
+```bash
+podman run --rm --volume "$PWD:/mnt" \
+    ghcr.io/ayosec/ffmpeg-drawvg \
+    ffmpeg \
+        -y -f lavfi -i '
+            color=teal:qhd:60:5,
+
+            drawvg=
+                translate (w/2) (h/2)
+                rotate t
+                rect -100 -100 200 200
+                fill,
+
+            format=yuv420p
+        ' \
+        -c:v libx265 -crf 18 \
+        /mnt/output.mp4
+        ```
