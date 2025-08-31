@@ -11,11 +11,13 @@
 
 @macro codeexample {block}
 @cartouche Example
-
 \block\
 @end cartouche
 @end macro
 
+@macro vgscmd {name}
+@ref{cmd_\name\,,@code{\name\}}
+@end macro
 
 @chapter Introduction
 
@@ -49,8 +51,8 @@ closepath
 stroke
 @end example
 
-It can be shortened using the aliases for @code{moveto}, @code{lineto},
-and @code{closepath}:
+It can be shortened using the aliases for @vgscmd{moveto}, @vgscmd{lineto},
+and @vgscmd{closepath}:
 
 @example
 M 125 50
@@ -73,7 +75,7 @@ stroke
 @end macro
 
 Finally, drawvg can use @ffexprs{} and frame metadata in command arguments. In
-this example, we are using the variables @code{w} (frame width) and @code{h}
+this example, we are using the variables @var{w} (frame width) and @var{h}
 (frame height) to create a circle in the middle of the frame.
 
 @example
@@ -102,7 +104,7 @@ Vector Graphics}, or @svgpathlink{}. Many command names are taken from
 A drawvg script consists of a series of commands to describe 2D
 graphics.
 
-A command is an identifier (like @code{setcolor} or @code{lineto})
+A command is an identifier (like @vgscmd{setcolor} or @vgscmd{lineto})
 followed by its arguments. Each item in the code (command name,
 arguments, etc.) is separated by any of the following characters:
 
@@ -180,8 +182,8 @@ moveto 10 10 lineto 20 30
 @end example
 
 @item
-If the command has no arguments (like @code{closepath} or
-@code{stroke}), the next command starts at the next item.
+If the command has no arguments (like @vgscmd{closepath} or
+@vgscmd{stroke}), the next command starts at the next item.
 
 @end itemize
 
@@ -194,16 +196,16 @@ newpath rect 10 20 30 40 setcolor teal fill
 
 @enumerate
 @item
-@code{newpath} requires no arguments.
+@vgscmd{newpath} requires no arguments.
 
 @item
-@code{rect} requires 4 arguments, so it takes the next 4 numbers.
+@vgscmd{rect} requires 4 arguments, so it takes the next 4 numbers.
 
 @item
-@code{setcolor} requires 1 argument, so it takes the word @code{teal}.
+@vgscmd{setcolor} requires 1 argument, so it takes the word @code{teal}.
 
 @item
-@code{fill} requires no arguments.
+@vgscmd{fill} requires no arguments.
 @end enumerate
 }
 
@@ -213,35 +215,23 @@ Most commands in @svgpathlink{} are also present in drawvg. For some of them,
 there is an alias to a longer name:
 
 @itemize
-@item
-@code{curveto} for @code{C}.
-@item
-@code{rcurveto} for @code{c}.
-@item
-@code{lineto} for @code{L}.
-@item
-@code{rlineto} for @code{l}.
-@item
-@code{moveto} for @code{M}.
-@item
-@code{rmoveto} for @code{m}.
-@item
-@code{closepath} for @code{Z}, @code{z}.
+@item @vgscmd{curveto} for @vgscmd{C}.
+@item @vgscmd{rcurveto} for @vgscmd{c}.
+@item @vgscmd{lineto} for @vgscmd{L}.
+@item @vgscmd{rlineto} for @vgscmd{l}.
+@item @vgscmd{moveto} for @vgscmd{M}.
+@item @vgscmd{rmoveto} for @vgscmd{m}.
+@item @vgscmd{closepath} for @vgscmd{Z}, @vgscmd{z}.
 @end itemize
 
 Other commands only exist in a single-letter form:
 
 @itemize
-@item
-@code{H}, @code{h}
-@item
-@code{Q}, @code{q}
-@item
-@code{S}, @code{s}
-@item
-@code{V}, @code{v}
-@item
-@code{T}, @code{t}
+@item @vgscmd{H}, @vgscmd{h}
+@item @vgscmd{Q}, @vgscmd{q}
+@item @vgscmd{S}, @vgscmd{s}
+@item @vgscmd{V}, @vgscmd{v}
+@item @vgscmd{T}, @vgscmd{t}
 @end itemize
 
 This makes it possible to use a path in SVG to create the same shape in
@@ -269,7 +259,7 @@ l 10 10
 stroke
 @end example
 
-After the first call to @code{l} (alias to @code{rlineto}), the command
+After the first call to @vgscmd{l} (alias to @vgscmd{rlineto}), the command
 can be executed without the name, so it can be written as:
 
 @example
@@ -279,7 +269,7 @@ stroke
 @end example
 }
 
-To reuse the same command (@code{l}, in the previous example), the
+To reuse the same command (@vgscmd{l}, in the previous example), the
 parser checks if the item after the last argument is a numeric value,
 like a number literal or a FFmpeg expression.
 
@@ -290,7 +280,7 @@ In this example:
 l 10 20 30 40 stroke
 @end example
 
-@code{l} requires 2 arguments, and can be implicit, so the parser
+@vgscmd{l} requires 2 arguments, and can be implicit, so the parser
 performs this operation:
 
 @enumerate
@@ -306,7 +296,7 @@ instruction (@code{l 30 40}).
 
 @item
 Checks if the next item after @code{40} is a numeric value, but it is a
-command (@code{stroke}), so it stops reusing @code{l}.
+command (@vgscmd{stroke}), so it stops reusing @vgscmd{l}.
 
 @end enumerate
 }
@@ -321,9 +311,9 @@ omitted in some cases. For example, the expression @code{m1-2} is equivalent to
 Most commands expect numeric arguments, like number literals, variable
 names, or expressions.
 
-@code{setcolor} and @code{colorstop} expect a color.
+@vgscmd{setcolor} and @vgscmd{colorstop} expect a color.
 
-@code{setlinecap} and @code{setlinejoin} expect a constant value.
+@vgscmd{setlinecap} and @vgscmd{setlinejoin} expect a constant value.
 
 @subsection Number Literals
 
@@ -353,7 +343,7 @@ In the next example, all literals represent the same value:
 argument. The expression must be enclosed in parenthesis.
 
 @codeexample {
-The variables @code{w} and @code{h} represent the width and height of the
+The variables @var{w} and @var{h} represent the width and height of the
 frame. We can compute the center of the frame by dividing them by @code{2}:
 
 @example
@@ -370,7 +360,7 @@ moveto
 @end example
 }
 
-The variables @code{n} and @code{t} can be used to compute a value that changes
+The variables @var{n} and @var{t} can be used to compute a value that changes
 over time.
 
 @codeexample {
@@ -417,7 +407,7 @@ rect (0) 0 (w) h
 It is possible to create a variable with the same name of a command, and
 then use it as an argument. In the previous example, the item @var{h} is a
 reference to a variable (frame height), but in other contexts it may be
-a command (@code{h}).
+a command (@vgscmd{h}).
 
 For @ref{implicit commands}, the parser prioritizes
 commands over variable names when it has to determine if the command is
@@ -425,8 +415,8 @@ reused.
 
 @codeexample {
 In this example, the variable @var{c} is used as the first argument in two
-calls to @code{l}. However, only the first one is valid, because in the
-second call the parser recognizes @code{c} as a command.
+calls to @vgscmd{l}. However, only the first one is valid, because in the
+second call the parser recognizes @vgscmd{c} as a command.
 
 @example
 setvar c 5
@@ -445,13 +435,12 @@ l c 10 (c) 15
 @anchor{Colors}
 @subsection Colors
 
-The color to stroke and to fill paths can be set with @code{setcolor}.
+The color to stroke and to fill paths can be set with @vgscmd{setcolor}.
 Its argument has the same syntax for colors in FFmpeg:
 
 @itemize
 @item
-A @uref{https://ffmpeg.org/ffmpeg-utils.html#Color,predefined color
-name}.
+A @ref{Color,,predefined color name,ffmpeg-utils}.
 
 @item
 In @code{#RRGGBB} format.
@@ -479,15 +468,15 @@ setcolor blue@@0.5
 fill
 @end example
 
-The commands @code{setrgba} and @code{sethsla} allow setting colors
+The commands @vgscmd{setrgba} and @vgscmd{sethsla} allow setting colors
 using expressions.
 
-@code{defrgba} and @code{defhsla} compute the color and store it in a
+@vgscmd{defrgba} and @vgscmd{defhsla} compute the color and store it in a
 variable.
 
 @subsection Constants
 
-The argument for @code{setlinecap} and @code{setlinejoin} is an
+The argument for @vgscmd{setlinecap} and @vgscmd{setlinejoin} is an
 identifier referring to a constant value.
 
 @example
@@ -503,7 +492,7 @@ used to fill a region, to stroke an outline, or to establish a clip
 region.
 
 In order to draw anything on top of a video frame, first we have to
-define a path, and then use @code{stroke} or @code{fill}.
+define a path, and then use @vgscmd{stroke} or @vgscmd{fill}.
 
 The
 @uref{https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch/Paths,tutorial
@@ -516,16 +505,16 @@ on paths in MDN} is a good introduction to the topic. It is focused on
 Some commands require a @emph{current point}. Initially, the
 @emph{current point} is set to
 @uref{https://en.wikipedia.org/wiki/NaN,@code{NaN}}. It is initialized
-with @code{M} or @code{moveto}. Other commands, like @code{lineto} or
-@code{curveto}, updates the @emph{current point} to the new end of the
+with @vgscmd{M} or @vgscmd{moveto}. Other commands, like @vgscmd{lineto} or
+@vgscmd{curveto}, updates the @emph{current point} to the new end of the
 shape.
 
-The @emph{current point} can be cleared with @code{newpath}. Commands
-that clear the path, like @code{stroke} or @code{fill}, also clear the
+The @emph{current point} can be cleared with @vgscmd{newpath}. Commands
+that clear the path, like @vgscmd{stroke} or @vgscmd{fill}, also clear the
 @emph{current point}.
 
 @codeexample {
-@code{rlineto} uses coordinates relative to the @emph{current point}.
+@vgscmd{rlineto} uses coordinates relative to the @emph{current point}.
 
 Given this script:
 
@@ -563,33 +552,33 @@ A path is defined by adding lines, curves, or basic shapes.
 @item Basic shapes
 
 @itemize
-@item @code{circle}
-@item @code{ellipse}
-@item @code{rect}
-@item @code{roundedrect}
+@item @vgscmd{circle}
+@item @vgscmd{ellipse}
+@item @vgscmd{rect}
+@item @vgscmd{roundedrect}
 @end itemize
 
 @item
 Lines
 @itemize
-@item @code{M}, @code{moveto}
-@item @code{m}, @code{rmoveto}
-@item @code{H}, @code{h}
-@item @code{V}, @code{v}
-@item @code{L}, @code{lineto}
-@item @code{l}, @code{rlineto}
-@item @code{Z}, @code{z}, @code{closepath}
+@item @vgscmd{M}, @vgscmd{moveto}
+@item @vgscmd{m}, @vgscmd{rmoveto}
+@item @vgscmd{H}, @vgscmd{h}
+@item @vgscmd{V}, @vgscmd{v}
+@item @vgscmd{L}, @vgscmd{lineto}
+@item @vgscmd{l}, @vgscmd{rlineto}
+@item @vgscmd{Z}, @vgscmd{z}, @vgscmd{closepath}
 @end itemize
 
 @item
 Curves
 @itemize
-@item @code{arc}, @code{arcn}
-@item @code{C}, @code{curveto},
-@item @code{c}, @code{rcurveto}
-@item @code{Q}, @code{q}
-@item @code{S}, @code{s}
-@item @code{T}, @code{t}
+@item @vgscmd{arc}, @vgscmd{arcn}
+@item @vgscmd{C}, @vgscmd{curveto},
+@item @vgscmd{c}, @vgscmd{rcurveto}
+@item @vgscmd{Q}, @vgscmd{q}
+@item @vgscmd{S}, @vgscmd{s}
+@item @vgscmd{T}, @vgscmd{t}
 @end itemize
 
 @end itemize
@@ -600,18 +589,18 @@ Single-letter commands are taken from @svgpathlink{}.
 @subsection Fill
 
 The region within the shape defined by a path can be filled with
-@code{fill} or @code{eofill}. Each command uses a different
+@vgscmd{fill} or @vgscmd{eofill}. Each command uses a different
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-fill-rule-t,fill
 rule}:
 
 @itemize
 @item
-@code{fill} uses the
+@vgscmd{fill} uses the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#CAIRO-FILL-RULE-WINDING:CAPS,winding
 rule}, also known as
 @uref{https://en.wikipedia.org/wiki/Nonzero-rule,nonzero rule}.
 @item
-@code{eofill} uses the
+@vgscmd{eofill} uses the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#CAIRO-FILL-RULE-EVEN-ODD:CAPS,even--odd
 rule}.
 @end itemize
@@ -638,20 +627,20 @@ eofill
 
 @subsection Stroke
 
-@code{stroke} draws a line around the shape defined by the path. The
+@vgscmd{stroke} draws a line around the shape defined by the path. The
 stroke can be configured with different commands:
 
 @itemize
-@item @code{setdash}
-@item @code{setdashoffset}
-@item @code{setlinecap}
-@item @code{setlinejoin}
-@item @code{setlinewidth}
-@item @code{resetdash}
+@item @vgscmd{setdash}
+@item @vgscmd{setdashoffset}
+@item @vgscmd{setlinecap}
+@item @vgscmd{setlinejoin}
+@item @vgscmd{setlinewidth}
+@item @vgscmd{resetdash}
 @end itemize
 
 @codeexample{
-This example use @code{setdashoffset} to animate the stroke:
+This example use @vgscmd{setdashoffset} to animate the stroke:
 
 @example
 moveto 0 0
@@ -670,13 +659,13 @@ stroke
 @subsection Clip
 
 A @uref{https://en.wikipedia.org/wiki/Clipping_(computer_graphics),clip
-region} can be established with @code{clip} and @code{eoclip}.
+region} can be established with @vgscmd{clip} and @vgscmd{eoclip}.
 
 If there is an active clip region, the new clip region will be the
-intersection between the existing one and the path. @code{resetclip}
+intersection between the existing one and the path. @vgscmd{resetclip}
 reset the clip region to the whole frame.
 
-@code{eoclip} uses the
+@vgscmd{eoclip} uses the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#CAIRO-FILL-RULE-EVEN-ODD:CAPS,even--odd
 rule} to compute the clip region.
 
@@ -700,9 +689,9 @@ stroke
 
 @subsection Preserving Paths
 
-The path is cleared after any operation on it, like @code{fill} or
-@code{stroke}. To reuse the same path in multiple operations,
-@code{preserve} must be called before them.
+The path is cleared after any operation on it, like @vgscmd{fill} or
+@vgscmd{stroke}. To reuse the same path in multiple operations,
+@vgscmd{preserve} must be called before them.
 
 @codeexample{
 In this example, each path is used twice.
@@ -758,7 +747,7 @@ Duration, in seconds, of the frame.
 @anchor{User Variables}
 @subsection User Variables
 
-New variables can be created with the @code{setvar} command. It
+New variables can be created with the @vgscmd{setvar} command. It
 associates a name with a numeric value.
 
 The name must follow these rules:
@@ -780,7 +769,7 @@ The same variable can be assigned multiple times.
 @codeexample{
 In this example, the result of an expression is stored in a variable
 with the name @var{progress}. Then, it is used for the @var{x} and
-@var{width} arguments of @code{rect}.
+@var{width} arguments of @vgscmd{rect}.
 
 @example
 setvar progress (w * (pow(mod(t / 2 + 0.5, 1), 2.5)))
@@ -802,24 +791,19 @@ The pattern for fill and stroke operations can be either a solid color,
 or a gradient.
 
 @itemize
-@item
-Solid colors.
+@item Solid colors.
+
 @itemize
-@item
-@code{setcolor}
-@item
-@code{sethsla}
-@item
-@code{setrgba}
+@item @vgscmd{setcolor}
+@item @vgscmd{sethsla}
+@item @vgscmd{setrgba}
 @end itemize
 
-@item
-Gradients.
+@item Gradients.
+
 @itemize
-@item
-@code{lineargrad}
-@item
-@code{radialgrad}
+@item @vgscmd{lineargrad}
+@item @vgscmd{radialgrad}
 @end itemize
 
 @end itemize
@@ -829,8 +813,8 @@ operation, but it is replaced by any command that sets a new pattern.
 
 @subsection Gradients
 
-To configure a gradient, first call to @code{lineargrad} or
-@code{radialgrad}, and then add color stops by calling @code{colorstop}
+To configure a gradient, first call to @vgscmd{lineargrad} or
+@vgscmd{radialgrad}, and then add color stops by calling @vgscmd{colorstop}
 for each stop.
 
 @codeexample{
@@ -860,7 +844,7 @@ fill
 
 @subsection Variables
 
-@code{setcolor} and @code{colorstop} accept a variable name as the
+@vgscmd{setcolor} and @vgscmd{colorstop} accept a variable name as the
 argument. When a variable is used, its value is interpreted as a
 @code{0xRRGGBBAA} code.
 
@@ -879,10 +863,8 @@ fill
 @end example
 }
 
-If a variable has the same name of a
-@uref{https://ffmpeg.org/ffmpeg-utils.html#Color,FFmpeg color}, the
-variable has preference, and will be used instead of the predefined
-color.
+If a variable has the same name of a @ref{Color,,known color,ffmpeg-utils}, the
+variable has preference, and will be used instead of the predefined color.
 
 @codeexample{
 @example
@@ -897,16 +879,16 @@ fill
 @end example
 }
 
-@code{defrgba} and @code{defhsla} compute the @code{0xRRGGBBAA} value
+@vgscmd{defrgba} and @vgscmd{defhsla} compute the @code{0xRRGGBBAA} value
 for a color given its color components:
 
 @itemize
 @item
-For @code{defrgba}: @emph{red}, @emph{green}, @emph{blue}, and
+For @vgscmd{defrgba}: @emph{red}, @emph{green}, @emph{blue}, and
 @emph{alpha}.
 
 @item
-For @code{defhsla}: @emph{hue}, @emph{saturation}, @emph{lightness}, and
+For @vgscmd{defhsla}: @emph{hue}, @emph{saturation}, @emph{lightness}, and
 @emph{alpha}.
 @end itemize
 
@@ -935,14 +917,10 @@ The coordinates for each command can be scaled, rotated, and translated,
 by using the following commands:
 
 @itemize
-@item
-@code{rotate}
-@item
-@code{scale}
-@item
-@code{scalexy}
-@item
-@code{translate}
+@item @vgscmd{rotate}
+@item @vgscmd{scale}
+@item @vgscmd{scalexy}
+@item @vgscmd{translate}
 @end itemize
 
 The transformations are applied when the command is executed. They have
@@ -951,10 +929,10 @@ no effect on the existing path, only on the new segments added to it.
 They are done by updating the
 @uref{https://www.cairographics.org/manual/cairo-Transformations.html,current
 transformation matrix} in the Cairo context. To reset the matrix to its
-original state, before any transformation, use @code{resetmatrix}.
+original state, before any transformation, use @vgscmd{resetmatrix}.
 
 The transform origin for scale and rotation is initially at @code{0, 0},
-but it can be adjusted with @code{translate}.
+but it can be adjusted with @vgscmd{translate}.
 
 @codeexample{
 @example
@@ -987,8 +965,8 @@ The state of a drawvg script contains all parameters used for drawing
 operations, like the current color, the transformation matrix, the
 stroke configuration, etc.
 
-The @code{save} command pushes a snapshot of the state to an internal
-stack. Later, @code{restore} pops the latest snapshot from the stack,
+The @vgscmd{save} command pushes a snapshot of the state to an internal
+stack. Later, @vgscmd{restore} pops the latest snapshot from the stack,
 and uses it as the new state.
 
 The parameters that can be saved and restored are:
@@ -996,56 +974,41 @@ The parameters that can be saved and restored are:
 @itemize
 @item
 Pattern for stroke and fill operations.
+
 @itemize
-@item
-@code{lineargrad}
-@item
-@code{radialgrad}
-@item
-@code{setrgba}
-@item
-@code{setcolor}
-@item
-@code{sethsla}
+@item @vgscmd{lineargrad}
+@item @vgscmd{radialgrad}
+@item @vgscmd{setrgba}
+@item @vgscmd{setcolor}
+@item @vgscmd{sethsla}
 @end itemize
 
-@item
-Transformation matrix.
+@item Transformation matrix.
+
 @itemize
-@item
-@code{resetmatrix}
-@item
-@code{rotate}
-@item
-@code{scale}
-@item
-@code{scalexy}
-@item
-@code{translate}
+@item @vgscmd{resetmatrix}
+@item @vgscmd{rotate}
+@item @vgscmd{scale}
+@item @vgscmd{scalexy}
+@item @vgscmd{translate}
 @end itemize
 
-@item
-Stroke configuration.
+@item Stroke configuration.
+
 @itemize
-@item
-@code{setdash}
-@item
-@code{setdashoffset}
-@item
-@code{setlinecap}
-@item
-@code{setlinejoin}
-@item
-@code{setlinewidth}
+@item @vgscmd{setdash}
+@item @vgscmd{setdashoffset}
+@item @vgscmd{setlinecap}
+@item @vgscmd{setlinejoin}
+@item @vgscmd{setlinewidth}
 @end itemize
 
 @item
 Clip region
+
 @itemize
-@item
-@code{clip}
-@item
-@code{resetclip}
+@item @vgscmd{clip}
+@item @vgscmd{resetclip}
 @end itemize
 
 @end itemize
@@ -1054,7 +1017,7 @@ Clip region
 @section Frame Metadata
 
 Some FFmpeg filters add metadata to frames. The command
-@code{getmetadata} can read metadata items containing a numeric value,
+@vgscmd{getmetadata} can read metadata items containing a numeric value,
 and store it in a variable that can be used for command arguments.
 
 @codeexample{
@@ -1086,8 +1049,8 @@ ffplay -i example-video.webm -vf 'cropdetect, drawvg=file=drawcropdetect.vgs'
 
 @section @code{if} / @code{repeat} Statements
 
-There is limited support for control flow statements: only @code{if} and
-@code{repeat}.
+There is limited support for control flow statements: only @vgscmd{if} and
+@vgscmd{repeat}.
 
 Both commands receive two arguments: an expression and a block.
 
@@ -1101,11 +1064,11 @@ repeat (count) @{
 @}
 @end example
 
-@code{if} executes its block if the result of @code{(condition)} is not
+@vgscmd{if} executes its block if the result of @code{(condition)} is not
 zero.
 
-@code{repeat} executes its block the number of times specified by
-@code{(count)}. In each iteration, the variable @code{i} is used as a
+@vgscmd{repeat} executes its block the number of times specified by
+@code{(count)}. In each iteration, the variable @var{i} is used as a
 @uref{https://en.wikipedia.org/wiki/For_loop#Loop_counters,loop
 counter}.
 
@@ -1159,9 +1122,9 @@ if (gt(x, y) * not(eq(z, 1))) @{
 }
 
 @subsection Early Exit
-@code{break} causes a @code{repeat} loop to be terminated immediately.
+@vgscmd{break} causes a @vgscmd{repeat} loop to be terminated immediately.
 
-If it is executed outside a @code{repeat} block, it terminates the whole
+If it is executed outside a @vgscmd{repeat} block, it terminates the whole
 script, or the current procedure.
 
 @codeexample{
@@ -1169,9 +1132,9 @@ In this example, we are using the @ref{func-randomg,@code{randomg}} function
 to draw a line with random segments.
 
 The loop can be executed @code{500} times, but it is interrupted if the X
-coordinate of the @ref{current point} (@code{cx}) exceeds the frame width
-(@code{w}). The @ref{current point} is updated after each call to
-@code{rlineto}.
+coordinate of the @ref{current point} (@var{cx}) exceeds the frame width
+(@var{w}). The @ref{current point} is updated after each call to
+@vgscmd{rlineto}.
 
 @example
 moveto 0 0
@@ -1196,7 +1159,7 @@ stroke
 A procedure is a name associated with a block that can be executed
 multiple times. It can take between 0 and 6 parameters.
 
-@code{proc} is used to set the parameter names and the block for a
+@vgscmd{proc} is used to set the parameter names and the block for a
 procedure:
 
 @example
@@ -1219,9 +1182,9 @@ proc square center_x center_y side @{
 @}
 @end example
 
-@code{call} executes the block assigned to the procedure name. It
+@vgscmd{call} executes the block assigned to the procedure name. It
 requires the name of the procedure, and the value for each parameter
-defined in the call to @code{proc}.
+defined in the call to @vgscmd{proc}.
 
 @example
 call p0
@@ -1286,13 +1249,13 @@ call zigzag 0x20F0B7FF 180
 
 When the procedure returns, the value of the variable for each argument
 is restored to the value it had before calling the procedure. Changes in
-other variables (with @code{setvar}, @code{getmetadata}, @code{defhsla},
-and @code{defrgba}) are preserved.
+other variables (with @vgscmd{setvar}, @vgscmd{getmetadata}, @vgscmd{defhsla},
+and @vgscmd{defrgba}) are preserved.
 
 @codeexample{
-In the next example, the variable @code{A} has the value @code{0} before
-calling the procedure @code{P}. During the execution of @code{P},
-@code{A} is @code{1}, but after it, @code{A} is @code{0} again.
+In the next example, the variable @var{A} has the value @code{0} before
+calling the procedure @var{P}. During the execution of @var{P},
+@code{A} is @code{1}, but after it, @var{A} is @code{0} again.
 
 @example
 setvar A 0
@@ -1315,14 +1278,14 @@ It writes the following messages:
 @end verbatim
 }
 
-@code{break} causes the script to leave the current procedure, similar
+@vgscmd{break} causes the script to leave the current procedure, similar
 to the
 @uref{https://en.wikipedia.org/wiki/Return_statement,@code{return}
 statement} in other programming languages, unless it is called within a
-@code{repeat} loop.
+@vgscmd{repeat} loop.
 
-The body of the procedure must be defined with @code{proc} @emph{before}
-using @code{call}.
+The body of the procedure must be defined with @vgscmd{proc} @emph{before}
+using @vgscmd{call}.
 
 @codeexample{
 In this example, when the procedure @code{notyet} is called, its body
@@ -1338,8 +1301,8 @@ proc notyet @{
 @end example
 }
 
-A procedure can be redefined by other calls to @code{proc} with the same
-name. In such case, @code{call} invokes the last assigned block.
+A procedure can be redefined by other calls to @vgscmd{proc} with the same
+name. In such case, @vgscmd{call} invokes the last assigned block.
 
 @codeexample{
 In this example, the procedure @code{example} has two different blocks.
@@ -1367,7 +1330,7 @@ There are some functions specific to drawvg available in @ffexprs{}.
 
 @code{p(x, y)} returns the color of the pixel at coordinates
 @code{x, y}, as a @code{0xRRGGBBAA} value. This value can be assigned to
-a variable, which can be used later as the argument for @code{setcolor}.
+a variable, which can be used later as the argument for @vgscmd{setcolor}.
 
 If the coordinates are outside the frame, or any of the arguments is not
 a finite number (like
@@ -1376,7 +1339,7 @@ returns @code{NaN}.
 
 The @ref{transformation matrix} is applied to the
 arguments. To use the original frame coordinates, call
-@code{resetmatrix} between @code{save} and @code{restore}:
+@vgscmd{resetmatrix} between @vgscmd{save} and @vgscmd{restore}:
 
 @example
 save
@@ -1406,7 +1369,7 @@ if (not(isnan(pixel))) @{
 length of each line segment returned by
 @uref{https://www.cairographics.org/manual/cairo-Paths.html#cairo-copy-path-flat,@code{cairo_copy_path_flat}}.
 
-The function expects an argument @code{n}, as the maximum number of line
+The function expects an argument @var{n}, as the maximum number of line
 segments to add to the length, or @code{0} to add all segments.
 
 @codeexample{
@@ -1448,7 +1411,7 @@ To understand the difference, we need to dive into how
 
 First, each expression in FFmpeg has a set of 10 internal variables,
 which can be written with @code{st(idx, value)}, and can be read with
-@code{ld(idx)}. @code{idx} is a value between @code{0} and @code{9}.
+@code{ld(idx)}. @var{idx} is a value between @code{0} and @code{9}.
 These variables are initialized to @code{0}.
 
 When a drawvg script is parsed, each expression is compiled with
@@ -1489,7 +1452,7 @@ fill
 
 The function @code{random(idx)} returns a
 @uref{https://en.wikipedia.org/wiki/Pseudorandom_number_generator,pseudorandom}
-value between @code{0} and @code{1}. @code{idx} is the internal variable
+value between @code{0} and @code{1}. @var{idx} is the internal variable
 that is used both as the seed and to keep the state of the number
 generator.
 
@@ -1546,9 +1509,9 @@ setlinewidth 1
 stroke
 @end example
 
-This is achieved by using a precomputed state before calling
-@code{random(0)}. The variable i, updated by @code{repeat}, is needed to
-compute different states in each iteration.
+This is achieved by using a precomputed state before calling @code{random(0)}.
+The variable @var{i}, updated by @vgscmd{repeat}, is needed to compute
+different states in each iteration.
 }
 
 The @code{randomg(idx)} function, which is specific to drawvg scripts,
@@ -1560,7 +1523,7 @@ problems:
 @item The state is shared between expressions.
 @end itemize
 
-The parameter @code{idx} has two uses:
+The parameter @var{idx} has two uses:
 
 @itemize
 @item
@@ -1633,7 +1596,7 @@ repeat 50 @{
 @section Tracing with @code{print}
 
 It is possible to trace the execution of a drawvg script by printing the
-value of an expression, either with the @code{print} command, or with
+value of an expression, either with the @vgscmd{print} command, or with
 the print function.
 
 In both cases, the values are written to the FFmpeg log.
@@ -1684,7 +1647,7 @@ $ ffmpeg \
 @anchor{Command print}
 @subsection Command @code{print}
 
-The command @code{print} accepts an arbitrary number of arguments, and
+The command @vgscmd{print} accepts an arbitrary number of arguments, and
 for each one it writes:
 
 @itemize
@@ -1701,7 +1664,7 @@ character.
 
 @codeexample{
 The next script prints the position of the @ref{current point} after the
-@code{l} command:
+@vgscmd{l} command:
 
 @example
 M 10 20
@@ -1746,16 +1709,17 @@ $ ffmpeg \
 @signature{\sig\} @ @ @ --- @ref{implicit commands,@i{Can be implicit}}
 @end macro
 
+@anchor{cmd_arc}
 @section @code{arc}
 
 @signatureimpl{arc @var{xc} @var{yc} @var{radius} @var{angle1} @var{angle2}}
 
-Adds a circular arc of the given @code{radius} to the current path. The
-arc is centered at @code{xc, yc}, begins at @code{angle1} and proceeds
-in the direction of increasing angles to end at @code{angle2}.
+Adds a circular arc of the given @var{radius} to the current path. The
+arc is centered at @var{xc, yc}, begins at @var{angle1} and proceeds
+in the direction of increasing angles to end at @var{angle2}.
 
 If there is a @ref{current point}, a line is added from it to the beginning of
-the arc. If this is not desired, use @code{newpath} before @code{arc} to clear
+the arc. If this is not desired, use @vgscmd{newpath} before @vgscmd{arc} to clear
 the @ref{current point}.
 
 See the documentation of the
@@ -1769,11 +1733,12 @@ stroke
 @end example
 }
 
+@anchor{cmd_arcn}
 @section @code{arcn}
 
 @signatureimpl{arcn @var{xc} @var{yc} @var{radius} @var{angle1} @var{angle2}}
 
-Similar to @code{arc}, but it differs in the direction of the arc
+Similar to @vgscmd{arc}, but it differs in the direction of the arc
 between the two angles.
 
 See the documentation of the
@@ -1781,7 +1746,7 @@ See the documentation of the
 function for more details.
 
 @codeexample{
-In this example, both @code{arc} and @code{arcn} have the same angles,
+In this example, both @vgscmd{arc} and @vgscmd{arcn} have the same angles,
 but they render different arcs:
 
 @example
@@ -1794,35 +1759,38 @@ stroke
 @end example
 }
 
-@code{newpath} is needed to prevent a line between the two arcs.
+@vgscmd{newpath} is needed to prevent a line between the two arcs.
 
+@anchor{cmd_break}
 @section @code{break}
 
 @signature{break}
 
-@code{break} terminates the execution of the innermost block, either a
-@code{repeat} loop or a procedure.
+@vgscmd{break} terminates the execution of the innermost block, either a
+@vgscmd{repeat} loop or a procedure.
 
-If it is used outside of a @code{repeat} / @code{proc} block, it
+If it is used outside of a @vgscmd{repeat} / @vgscmd{proc} block, it
 terminates the script for the current frame.
 
+@anchor{cmd_call}
 @section @code{call}
 
 @signature{call @var{name} @var{args}*}
 
-Invokes a procedure defined by @code{proc}.
+Invokes a procedure defined by @vgscmd{proc}.
 
 See the @ref{Procedures} section above for more details.
 
+@anchor{cmd_circle}
 @section @code{circle}
 
 @signatureimpl{circle @var{xc} @var{yc} @var{radius}}
 
-Adds a circle of the given @code{radius} to the current path. The circle
-is centered at @code{xc, yc}. The @ref{current point} is cleared before and
+Adds a circle of the given @var{radius} to the current path. The circle
+is centered at @var{xc, yc}. The @ref{current point} is cleared before and
 after adding the circle.
 
-This is a convenience wrapper for @code{arc}. A call to @code{circle} is
+This is a convenience wrapper for @vgscmd{arc}. A call to @vgscmd{circle} is
 equivalent to:
 
 @example
@@ -1831,51 +1799,57 @@ arc xc yc radius (0) (2 * PI)
 newpath
 @end example
 
+@anchor{cmd_clip}
+@anchor{cmd_eoclip}
 @section @code{clip}, @code{eoclip}
 
 @signature{clip, eoclip}
 
 Establishes a new clip region by intersecting the current clip region
-with the current path as it would be filled by @code{fill} or
-@code{eofill}.
+with the current path as it would be filled by @vgscmd{fill} or
+@vgscmd{eofill}.
 
-@code{eoclip} uses the
+@vgscmd{eoclip} uses the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#CAIRO-FILL-RULE-EVEN-ODD:CAPS,even--odd
 rule}. See @ref{fill rules} for more details.
 
 The path is cleared after updating the clip region, unless the
-@code{preserve} command is used before @code{clip} or @code{eoclip}.
+@vgscmd{preserve} command is used before @vgscmd{clip} or @vgscmd{eoclip}.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-clip,@code{cairo_clip}}
 function for more details.
 
+@anchor{cmd_Z}
+@anchor{cmd_z}
+@anchor{cmd_closepath}
 @section @code{Z}, @code{z}, @code{closepath}
 
 @signature{Z, z, closepath}
 
 Adds a line segment to the path from the @ref{current point} to the beginning
 of the current sub-path, and closes this sub-path. The beginning is set by any
-of the @emph{move} commands (@code{M}, @code{m}, @code{moveto},
-@code{rmoveto}).
+of the @emph{move} commands (@vgscmd{M}, @vgscmd{m}, @vgscmd{moveto},
+@vgscmd{rmoveto}).
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-Paths.html#cairo-close-path,@code{cairo_close_path}}
 function for more details.
 
+@anchor{cmd_colorstop}
 @section @code{colorstop}
 
 @signatureimpl{colorstop @var{offset} @var{color}}
 
 Adds a color stop to a gradient pattern.
 
-@code{offset} is a value between @code{0} and @code{1}, and it specifies
+@var{offset} is a value between @code{0} and @code{1}, and it specifies
 the location along the gradient's control vector.
 
-This command must be executed after @code{lineargrad} or
-@code{radialgrad}.
+This command must be executed after @vgscmd{lineargrad} or
+@vgscmd{radialgrad}.
 
-Color stops can be added in any number of calls to @code{colorstop}. In
+Color stops can be added in any number of calls to @vgscmd{colorstop}. In
 the next example, the 3 blocks define the same gradient:
 
 @example
@@ -1897,7 +1871,7 @@ See the documentation of the
 function for more details.
 
 @codeexample{
-In this example, color stops are added in a @code{repeat} loop.
+In this example, color stops are added in a @vgscmd{repeat} loop.
 
 @example
 lineargrad 0 0 w h
@@ -1928,13 +1902,15 @@ fill
 @end example
 }
 
+@anchor{cmd_C}
+@anchor{cmd_curveto}
 @section @code{C}, @code{curveto}
 
 @signatureimpl{C, curveto @var{x1} @var{y1} @var{x2} @var{y2} @var{x} @var{y}}
 
 Draw a cubic Bézier curve from the @ref{current point} to the @emph{end point}
-specified by @code{x, y}. The @emph{start control point} is specified by
-@code{x1, y1} and the @emph{end control point} is specified by @code{x2, y2}.
+specified by @var{x, y}. The @emph{start control point} is specified by
+@var{x1, y1} and the @emph{end control point} is specified by @var{x2, y2}.
 
 @macro mdncubicbeziercurve
 @uref{https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d#cubic_b%C3%A9zier_curve,Cubic Bézier Curve on MDN}
@@ -1944,7 +1920,7 @@ specified by @code{x, y}. The @emph{start control point} is specified by
 @uref{https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch/Paths#curve_commands,Curve Commands section of the Paths tutorial on MDN}
 @end macro
 
-The behaviour is identical to the @code{C} command in @svgpathlink{}. For more
+The behaviour is identical to the @vgscmd{C} command in @svgpathlink{}. For more
 details, see @mdncubicbeziercurve{}, and the @mdntutorialcurve{}.
 
 @codeexample{
@@ -1960,42 +1936,47 @@ stroke
 @end example
 }
 
+@anchor{cmd_c}
+@anchor{cmd_rcurveto}
 @section @code{c}, @code{rcurveto}
 
 @signatureimpl{c, rcurveto @var{dx1} @var{dy1} @var{dx2} @var{dy2} @var{dx} @var{dy}}
 
-Like @code{curveto}, but the coordinates are relative to the @ref{current
+Like @vgscmd{curveto}, but the coordinates are relative to the @ref{current
 point}.
 
+@anchor{cmd_defhsla}
 @section @code{defhsla}
 
 @signature{defhsla varname @var{h} @var{s} @var{l} @var{a}}
 
-Similar to @code{sethsla}, but instead of establishing the color for
+Similar to @vgscmd{sethsla}, but instead of establishing the color for
 stroke and fill operations, the computed color is stored as a
-@code{0xRRGGBBAA} value in the variable @code{varname}.
+@code{0xRRGGBBAA} value in the variable @var{varname}.
 
-@code{varname} can then be used as a color for @code{setcolor} and
-@code{colorstop}.
+@var{varname} can then be used as a color for @vgscmd{setcolor} and
+@vgscmd{colorstop}.
 
-See @code{sethsla} for more details on how the color is computed.
+See @vgscmd{sethsla} for more details on how the color is computed.
 
+@anchor{cmd_defrgba}
 @section @code{defrgba}
 
 @signature{defrgba varname @var{r} @var{g} @var{b} @var{a}}
 
 Computes a color from the @emph{red}, @emph{green}, @emph{blue}, and
-@emph{alpha} components, and assigns it to the variable @code{varname}
+@emph{alpha} components, and assigns it to the variable @var{varname}
 as a @code{0xRRGGBBAA} value.
 
 All components are values between @code{0} and @code{1}. Values outside
 that range are clamped to it.
 
+@anchor{cmd_ellipse}
 @section @code{ellipse}
 
 @signatureimpl{ellipse @var{cx} @var{cy} @var{rx} @var{ry}}
 
-Adds an ellipse to the current path. Similar to @code{circle}, but it is
+Adds an ellipse to the current path. Similar to @vgscmd{circle}, but it is
 possible to use different radius for both axes.
 
 @codeexample{
@@ -2005,6 +1986,8 @@ stroke
 @end verbatim
 }
 
+@anchor{cmd_fill}
+@anchor{cmd_eofill}
 @section @code{fill}, @code{eofill}
 
 @signature{fill, eofill}
@@ -2012,101 +1995,115 @@ stroke
 Fill the current path, using the @ref{current pattern} (either
 a solid color or a gradient).
 
-@code{eofill} uses the
+@vgscmd{eofill} uses the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#CAIRO-FILL-RULE-EVEN-ODD:CAPS,even--odd
 rule}. See @ref{fill rules} for more details.
 
-The path is cleared after the operation, unless the @code{preserve}
-command is used before @code{fill} or @code{eofill}.
+The path is cleared after the operation, unless the @vgscmd{preserve}
+command is used before @vgscmd{fill} or @vgscmd{eofill}.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-fill,@code{cairo_fill}}
 function for more details.
 
+@anchor{cmd_getmetadata}
 @section @code{getmetadata}
 
 @signature{getmetadata @var{varname} @var{key}}
 
 Get the value of a metadata entry created by another filter, and assign
-it to the variable @code{varname}.
+it to the variable @var{varname}.
 
-If there is no metadata entry for @code{key}, or its value is not a
-number, @code{varname} is set to
+If there is no metadata entry for @var{key}, or its value is not a
+number, @var{varname} is set to
 @uref{https://en.wikipedia.org/wiki/NaN,@code{NaN}}.
 
 See the @ref{Frame Metadata} section above for an
 example.
 
+@anchor{cmd_H}
+@anchor{cmd_h}
 @section @code{H}, @code{h}
 
 @signatureimpl{H, h @var{x}}
 
 Draw a horizontal line from the @ref{current point} to x.
 
-The coordinate for @code{H} is absolute, and for @code{h} it is relative
+The coordinate for @vgscmd{H} is absolute, and for @vgscmd{h} it is relative
 to the @ref{current point}.
 
+@anchor{cmd_if}
 @section @code{if}
 
 @signature{if @var{condition} @{ @var{block} @}}
 
-Executes a block if the value of @code{condition} is not zero, and a
+Executes a block if the value of @var{condition} is not zero, and a
 finite number (unlike
 @uref{https://en.wikipedia.org/wiki/NaN,@code{NaN}}).
 
 See the @ref{comp-operators,Comparison and Logical Operators} section
 above for more details on how to write conditional expressions.
 
+@anchor{cmd_lineargrad}
 @section @code{lineargrad}
 
 @signature{lineargrad @var{x0} @var{y0} @var{x1} @var{y1}}
 
 Set the @ref{current pattern} to a new linear gradient, along
-the line from the coordinates @code{x0, y0} to @code{x1, y1}.
+the line from the coordinates @var{x0, y0} to @var{x1, y1}.
 
 This gradient can be used for stroke and fill operations.
 
-Use @code{colorstop} to set the color for each position in the gradient.
+Use @vgscmd{colorstop} to set the color for each position in the gradient.
 
+@anchor{cmd_L}
+@anchor{cmd_lineto}
 @section @code{L}, @code{lineto}
 
 @signatureimpl{L, lineto @var{x} @var{y}}
 
-Draw a line from the @ref{current point} to the coordinates at @code{x, y}.
+Draw a line from the @ref{current point} to the coordinates at @var{x, y}.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-Paths.html#cairo-line-to,@code{cairo_line_to}}
 function for more details.
 
+@anchor{cmd_l}
+@anchor{cmd_rlineto}
 @section @code{l}, @code{rlineto}
 
 @signatureimpl{l, rlineto @var{dx} @var{dy}}
 
-Like @code{lineto}, but the coordinates are relative to the @ref{current
+Like @vgscmd{lineto}, but the coordinates are relative to the @ref{current
 point}.
 
+@anchor{cmd_M}
+@anchor{cmd_moveto}
 @section @code{M}, @code{moveto}
 
 @signatureimpl{M, moveto @var{x} @var{y}}
 
-Begin a new sub-path, and set the @ref{current point} to @code{x, y}.
+Begin a new sub-path, and set the @ref{current point} to @var{x, y}.
 
+@anchor{cmd_m}
+@anchor{cmd_rmoveto}
 @section @code{m}, @code{rmoveto}
 
 @signatureimpl{m, rmoveto @var{dx} @var{dy}}
 
-Like @code{moveto}, but the coordinates are relative to the @ref{current
+Like @vgscmd{moveto}, but the coordinates are relative to the @ref{current
 point}.
 
+@anchor{cmd_newpath}
 @section @code{newpath}
 
 @signature{newpath}
 
-Begin a new sub-path. Like @code{moveto}, but there is no
+Begin a new sub-path. Like @vgscmd{moveto}, but there is no
 @ref{current point} after it.
 
 @codeexample{
-In the next example, @code{newpath} is used in the path on the right to
+In the next example, @vgscmd{newpath} is used in the path on the right to
 prevent the line connecting both arcs.
 
 @verbatim
@@ -2125,6 +2122,7 @@ stroke
 @end verbatim
 }
 
+@anchor{cmd_preserve}
 @section @code{preserve}
 
 @signature{preserve}
@@ -2135,25 +2133,20 @@ preserve the path, so the same path can be used in multiple operations.
 It has effect on these commands:
 
 @itemize
-@item
-@code{clip}
-@item
-@code{eoclip}
-@item
-@code{eofill}
-@item
-@code{fill}
-@item
-@code{stroke}
+@item @vgscmd{clip}
+@item @vgscmd{eoclip}
+@item @vgscmd{eofill}
+@item @vgscmd{fill}
+@item @vgscmd{stroke}
 @end itemize
 
-The script can contain any command between @code{preserve} and the
+The script can contain any command between @vgscmd{preserve} and the
 associated operation. This allows modifying other properties, like the
 current color.
 
 @codeexample{
-In this example, the same path is used for both @code{fill} and
-@code{stroke}, but with different colors.
+In this example, the same path is used for both @vgscmd{fill} and
+@vgscmd{stroke}, but with different colors.
 
 @verbatim
 circle (w / 2) (h / 2) (w / 3)
@@ -2167,13 +2160,13 @@ stroke
 @end verbatim
 }
 
-@code{preserve} can be called multiple times, if the same path has to be
+@vgscmd{preserve} can be called multiple times, if the same path has to be
 used in 3 or more operations.
 
 @codeexample{
-In this example, the path created by @code{circle} is used by
-@code{fill}, @code{stroke}, and @code{clip}. After @code{clip}, the path
-is cleared.
+In this example, the path created by @vgscmd{circle} is used by
+@vgscmd{fill}, @vgscmd{stroke}, and @vgscmd{clip}. After @vgscmd{clip}, the
+path is cleared.
 
 @verbatim
 circle 100 100 50
@@ -2184,31 +2177,33 @@ clip
 @end verbatim
 }
 
+@anchor{cmd_print}
 @section @code{print}
 
 @signatureimpl{print @var{expr}}
 
 Print its arguments to the FFmpeg log.
 
-See the @ref{Command print} section above for more
-details.
+See the @ref{Command print} section above for more details.
 
+@anchor{cmd_proc}
 @section @code{proc}
 
 @signature{proc @var{name} @var{params}* @{ @var{block} @}}
 
-Assign the block and the parameters for the procedure @code{name}. The
-procedure can be called multiple times with the @code{call} command.
+Assign the block and the parameters for the procedure @var{name}. The
+procedure can be called multiple times with the @vgscmd{call} command.
 
 See the @ref{Procedures} section above for more details.
 
+@anchor{cmd_Q}
 @section @code{Q}
 
 @signature{Q x1 y1 @var{x} @var{y}}
 
 Draw a quadratic Bézier curve from the @ref{current point} to the @emph{end
-point} specified by @code{x, y}. The @emph{control point} is specified by
-@code{x1, y1}.
+point} specified by @var{x, y}. The @emph{control point} is specified by
+@var{x1, y1}.
 
 @macro mdnquadbeziercurve
 @uref{https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d#quadratic_b%C3%A9zier_curve,Quadratic Bézier curve on MDN}
@@ -2229,31 +2224,33 @@ stroke
 @end verbatim
 }
 
+@anchor{cmd_q}
 @section @code{q}
 
 @signature{q @var{dx1} @var{dy1} @var{dx} @var{dy}}
 
-Like @code{Q}, but the coordinates are relative to the @ref{current point}.
+Like @vgscmd{Q}, but the coordinates are relative to the @ref{current point}.
 
+@anchor{cmd_radialgrad}
 @section @code{radialgrad}
 
 @signature{radialgrad @var{cx0} @var{cy0} @var{radius0} @var{cx1} @var{cy1} @var{radius1}}
 
 Creates a new radial gradient between the two circles defined by
-@code{cx0 cy0 radius0} and @code{cx1 cy1 radius1}. Each set of arguments
+@var{cx0 cy0 radius0} and @var{cx1 cy1 radius1}. Each set of arguments
 is the coordinates of the center and the radius.
 
 This gradient can be used for stroke and fill operations.
 
-Use @code{colorstop} to set the color for each position in the gradient.
+Use @vgscmd{colorstop} to set the color for each position in the gradient.
 
 @codeexample{
 The animation in the next example shows how the two circles defined in
-the @code{radialgrad} arguments interact with each other.
+the @vgscmd{radialgrad} arguments interact with each other.
 
-The red circle represent the circle for the @code{cx0 cy0 radius0}
+The red circle represent the circle for the @var{cx0 cy0 radius0}
 arguments, and the yellow circle is the one for the
-@code{cx1 cy1 radius1} arguments.
+@var{cx1 cy1 radius1} arguments.
 
 @verbatim
 setvar cx0 (mod(t * 30, w))
@@ -2288,34 +2285,37 @@ stroke
 @end verbatim
 }
 
+@anchor{cmd_rect}
 @section @code{rect}
 
 @signature{rect @var{x} @var{y} @var{width} @var{height}}
 
-Adds a rectangle of the given size (@code{width} × @code{height}), at position
-@code{x, y}, to the current path. The @ref{current point} is cleared before and
+Adds a rectangle of the given size (@var{width} × @var{height}), at position
+@var{x, y}, to the current path. The @ref{current point} is cleared before and
 after adding the rectangle.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-Paths.html#cairo-rectangle,@code{cairo_rectangle}}
 function for more details.
 
+@anchor{cmd_repeat}
 @section @code{repeat}
 
 @signature{repeat @var{count} @{ @var{block} @}}
 
-Executes a block the number of times indicated by @code{count}.
+Executes a block the number of times indicated by @var{count}.
 
-In each iteration, the variable @code{i} is used as a
+In each iteration, the variable @var{i} is used as a
 @uref{https://en.wikipedia.org/wiki/For_loop#Loop_counters,loop
 counter}. It takes the values from @code{0} to @code{count - 1}. When
 the loop is terminated, the variable is restored to the value before
 starting the loop.
 
-If @code{count} is less than @code{1}, or it is not a finite number
+If @var{count} is less than @code{1}, or it is not a finite number
 (like @uref{https://en.wikipedia.org/wiki/NaN,@code{NaN}}), the block is
 not executed.
 
+@anchor{cmd_resetclip}
 @section @code{resetclip}
 
 @signature{resetclip}
@@ -2327,39 +2327,43 @@ See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-reset-clip,@code{cairo_reset_clip}}
 function for more details.
 
+@anchor{cmd_resetdash}
 @section @code{resetdash}
 
 @signature{resetdash}
 
-Disable the dash pattern to be used by @code{stroke}. This reverts any
-change made by @code{setdash} and @code{setdashoffset}.
+Disable the dash pattern to be used by @vgscmd{stroke}. This reverts any
+change made by @vgscmd{setdash} and @vgscmd{setdashoffset}.
 
 It calls
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-dash,@code{cairo_set_dash}}
 with @code{num_dashes} set to @code{0}.
 
+@anchor{cmd_resetmatrix}
 @section @code{resetmatrix}
 
 @signature{resetmatrix}
 
 Resets the current @ref{transformation matrix}.
 
+@anchor{cmd_restore}
 @section @code{restore}
 
 @signature{restore}
 
-Restores the state saved by a preceding call to @code{save}.
+Restores the state saved by a preceding call to @vgscmd{save}.
 
 For more details, see the @ref{State Stack} section above, and the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-restore,@code{cairo_restore}}
 function.
 
+@anchor{cmd_rotate}
 @section @code{rotate}
 
 @signature{rotate @var{angle}}
 
 Modifies the current @ref{transformation matrix} by rotating the user-space
-axes by @code{angle} radians.
+axes by @var{angle} radians.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-Transformations.html#cairo-rotate,@code{cairo_rotate}}
@@ -2369,15 +2373,12 @@ function for more details.
 In this example:
 
 @itemize
+@item @vgscmd{scalexy} maps the coordinates to a 1x1 frame.
+@item @vgscmd{translate} put @code{0, 0} at the center of the frame.
+@item @vgscmd{rotate} rotates 45°.
 @item
-@code{scalexy} maps the coordinates to a 1x1 frame.
-@item
-@code{translate} put @code{0, 0} at the center of the frame.
-@item
-@code{rotate} rotates 45°.
-@item
-@code{resetmatrix} reverts the transformations before @code{stroke}, so
-the line width is not affected by the scale.
+@vgscmd{resetmatrix} reverts the transformations before @vgscmd{stroke}, so the
+line width is not affected by the scale.
 @end itemize
 
 @verbatim
@@ -2390,20 +2391,20 @@ stroke
 @end verbatim
 }
 
+@anchor{cmd_roundedrect}
 @section @code{roundedrect}
 
 @signatureimpl{roundedrect @var{x} @var{y} @var{width} @var{height} @var{radius}}
 
-Like @code{rect}, but a circular arc is used for the corners.
+Like @vgscmd{rect}, but a circular arc is used for the corners.
 
 @codeexample{
 The next example shows the same rectangle, with different values for the
 corner radius.
 
-The radius is computed by multiplying @code{i} (the
-@uref{https://en.wikipedia.org/wiki/For_loop#Loop_counters,loop
-counter}) by @code{4.5}. This number is chosen to make the last shape a
-perfect circle.
+The radius is computed by multiplying @var{i} (the
+@uref{https://en.wikipedia.org/wiki/For_loop#Loop_counters,loop counter}) by
+@code{4.5}. This number is chosen to make the last shape a perfect circle.
 
 @example
 repeat 9 @{
@@ -2418,39 +2419,43 @@ stroke
 @end example
 }
 
+@anchor{cmd_save}
 @section @code{save}
 
 @signature{save}
 
 Saves a copy of the current state on an internal stack. This copy can be
-restored later with @code{restore}.
+restored later with @vgscmd{restore}.
 
 For more details, see the @ref{State Stack} section above, and the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-save,@code{cairo_save}}
 function.
 
+@anchor{cmd_scale}
 @section @code{scale}
 
 @signature{scale @var{sxy}}
 
-Similar to @code{scalexy}, but the same value is used for both axes. It
+Similar to @vgscmd{scalexy}, but the same value is used for both axes. It
 is equivalent to:
 
 @signature{scalexy @var{sxy} @var{sxy}}
 
+@anchor{cmd_scalexy}
 @section @code{scalexy}
 
 @signature{scalexy @var{sx} @var{sy}}
 
 Modifies the current @ref{transformation matrix} by scaling the X and Y
-user-space axes by @code{sx} and @code{sy} respectively.
+user-space axes by @var{sx} and @var{sy} respectively.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-Transformations.html#cairo-scale,@code{cairo_scale}}
 function for more details.
 
-See @code{rotate} for an example on combining multiple transformations.
+See @vgscmd{rotate} for an example on combining multiple transformations.
 
+@anchor{cmd_setcolor}
 @section @code{setcolor}
 
 @signature{setcolor @var{color}}
@@ -2459,36 +2464,38 @@ Set a solid color as the @ref{current pattern} for stroke and fill operations
 
 See the @ref{Colors} section above for more details.
 
+@anchor{cmd_setdash}
 @section @code{setdash}
 
 @signatureimpl{setdash @var{length}}
 
-Sets the dash pattern to be used by @code{stroke}.
+Sets the dash pattern to be used by @vgscmd{stroke}.
 
-Each call to @code{setdash} adds a length to the pattern, alternating
+Each call to @vgscmd{setdash} adds a length to the pattern, alternating
 between @emph{on} and @emph{off} portions of the stroke.
 
-After a call to @code{setdash}, @code{resetdash} is needed either to
+After a call to @vgscmd{setdash}, @vgscmd{resetdash} is needed either to
 create a new pattern, or to discard the current one.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-dash,@code{cairo_set_dash}}
 function for more details.
 
+@anchor{cmd_setdashoffset}
 @section @code{setdashoffset}
 
 @signature{setdashoffset @var{offset}}
 
 Set the offset into the dash pattern at which the stroke should start.
 
-@code{setdash} must be called @emph{before} @code{setdashoffset}.
+@vgscmd{setdash} must be called @emph{before} @vgscmd{setdashoffset}.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-dash,@code{cairo_set_dash}}
 function for more details.
 
 @codeexample{
-The next animation shows the effect of @code{setdashoffset} when its
+The next animation shows the effect of @vgscmd{setdashoffset} when its
 argument changes over time.
 
 @verbatim
@@ -2505,6 +2512,7 @@ stroke
 @end verbatim
 }
 
+@anchor{cmd_sethsla}
 @section @code{sethsla}
 
 @signature{sethsla @var{h} @var{s} @var{l} @var{a}}
@@ -2523,6 +2531,7 @@ The conversion to RGB is implemented according to the
 @uref{https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB,formulae from
 Wikipedia}.
 
+@anchor{cmd_setlinecap}
 @section @code{setlinecap}
 
 @signature{setlinecap @var{cap}}
@@ -2530,7 +2539,7 @@ Wikipedia}.
 Set the current line cap style, which determines the shape used to draw
 the end points of lines.
 
-@code{cap} must be one of the following names:
+@var{cap} must be one of the following names:
 
 @itemize
 @item @code{butt}
@@ -2568,6 +2577,7 @@ stroke
 @end verbatim
 }
 
+@anchor{cmd_setlinejoin}
 @section @code{setlinejoin}
 
 @signature{setlinejoin @var{join}}
@@ -2575,7 +2585,7 @@ stroke
 Sets the current line join style, which determines the shape used to
 join two line segments.
 
-@code{join} must be one of the following names:
+@var{join} must be one of the following names:
 
 @itemize
 @item @code{bevel}
@@ -2608,16 +2618,17 @@ M 70 160 l 50 50 50 -50 stroke
 @end verbatim
 }
 
+@anchor{cmd_setlinewidth}
 @section @code{setlinewidth}
 
 @signature{setlinewidth @var{width}}
 
-Set the line width for @code{stroke}.
+Set the line width for @vgscmd{stroke}.
 
-@code{width} is affected by the @ref{transformation matrix}.
+@var{width} is affected by the @ref{transformation matrix}.
 
 To specify a width that is not affected by other transformations,
-@code{resetmatrix} can be used between @code{save} / @code{restore}:
+@vgscmd{resetmatrix} can be used between @vgscmd{save} / @vgscmd{restore}:
 
 @verbatim
 save
@@ -2634,6 +2645,7 @@ See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-set-line-width,@code{cairo_set_line_width}}
 function for more details.
 
+@anchor{cmd_setrgba}
 @section @code{setrgba}
 
 @signature{setrgba @var{r} @var{g} @var{b} @var{a}}
@@ -2644,14 +2656,16 @@ Set the @ref{current pattern} to a solid color, given the
 All components are values between @code{0} and @code{1}. Values outside
 that range are clamped to it.
 
+@anchor{cmd_setvar}
 @section @code{setvar}
 
 @signature{setvar @var{varname} @var{value}}
 
-Set the variable @code{varname} to @code{value}.
+Set the variable @var{varname} to @var{value}.
 
 See the @ref{User Variables} section above for more details.
 
+@anchor{cmd_stroke}
 @section @code{stroke}
 
 @signature{stroke}
@@ -2659,20 +2673,22 @@ See the @ref{User Variables} section above for more details.
 Strokes the current path according to the current line width, line join,
 line cap, and dash settings.
 
-The path is cleared after the operation, unless the @code{preserve}
-command is used before @code{stroke}.
+The path is cleared after the operation, unless the @vgscmd{preserve}
+command is used before @vgscmd{stroke}.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-cairo-t.html#cairo-stroke,@code{cairo_stroke}}
 function for more details.
 
+@anchor{cmd_S}
+@anchor{cmd_s}
 @section @code{S}, @code{s}
 
 @signatureimpl{S, s @var{x2} @var{y2} @var{x} @var{y}}
 
 Draw a smooth cubic Bézier curve from the @ref{current point} to the @emph{end
-point} specified by @code{x, y}. The @emph{end control point} is specified by
-@code{x2, y2}.
+point} specified by @var{x, y}. The @emph{end control point} is specified by
+@var{x2, y2}.
 
 The @emph{start control point} is the reflection of the @emph{end
 control point} of the previous curve command about the @emph{current
@@ -2681,7 +2697,7 @@ point}.
 The behaviour is identical to the @code{S} command in @svgpathlink{}. For more
 details, see @mdncubicbeziercurve{}, and the @mdntutorialcurve{}.
 
-@code{s} is like @code{S}, but the coordinates are relative to the @ref{current
+@vgscmd{s} is like @vgscmd{S}, but the coordinates are relative to the @ref{current
 point}.
 
 @codeexample{
@@ -2698,23 +2714,26 @@ stroke
 @end example
 }
 
+@anchor{cmd_translate}
 @section @code{translate}
 
 @signature{translate @var{tx} @var{ty}}
 
 Modifies the current @ref{transformation matrix} by
-translating the user-space origin by @code{tx, ty}.
+translating the user-space origin by @var{tx, ty}.
 
 See the documentation of the
 @uref{https://www.cairographics.org/manual/cairo-Transformations.html#cairo-translate,@code{cairo_translate}}
 function for more details.
 
+@anchor{cmd_T}
+@anchor{cmd_t}
 @section @code{T}, @code{t}
 
 @signatureimpl{T, t @var{x} @var{y}}
 
 Draw a smooth quadratic Bézier curve from the @ref{current point} to the
-@emph{end point} specified by @code{x, y}.
+@emph{end point} specified by @var{x, y}.
 
 The @emph{control point} is the reflection of the @emph{control point}
 of the previous curve command about the @emph{current point}.
@@ -2722,7 +2741,7 @@ of the previous curve command about the @emph{current point}.
 The behaviour is identical to the @code{T} command in @svgpathlink{}. For more
 details, see @mdnquadbeziercurve{}, and the @mdntutorialcurve{}.
 
-@code{t} is like @code{T}, but the coordinates are relative to the
+@vgscmd{t} is like @vgscmd{T}, but the coordinates are relative to the
 @ref{current point}.
 
 @codeexample{
@@ -2739,13 +2758,15 @@ stroke
 @end example
 }
 
+@anchor{cmd_V}
+@anchor{cmd_v}
 @section @code{V}, @code{v}
 
 @signatureimpl{V, v @var{y}}
 
 Draw a vertical line from the @ref{current point} to y.
 
-The coordinate for @code{V} is absolute, and for @code{v} it is relative
+The coordinate for @vgscmd{V} is absolute, and for @vgscmd{v} it is relative
 to the @ref{current point}.
 
 @bye
