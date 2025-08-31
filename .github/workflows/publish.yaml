@@ -113,6 +113,8 @@ jobs:
           export FFMPEG_DIR=$(realpath ffmpeg)
           export EXAMPLE_VIDEOS_PATH=$(realpath videos)
 
+          export FFMPEG_DOCDIR=$(mktemp -d)
+
           set -x
 
           sudo apt-get update
@@ -123,6 +125,8 @@ jobs:
 
           cd frontend/node_modules/.dist/
           cp -a playground/docs/landing.html index.html
+
+          mv "$FFMPEG_DOCDIR" ffmpeg-docs
 
       - name: Upload Site
         uses: actions/upload-pages-artifact@v3

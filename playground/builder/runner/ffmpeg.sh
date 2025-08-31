@@ -20,3 +20,8 @@ set -x
 make "-j$nproc"
 
 "$FFMPEG_BIN" -version
+
+if [ -n "${FFMPEG_DOCDIR:-}" ]
+then
+    make DOCDIR="$FFMPEG_DOCDIR" install-html
+fi

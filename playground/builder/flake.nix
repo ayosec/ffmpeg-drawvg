@@ -46,6 +46,8 @@
             nasm
             pkg-config
             pkgs.cairo
+            texi2html
+            texinfo
           ];
         };
       };
