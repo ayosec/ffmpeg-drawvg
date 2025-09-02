@@ -2,7 +2,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { readFileSync } from "node:fs";
 
-import { Fragment } from "react";
 import { marked } from "marked";
 
 import Content from "./Content";
@@ -21,34 +20,24 @@ export default async function Landing(langRefName: string) {
 
     const playgroundURL = E.WEBSITE_URL ?? "..";
 
-    const examples = Content.Examples.map(example =>
-        <Fragment key={example.link}>
-            <a href={"#" + example.link}>{example.title}</a>{" "}
-        </Fragment>
-    );
+    const title = "FFmpeg - drawvg";
+
+    const titleElem = repoURL
+        ? <a href={repoURL} target="_blank">{title}</a>
+        : title;
 
     return (
         <HtmlFile title="FFmpeg - drawvg">
             <main className="landing">
-                <aside>
-                    <label id="showTOC">
-                        Table of Contents
-                        <input type="checkbox" />
-                    </label>
+                <nav>
+                    <div className="title">{titleElem}</div>
 
-                    <div className="sections">
-                        <h1>drawvg</h1>
-
-                        <a href={ repoURL }>Source Code</a>
-                        <a href={ playgroundURL }>Playground</a>
-                        <a href={ docsURL + langRefName }>Language Reference</a>
-
-                        <details open data-title="Examples">
-                            <summary>Examples</summary>
-                            { examples }
-                        </details>
+                    <div className="links">
+                        <a href={ playgroundURL }><span>Playground</span></a>
+                        <a href={ docsURL + langRefName }><span>Language Reference</span></a>
+                        <a href={ repoURL }><span>Source Code</span></a>
                     </div>
-                </aside>
+                </nav>
 
                 <section>
                     <Content

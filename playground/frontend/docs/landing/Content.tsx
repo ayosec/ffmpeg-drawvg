@@ -8,7 +8,7 @@ interface Props {
 
 type CommandTag = (props: { name: string }) => React.ReactNode;
 
-export default function Content ({ introduction, langRefURL, playgroundURL }: Props) {
+export default function Content({ introduction, langRefURL, playgroundURL }: Props) {
     const C: CommandTag = ({ name }) => (
         <a className="vgs-command" href={ `${langRefURL}#cmd_${name}` }>
             { name }
@@ -17,25 +17,6 @@ export default function Content ({ introduction, langRefURL, playgroundURL }: Pr
 
     return makeText(introduction, langRefURL, playgroundURL, C);
 }
-
-Content.Examples = [
-    "Progress Indicator",
-    "Using Frame Metadata",
-    "CircleCrop Transition",
-    "Custom Transitions",
-    "Reading Colors",
-    "Waves Effect",
-].map(title => ({
-    title,
-    link: "example_" + title.toLowerCase().replaceAll(/\W/g, "_"),
-}));
-
-const Example = ({ id }: { id: number }) => (
-    <h3>
-        <a name={ Content.Examples[id].link }></a>
-        { Content.Examples[id].title }
-    </h3>
-);
 
 const makeText = (
     introduction: string,
@@ -59,7 +40,7 @@ const makeText = (
         examples, focused on the capabilities of the VGS language.
     </p>
 
-    <Example id={0} />
+    <h3>Progress Indicator</h3>
 
     <p>
         The variable <code>t</code> can be used to compute one of the
@@ -80,7 +61,7 @@ const makeText = (
 
     <VideoRef1 />
 
-    <Example id={1} />
+    <h3>Using Frame Metadata</h3>
 
     <p>
         The <FilterRef name="cropdetect" /> filter calculates the necessary
@@ -102,7 +83,7 @@ const makeText = (
 
     <VideoRef2 />
 
-    <Example id={2} />
+    <h3>CircleCrop Transition</h3>
 
     <p>
         This example creates a transition similar to the
@@ -118,7 +99,7 @@ const makeText = (
 
     <VideoRef1 />
 
-    <Example id={3} />
+    <h3>Custom Transitions</h3>
 
     <p>
         Another way to create custom transitions is to use the <FilterRef name="alphamerge" /> and
@@ -144,7 +125,7 @@ const makeText = (
 
     <VideoRef1 />
 
-    <Example id={4} />
+    <h3>Reading Colors</h3>
 
     <p>
         The function <code>p(x, y)</code> returns the color of a pixel at the given
@@ -169,7 +150,7 @@ const makeText = (
 
     <VideoRef1 />
 
-    <Example id={5} />
+    <h3>Waves Effect</h3>
 
     <p>
         drawvg can be combined with the <FilterRef name="displace" /> filter to

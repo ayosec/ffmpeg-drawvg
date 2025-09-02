@@ -12,8 +12,8 @@ body {
     padding: 0;
     margin: 0;
 
-    font-family: "DejaVu Sans", Seravek, Calibri, Arial, sans-serif;
-    font-size: var(--theme-font-size);
+    font-family: system-ui, "DejaVu Sans", "Segoe UI", sans-serif;
+    font-size: 18px;
 
     color: var(--theme-fg);
     background: var(--theme-bg);
@@ -542,6 +542,71 @@ a {
 }
 
 main.landing {
+    grid-template-columns: 1fr;
+
+    nav {
+        display: flex;
+
+        @media (--regular-viewport) {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        @media (--small-viewport) {
+            flex-direction: column;
+        }
+
+        color: #fff;
+        background: #333;
+        text-shadow: 1px 1px 2px black;
+
+        .title {
+            font-size: 2rem;
+            padding: 10px;
+        }
+
+        .links {
+            display: flex;
+
+            @media (--regular-viewport) {
+                flex-direction: row;
+                gap: 2em;
+            }
+
+            @media (--small-viewport) {
+                flex-direction: column;
+                gap: 1ex;
+            }
+
+            a {
+                display: flex;
+
+                span {
+                    display: block;
+                    align-self: center;
+
+                    padding: 0.2ex 1ex;
+                    font-size: 1.2rem;
+                }
+
+                &:hover {
+                    background: #222;
+                }
+            }
+        }
+
+        a {
+            color: unset;
+            background: unset;
+            text-decoration: none;
+        }
+    }
+
+    section {
+        max-width: 60rem;
+        justify-self: center;
+    }
+
     .complex-example {
         .source {
             border: 1px solid var(--theme-header-underline);
@@ -700,8 +765,6 @@ h2, h3, h4 {
 /* Theme */
 :root {
     color-scheme: light dark;
-
-    --theme-font-size: 12pt;
 
     --theme-fg: #111;
     --theme-bg: #fff;
