@@ -4,6 +4,10 @@ import { readFileSync } from "node:fs";
 
 import { marked } from "marked";
 
+import { AiOutlineExperiment } from "react-icons/ai";
+import { LiaGit } from "react-icons/lia";
+import { LuBookText } from "react-icons/lu";
+
 import Content from "./Content";
 import HtmlFile from "../HtmlFile";
 
@@ -33,9 +37,20 @@ export default async function Landing(langRefName: string) {
                     <div className="title">{titleElem}</div>
 
                     <div className="links">
-                        <a href={ playgroundURL }><span>Playground</span></a>
-                        <a href={ docsURL + langRefName }><span>Language Reference</span></a>
-                        <a href={ repoURL }><span>Source Code</span></a>
+                        <a href={ playgroundURL }>
+                            <AiOutlineExperiment size="1.5rem" />
+                            <span>Playground</span>
+                        </a>
+
+                        <a href={ docsURL + langRefName }>
+                            <LuBookText size="1.5rem" />
+                            <span>Language Reference</span>
+                        </a>
+
+                        <a href={ repoURL }>
+                            <LiaGit size="1.5rem" />
+                            <span>Source Code</span>
+                        </a>
                     </div>
                 </nav>
 

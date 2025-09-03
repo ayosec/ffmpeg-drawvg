@@ -575,17 +575,21 @@ main.landing {
 
             @media (--small-viewport) {
                 flex-direction: column;
-                gap: 1ex;
+                gap: 2ex;
+
+                padding: 1ex 0;
+                border-top: 1px solid;
             }
 
             a {
                 display: flex;
+                align-items: center;
+
+                padding: 0.2ex 1ex;
+                gap: 0.7ex;
 
                 span {
                     display: block;
-                    align-self: center;
-
-                    padding: 0.2ex 1ex;
                     font-size: 1.2rem;
                 }
 
