@@ -2508,19 +2508,16 @@ typedef struct DrawVGContext {
     struct VGSProgram program;
 } DrawVGContext;
 
-#define OFFSET(x) offsetof(DrawVGContext, x)
-
-#define FLAGS AV_OPT_FLAG_FILTERING_PARAM | AV_OPT_FLAG_VIDEO_PARAM
-
-#define OPT(name, field, help) \
-    {                          \
-        name,                  \
-        help,                  \
-        OFFSET(field),         \
-        AV_OPT_TYPE_STRING,    \
-        { .str = NULL },       \
-        0, 0,                  \
-        FLAGS                  \
+#define OPT(name, field, help)          \
+    {                                   \
+        name,                           \
+        help,                           \
+        offsetof(DrawVGContext, field), \
+        AV_OPT_TYPE_STRING,             \
+        { .str = NULL },                \
+        0, 0,                           \
+        AV_OPT_FLAG_FILTERING_PARAM     \
+           | AV_OPT_FLAG_VIDEO_PARAM    \
     }
 
 static const AVOption drawvg_options[]= {
@@ -2530,8 +2527,6 @@ static const AVOption drawvg_options[]= {
     { NULL }
 };
 
-#undef OFFSET
-#undef FLAGS
 #undef OPT
 
 
