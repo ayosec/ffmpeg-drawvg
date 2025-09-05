@@ -4,6 +4,7 @@ releases are sorted from youngest to oldest.
 version <next>:
 - ffprobe -codec option
 - EXIF Metadata Parsing
+- drawvg filter
 
 
 version 8.0:
