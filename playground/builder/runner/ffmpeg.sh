@@ -15,7 +15,7 @@ set -x
     --cc=clang \
     --ld=clang \
     --disable-{ffplay,ffprobe} \
-    --enable-{gpl,version3,librsvg,libfreetype,libharfbuzz,libvpx,libaom,fontconfig}
+    --enable-{gpl,version3,cairo,librsvg,libfreetype,libharfbuzz,libvpx,libaom,fontconfig}
 
 make "-j$nproc"
 

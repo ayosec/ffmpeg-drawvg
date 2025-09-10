@@ -69,6 +69,7 @@ apt-get install -y "${DEPS[@]}"
     --disable-libmfx \
     --disable-omx \
     --disable-debug \
+    --enable-cairo \
     --enable-gpl \
     --enable-libaom \
     --enable-libass \

@@ -76,9 +76,8 @@ this repository.
 ## Installation
 
 To use the drawvg filter, [you have to compile][ffbuild] the FFmpeg fork in the
-[`drawvg-filter` branch](/../drawvg-filter/). The only requirement is that Cairo
-must be enabled in the build. You can add `--enable-librsvg` to the
-`./configure` to force it:
+[`drawvg-filter` branch](/../drawvg-filter/), and configure FFmpeg with
+`--enable-cairo`.
 
 [ffbuild]: https://trac.ffmpeg.org/wiki/CompilationGuide
 
@@ -87,7 +86,7 @@ $ git clone --filter tree:0 -b drawvg-filter https://github.com/ayosec/ffmpeg-dr
 
 $ cd ffmpeg-drawvg
 
-$ ./configure --enable-librsvg ...
+$ ./configure --enable-cairo ...
 
 $ make -j"$(nproc)"
 
