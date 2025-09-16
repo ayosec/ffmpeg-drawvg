@@ -63,6 +63,7 @@ apt-get install -y "${DEPS[@]}"
 ./configure \
     --cpu=x86-64-v3 \
     --cc=clang \
+    --cxx=clang++ \
     --ld=clang \
     --prefix=/usr \
     --disable-{ffplay,ffprobe} \
