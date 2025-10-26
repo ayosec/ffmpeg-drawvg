@@ -1,0 +1,47 @@
+<style>
+    details.top-warning {
+        position: fixed;
+        z-index: 1001;
+
+        top: 0;
+        left: 0;
+        width: 100vw;
+
+        display: flex;
+        align-items: center;
+        gap: 1em;
+        padding: 5px;
+
+        background: #400;
+        color: #fdd;
+
+        font-size: 1.5rem;
+        text-align: left;
+    }
+
+    details.top-warning:not([open]) {
+        display: none;
+    }
+
+    details.top-warning summary {
+        padding: 1ex 2ex;
+        margin: 1ex;
+        border-radius: 5px;
+
+        background: #faa;
+        color: black;
+
+        cursor: default;
+    }
+
+    details.top-warning a {
+        color: #afa;
+    }
+</style>
+
+<details open class="top-warning">
+    <summary>Close</summary>
+
+    This is a copy of the FFmpeg website. Please visit
+    <a href="https://ffmpeg.org">ffmpeg.org</a> to see the official website.
+</details>

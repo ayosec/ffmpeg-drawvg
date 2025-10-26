@@ -103,17 +103,32 @@ jobs:
           path: videos/bigbuckbunny.mov
           url: https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_h264.mov
 
+      - name: FFmpeg Website
+        id: ffmpeg-website
+        run: |
+          set -xe
+
+          DEST=$(mktemp -d)
+          FFSRC=$(mktemp -d)
+
+          ( cd ffmpeg ; git ls-files | cpio -dpm "$FFSRC" )
+
+          nix develop --print-build-logs \
+            "./main/playground/builder#ffmpeg-website" \
+            --command main/.github/website-copy/build.sh "$FFSRC" "$DEST"
+
+          echo "dest=$DEST" >> "$GITHUB_OUTPUT"
+
       - name: Build Site
         env:
           WEBSITE_URL: ${{ steps.website-url.outputs.result }}/playground
+          FFMPEG_WEB: ${{ steps.ffmpeg-website.outputs.dest }}
 
         run: |
           export VITE_SOURCE_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
 
           export FFMPEG_DIR=$(realpath ffmpeg)
           export EXAMPLE_VIDEOS_PATH=$(realpath videos)
-
-          export FFMPEG_DOCDIR=$(mktemp -d)
 
           set -x
 
@@ -126,7 +141,7 @@ jobs:
           cd frontend/node_modules/.dist/
           cp -a playground/docs/landing.html index.html
 
-          mv "$FFMPEG_DOCDIR" ffmpeg-docs
+          cp -a "$FFMPEG_WEB" ffmpeg-website
 
       - name: Upload Site
         uses: actions/upload-pages-artifact@v3

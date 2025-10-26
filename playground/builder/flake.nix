@@ -34,6 +34,9 @@
 
         };
 
+        ffmpeg-website =
+          pkgs.mkShell { packages = [ pkgs.nodejs_20 pkgs.texinfo ]; };
+
         ffmpeg = pkgs.mkShell.override { stdenv = pkgs.clangStdenv; } {
           buildInputs = with pkgs; [
             fontconfig
