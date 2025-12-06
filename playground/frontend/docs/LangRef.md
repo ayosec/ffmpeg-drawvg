@@ -401,31 +401,37 @@ has the same syntax for colors in FFmpeg:
 
 [ffmpeg-colors]: https://ffmpeg.org/ffmpeg-utils.html#Color
 
-The color can be a variable name. In that case, its value is interpreted as a
-`0xRRGGBBAA` code.
-
 ::: {.example}
 
 ```vgs
-circle 75 100 50
+circle 70 70 60
 setcolor #FF0000
 fill
 
-circle 125 100 50
-setvar CustomGreen 0x90EEAAFF
-setcolor CustomGreen
-fill
-
-circle 175 100 50
+circle 170 170 60
 setcolor blue@0.5
 fill
 ```
 
 :::
 
-The commands `setrgba` and `sethsla` allow setting colors using expressions.
+The color can be a variable name. In that case, it must be assigned with
+`defrgba`, `defhsla`, or `setvar` and a color.
 
-`defrgba` and `defhsla` compute the color and store it in a variable.
+```vgs
+circle 70 70 60
+setvar CustomGreen #22FF44
+setcolor CustomGreen
+fill
+
+circle 170 170 60
+defhsla CustomBlue 200 0.7 0.5 1
+setcolor CustomBlue
+fill
+```
+
+The commands `setrgba` and `sethsla` allow setting colors using expressions.
+Similar to `defrgba` and `defhsla`, but with no intermediate variable.
 
 #### Constants
 
@@ -738,14 +744,14 @@ fill
 
 #### Variables
 
-`setcolor` and `colorstop` accept a variable name as the argument. When a
-variable is used, its value is interpreted as a `0xRRGGBBAA` code.
+`setcolor` and `colorstop` accept a variable name as the argument. The variable
+must be assigned with `defrgba`, `defhsla`, or `setvar` and a color.
 
 ::: {.example}
 
 ```vgs
 // Use color #1020FF, alpha = 50%
-setvar someblue 0x1020FF7F
+setvar someblue #1020FF@0.5
 
 setcolor someblue
 
@@ -768,16 +774,16 @@ setcolor teal
 rect 30 30 120 120
 fill
 
-setvar teal 0x70AAAAFF  // Now, `teal` is #70AAAA
-setcolor teal
+setvar teal #70AAAA
+setcolor teal         // Use the new color for `teal`.
 rect 90 90 120 120
 fill
 ```
 
 :::
 
-`defrgba` and `defhsla` compute the `0xRRGGBBAA` value for a color given its
-color components:
+`defrgba` and `defhsla` assign a color to a variable, by providing an
+expression for each color component:
 
 * For `defrgba`: *red*, *green*, *blue*, and *alpha*.
 * For `defhsla`: *hue*, *saturation*, *lightness*, and *alpha*.
@@ -1107,9 +1113,9 @@ proc zigzag color y {
     stroke
 }
 
-call zigzag 0x40C0FFFF 60
-call zigzag 0x00AABBFF 120
-call zigzag 0x20F0B7FF 180
+call zigzag #40C0FF 60
+call zigzag #00AABB 120
+call zigzag #20F0B7 180
 ```
 
 :::
@@ -1199,8 +1205,27 @@ There are some functions specific to drawvg available in [!ffmpeg-expr].
 #### Function `p`
 
 `p(x, y)` returns the color of the pixel at coordinates `x, y`, as a
-`0xRRGGBBAA` value. This value can be assigned to a variable, which can be used
-later as the argument for `setcolor`.
+`0xRRGGBBAA` value. It can be assigned to a variable, so the color can be
+available for `setcolor` and `colorstop` commands.
+
+If a single expression contains multiple calls to the function, it must return
+the value of the last call in order to use it as a color.
+
+::: {.example}
+
+In this example, the first call to `p(0, 0)` is stored in the variable `0` of
+the expression. Then, the same expression makes a second call to `p(1, 1)`, and
+finally it returns the value in the variable `0`.
+
+```vgs,ignore
+setvar pixel (st(0, p(0, 0)); p(1, 1); ld(0))
+```
+
+Since the result of the expression is not the last call to `p`, the variable
+`pixel` can not be used as a color, but it still can be used as a numeric
+`0xRRGGBBAA` value.
+
+:::
 
 If the coordinates are outside the frame, or any of the arguments is not a
 finite number (like [`NaN`][nan]), the function returns `NaN`.
@@ -1807,8 +1832,7 @@ defhsla varname h s l a
 ```
 
 Similar to `sethsla`, but instead of establishing the color for stroke and fill
-operations, the computed color is stored as a `0xRRGGBBAA` value in the variable
-`varname`.
+operations, the computed color is assigned to the variable `varname`.
 
 `varname` can then be used as a color for `setcolor` and `colorstop`.
 
@@ -1821,7 +1845,7 @@ defrgba varname r g b a
 ```
 
 Computes a color from the *red*, *green*, *blue*, and *alpha* components, and
-assigns it to the variable `varname` as a `0xRRGGBBAA` value.
+assigns it to the variable `varname`.
 
 All components are values between `0` and `1`. Values outside that range are
 clamped to it.
