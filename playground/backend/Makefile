@@ -16,6 +16,10 @@ CFLAGS += -mbulk-memory
 CFLAGS += -I$(FFMPEG_ROOT)
 CFLAGS += $(shell pkg-config --cflags $(DEPENDENCIES))
 
+ifdef FFMPEG_BUILD_DIR
+CFLAGS += -I$(FFMPEG_BUILD_DIR)
+endif
+
 LINK += $(shell pkg-config --libs $(DEPENDENCIES))
 
 LINK += --closure $(RUN_CLOSURE)
@@ -94,7 +98,7 @@ $(TARGET)/play/%.o: src/%.c
 
 
 $(SYNTAX_INFO): src/syntax-info/gentables.sh src/syntax-info/*.jq
-	$< $(FFMPEG_ROOT) $@
+	$< $(FFMPEG_ROOT) $@ $(CFLAGS)
 
 $(DESERIALIZERS): GENERATOR = $(TARGET)/deserializers-generator.js
 $(DESERIALIZERS): src/deserializers.c

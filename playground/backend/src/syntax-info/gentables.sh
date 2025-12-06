@@ -5,6 +5,9 @@ set -euo pipefail
 FFMPEG_ROOT=$1
 OUTPUT=$2
 
+shift 2
+CFLAGS=("$@")
+
 SYN_INFO=$(dirname "$0")
 
 tmpfile=$(mktemp)
@@ -20,7 +23,7 @@ dump_ast() {
         -Xclang -ast-dump-filter="$filter"
         -fsyntax-only
         -Wno-everything
-        $(pkg-config --cflags cairo)
+        "${CFLAGS[@]}"
         -I"$FFMPEG_ROOT"
     )
 
