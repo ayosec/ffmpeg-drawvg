@@ -10,7 +10,7 @@ import { LuCopy } from "react-icons/lu";
 import { PiTerminalWindowFill } from "react-icons/pi";
 
 import highlight from "../highlight";
-import { CACHE_DIR, DOCS_DIR, DOCS_URL } from "../buildcontext";
+import { CACHE_DIR, DOCS_DIR, DOCS_URL, FFMPEG } from "../buildcontext";
 
 interface Props {
     sources: string[];
@@ -100,6 +100,8 @@ function readSources(sources: string[]): Sources {
     for (const source of sources) {
         const src = fs.readFileSync(path.join(import.meta.dirname, source), "utf8");
         files[source] = src.trimEnd();
+
+        srcHash.update(FFMPEG.digest ?? "");
         srcHash.update(src);
         srcHash.update("\n");
     }

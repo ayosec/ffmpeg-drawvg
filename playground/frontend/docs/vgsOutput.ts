@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { hash, randomBytes } from "node:crypto";
+import { createHash, hash, randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 
 import RunQueue from "./RunQueue";
-import { CACHE_DIR, DOCS_DIR, DOCS_URL } from "./buildcontext";
+import { CACHE_DIR, DOCS_DIR, DOCS_URL, FFMPEG } from "./buildcontext";
 
 interface Asset {
     uri: string;
@@ -28,13 +28,13 @@ const JOBS = new RunQueue();
 const vgsOutput: (render: string, code: string, options: string[]) => string = (
     function getPreview() {
         const PLAYGROUND_URL = process.env.PLAYGROUND_URL ?? "..";
-        const FFMPEG_BIN = process.env.FFMPEG_BIN;
+        const ffbin = FFMPEG.path;
 
-        if (PLAYGROUND_URL === undefined || FFMPEG_BIN === undefined)
+        if (PLAYGROUND_URL === undefined || ffbin === undefined)
             return (_a, _b, code) => `<pre>${code}</pre>`;
 
         return (render, code, options) => (
-            renderVGS(PLAYGROUND_URL, FFMPEG_BIN, render, code, options)
+            renderVGS(PLAYGROUND_URL, ffbin, render, code, options)
         );
     }
 )();
@@ -107,13 +107,20 @@ function urlHash(code: string): string {
     return encodeURIComponent(gzipped.toString("base64"));
 }
 
+function codeCacheKey(code: string) {
+    const srcHash = createHash("sha256");
+    srcHash.update(FFMPEG.digest ?? "");
+    srcHash.update(code);
+    return srcHash.digest("base64url").substring(0, 16);
+}
+
 function makeOutputNames(code: string): (s: string) => Asset {
     const dirname = path.join(DOCS_DIR, OUTPUTS_DIR);
 
     if (!fs.existsSync(dirname))
         fs.mkdirSync(dirname);
 
-    const codeHash = hash("sha256", code, "base64url").substring(0, 16);
+    const codeHash = codeCacheKey(code);
 
     return function(suffix: string) {
         const filename = `vgs-${codeHash}.${suffix}`;

@@ -1,5 +1,25 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
+
 import envPaths from "env-paths";
+
+export const FFMPEG = (() => {
+    const path = process.env.FFMPEG_BIN;
+    let digest: Buffer|undefined = undefined;
+
+    if (path !== undefined) {
+        const srcHash = createHash("sha256");
+
+        const src = fs.readFileSync(path);
+        srcHash.update(src);
+        srcHash.update("\n");
+
+        digest = srcHash.digest();
+    }
+
+
+    return { path, digest };
+})()
 
 export const CACHE_DIR = envPaths("drawvg-playground").cache + "/outputs";
 
