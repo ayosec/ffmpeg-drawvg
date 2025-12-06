@@ -1,5 +1,5 @@
 <style>
-    details.top-warning {
+    div.top-warning {
         position: fixed;
         z-index: 1001;
 
@@ -19,11 +19,15 @@
         text-align: left;
     }
 
-    details.top-warning:not([open]) {
+    #close-top-warning {
         display: none;
     }
 
-    details.top-warning summary {
+    #close-top-warning:checked + div.top-warning {
+        display: none;
+    }
+
+    div.top-warning label[for="close-top-warning"] {
         padding: 1ex 2ex;
         margin: 1ex;
         border-radius: 5px;
@@ -34,14 +38,15 @@
         cursor: default;
     }
 
-    details.top-warning a {
+    div.top-warning a {
         color: #afa;
     }
 </style>
 
-<details open class="top-warning">
-    <summary>Close</summary>
+<input id="close-top-warning" type="checkbox">
+<div class="top-warning">
+    <label for="close-top-warning">Close</label>
 
     This is a copy of the FFmpeg website. Please visit
     <a href="https://ffmpeg.org">ffmpeg.org</a> to see the official website.
-</details>
+</div>
