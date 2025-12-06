@@ -1,8 +1,7 @@
 # Language Reference
 
-This document is a draft to describe the language used by the drawvg filter. If
-the filter is accepted into FFmpeg, please refer to the official documentation in
-<https://ffmpeg.org/documentation.html>.
+This document is an alternative version of the
+[official documentation](https://ffmpeg.org/drawvg-reference.html).
 
 Internally, the language is known as VGS (*Vector Graphics Script*). In this
 document, the term *drawvg* always refers to the programming language used by
