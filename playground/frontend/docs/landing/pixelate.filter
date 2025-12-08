@@ -1,6 +1,7 @@
 [0] scale = iw/1.5 : -2 , split [a] [b] ;
 
 [a]
+    pixelize ,
     drawvg = file=pixelate.vgs ,
     pad = iw*2+30 : ih+20 : iw+20 : ih+10
     [a0] ;

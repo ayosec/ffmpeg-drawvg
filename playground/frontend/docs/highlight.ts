@@ -225,7 +225,7 @@ function htmlEscape(text: string) {
 function filtergraphLang(hljs: HLJSApi) {
     const keyword =
         "alphamerge boxblur concat crop loop displace drawtext \
-         drawvg format pad scale overlay split \
+         drawvg format pad scale overlay pixelize split \
     ".split(/\s+/);
 
     return {

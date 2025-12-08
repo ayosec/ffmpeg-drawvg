@@ -1,6 +1,6 @@
 setvar SIZE 20
 
-setvar lastcolor 0
+setvar MID (SIZE / 2)
 
 repeat (h / SIZE + 1) {
     save
@@ -9,33 +9,21 @@ repeat (h / SIZE + 1) {
         translate SIZE 0
     }
 
+    setvar COL i
+
     repeat (w / SIZE + 1) {
-        setvar cr 0
-        setvar cg 0
-        setvar cb 0
+        setvar px (p(0, 0))
 
-        setvar cc 0
-
-        repeat 10 {
-            setvar d ((i - 5) * SIZE / 5)
-            setvar px (p(0, d))
-
-            if (not(isnan(px))) {
-                setvar cc (cc + 1)
-                setvar cr (cr + px / 0x1000000)
-                setvar cg (cg + bitand(px / 0x10000, 0xFF))
-                setvar cb (cb + bitand(px / 0x100, 0xFF))
-            }
+        if (isnan(px)) {
+            setvar px (p(-MID, 0))
         }
 
-        if (not(cc)) {
-            setcolor lastcolor
+        if (isnan(px)) {
+            setvar px (p(0, -MID))
         }
 
-        if cc {
-            defrgba curcolor (cr / cc / 255) (cg / cc / 255) (cb / cc / 255) 1
-            setcolor curcolor
-            setvar lastcolor curcolor
+        if (not(isnan(px))) {
+            setcolor px
         }
 
         moveto (-SIZE) 0
