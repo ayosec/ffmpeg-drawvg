@@ -120,6 +120,10 @@ section {
             &:not(ul) {
                 margin-left: 1em;
             }
+
+            &:is(ul) {
+                padding-bottom: 1px;
+            }
         }
     }
 
