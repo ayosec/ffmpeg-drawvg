@@ -119,7 +119,7 @@ void* backend_program_run(
     eval_state.vars[VAR_H] = height;
     eval_state.vars[VAR_DURATION] = var_duration;
 
-    ret = vgs_eval(&eval_state, program);
+    ret = vgs_eval(&eval_state, program, 0);
 
     cairo_destroy(eval_state.cairo_ctx);
     cairo_surface_destroy(surface);
