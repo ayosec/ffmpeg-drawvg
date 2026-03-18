@@ -10,10 +10,11 @@
 
 <!-- landing:intro -->
 
-drawvg is an experimental [FFmpeg filter] to render vector graphics on top of
-video frames.
+drawvg is a [FFmpeg filter], available since [8.1], to render vector graphics
+on top of video frames.
 
 [FFmpeg filter]: https://ffmpeg.org/ffmpeg-filters.html
+[8.1]: http://ffmpeg.org/index.html#pr8.1
 
 The render is done by executing a script written in its own language, called VGS
 (*Vector Graphics Script*). The script consists of a series of commands to
