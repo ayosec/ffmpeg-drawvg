@@ -13,6 +13,9 @@
 drawvg is a [FFmpeg filter], available since [8.1], to render vector graphics
 on top of video frames.
 
+FFmpeg must be configured with the `--enable-cairo` flag. You can see the
+enabled flags by running `ffmpeg -version`.
+
 [FFmpeg filter]: https://ffmpeg.org/ffmpeg-filters.html
 [8.1]: http://ffmpeg.org/index.html#pr8.1
 
